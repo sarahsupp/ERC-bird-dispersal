@@ -1,0 +1,94 @@
+---
+title: "Waxwings"
+author: "Sarah Supp"
+date: "10/25/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggmap)
+library(maptools)
+library(fields)
+library(sp)
+library(raster)
+library(maps)
+library(mapdata)
+library(rgdal)
+library(gamm4)
+library(sf)
+library(ggfortify)
+library(lubridate)
+
+waxwings <- read_tsv("data/ebd_cedwax_200708_201810_relAug-2018.txt")
+
+```
+
+Create columns for year, month, day, and julian day
+```{r}
+
+waxwings <- waxwings %>%
+  mutate(year = format(as.POSIXct(`OBSERVATION DATE`), "%Y"), 
+         month = format(as.POSIXct(`OBSERVATION DATE`), "%m"),
+         day = format(as.POSIXct(`OBSERVATION DATE`), "%d"))
+
+#TODO JULIAN DAY OF THE YEAR
+
+```
+
+
+Filter data to just the most recent years for preliminary graphics.
+```{r}
+
+cewa_1617 <- waxwings %>%
+  filter(year %in% c(2016, 2017))
+
+write_csv(cewa_1617, "data/cewa_1617.csv")
+```
+
+```{r}
+cewa_1617 %>%
+  filter(year == 2017) %>%
+  ggplot(aes(LONGITUDE, LATITUDE)) + 
+    geom_point(aes(col=month), alpha=0.25, size=0.10) +
+    facet_wrap(~month)
+```
+
+
+
+
+
+
+Create map boundaries to plot onto
+```{r}
+
+usa <- raster::getData('GADM', country='USA', level=0)
+canada <- raster::getData('GADM', country='Canada', level=0)
+mexico <- raster::getData('GADM', country='Mexico', level=0)
+
+usa <- fortify(usa)
+
+gg <- ggplot()
+gg <- gg + geom_map(data=usa, map=usa,
+                    aes(x=long, y=lat, map_id=id),
+                    color="black", fill="white", size=0.25)
+# read in the altitude layers, make rasters
+elev = raster("alt_5m_bil/alt.bil")
+
+# plot elev + map for extent
+myext <- c(-175, -50, 15, 75)
+plot.new()
+#plot(elev, ext = myext, xlab="Longitude", ylab = "Latitude", xlim = c(-175,-50), ylim = c(15,75), col=gray(0:256/256))
+
+borders <- function(){
+  plot(USAborder, ext=myext, border="black", add=TRUE)
+  plot(Mexborder, ext=myext, border="black", add=TRUE)
+  plot(Canborder, ext=myext, border="black", add=TRUE)
+}
+
+plot(elev, ext=myext, addfun=borders, ylab="Latitude", xlab="Longitude", xlim = c(-175,-50), ylim = c(15,75), col=gray(0:256/256)) 
+
+```
+
