@@ -16,6 +16,7 @@ library(sp)
 library(raster)
 library(maps)
 library(mapdata)
+library(usmap)
 library(rgdal)
 library(gamm4)
 library(sf)
@@ -23,6 +24,7 @@ library(ggfortify)
 library(lubridate)
 
 waxwings <- read_tsv("data/ebd_cedwax_200708_201810_relAug-2018.txt")
+
 
 ```
 
@@ -32,7 +34,13 @@ Create columns for year, month, day, and julian day
 waxwings <- waxwings %>%
   mutate(year = format(as.POSIXct(`OBSERVATION DATE`), "%Y"), 
          month = format(as.POSIXct(`OBSERVATION DATE`), "%m"),
-         day = format(as.POSIXct(`OBSERVATION DATE`), "%d"))
+         day = format(as.POSIXct(`OBSERVATION DATE`), "%d")) %>%
+  mutate(months = recode(month, "01" = "January", "02" = "February", "03" = "March", "04" = "April",
+                         "05"="May", "06"="June", "07"="July", "08"="August", "09"="September",
+                         "10"="October", "11"="November", "12"="December")) %>%
+  mutate(months = ordered(months, levels = c("October", "November", "December", "January", "February",
+                                             "March", "April", "May", "June", "July", "August", "Sep")))
+
 
 #TODO JULIAN DAY OF THE YEAR
 
@@ -48,9 +56,10 @@ cewa_1617 <- waxwings %>%
 write_csv(cewa_1617, "data/cewa_1617.csv")
 ```
 
+Make initial plot of waxwing locations by month for 2016
 ```{r}
 cewa_1617 %>%
-  filter(year == 2017) %>%
+  filter(year == 2016) %>%
   ggplot(aes(LONGITUDE, LATITUDE)) + 
     geom_point(aes(col=month), alpha=0.25, size=0.10) +
     facet_wrap(~month)
@@ -58,6 +67,36 @@ cewa_1617 %>%
 
 
 
+# plot the 2016 data onto a map of the eastern US and Great Plains
+```{r}
+
+all_states <- map_data("state")
+states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tennessee', 'indiana', 
+                                           'illinois', 'iowa', 'nebraska','south dakota', 'north dakota',
+                                           'minnesota', 'wisconsin', 'missouri', 'kansas'))
+
+cewa_1617winter <- cewa_1617 %>%
+  filter(year==2016 & month %in% c("11", "12") | year == 2017 & month %in% c("01", "02", "03")) %>%
+  filter(STATE %in% c("Ohio", "Michigan", "Kentucky", "Tennessee", "Indiana", "Illinois", "Iowa", "Nebraska",
+                      "South Dakota", "North Dakota", "Minnesota", "Wisconsin", "Missouri", "Kansas")) %>%
+  filter(months %in% c("November", "December","January", "February", "March"))
+
+#TODO: suppress axis labels, add points for known cedar patches, repeat for robins?
+p <- ggplot() +
+  geom_polygon( data=states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
+  geom_point(data=cewa_1617winter, aes(x=LONGITUDE, y=LATITUDE), alpha=0.25, size=0.5, col="mediumpurple") +
+  facet_wrap(~months) + 
+  labs(title="Cedar Waxwing locations in winter 2016-2017") + 
+  theme_bw() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+p
+
+```
 
 
 
@@ -74,13 +113,11 @@ gg <- ggplot()
 gg <- gg + geom_map(data=usa, map=usa,
                     aes(x=long, y=lat, map_id=id),
                     color="black", fill="white", size=0.25)
-# read in the altitude layers, make rasters
-elev = raster("alt_5m_bil/alt.bil")
 
 # plot elev + map for extent
-myext <- c(-175, -50, 15, 75)
+myext <- c(-103, -50, 15, 75)
 plot.new()
-#plot(elev, ext = myext, xlab="Longitude", ylab = "Latitude", xlim = c(-175,-50), ylim = c(15,75), col=gray(0:256/256))
+plot(usa, ext = myext, xlab="Longitude", ylab = "Latitude", xlim = c(-103,-50), ylim = c(15,75), col=gray(0:256/256))
 
 borders <- function(){
   plot(USAborder, ext=myext, border="black", add=TRUE)
