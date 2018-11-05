@@ -25,7 +25,7 @@ library(lubridate)
 library(ggplot2)
 
 waxwings <- read_tsv("data/ebd_cedwax_200708_201810_relAug-2018.txt")
-
+robins <- read_tsv("data/ebd_amerob_200708_201810_relAug-2018.txt")
 
 ```
 
@@ -33,6 +33,17 @@ Create columns for year, month, day, and julian day
 ```{r}
 
 waxwings <- waxwings %>%
+  mutate(year = format(as.POSIXct(`OBSERVATION DATE`), "%Y"), 
+         month = format(as.POSIXct(`OBSERVATION DATE`), "%m"),
+         day = format(as.POSIXct(`OBSERVATION DATE`), "%d"),
+         julian = yday(format(as.POSIXct(`OBSERVATION DATE`, "%Y/%m/%d")))) %>%
+  mutate(months = recode(month, "01" = "January", "02" = "February", "03" = "March", "04" = "April",
+                         "05"="May", "06"="June", "07"="July", "08"="August", "09"="September",
+                         "10"="October", "11"="November", "12"="December")) %>%
+  mutate(months = ordered(months, levels = c("October", "November", "December", "January", "February",
+                                             "March", "April", "May", "June", "July", "August", "Sep")))
+
+robins <- robins %>%
   mutate(year = format(as.POSIXct(`OBSERVATION DATE`), "%Y"), 
          month = format(as.POSIXct(`OBSERVATION DATE`), "%m"),
          day = format(as.POSIXct(`OBSERVATION DATE`), "%d"),
@@ -52,11 +63,15 @@ Filter data to just the most recent years for preliminary graphics.
 cewa_1617 <- waxwings %>%
   filter(year %in% c(2016, 2017))
 
+amro_1617 <- robins %>%
+  filter(year %in% c(2016, 2017))
+
 write_csv(cewa_1617, "data/cewa_1617.csv")
+write_csv(amro_1617, "data/amro_1617.csv")
 ```
 
 
-# plot the 2016 data onto a map of the eastern US and Great Plains
+# plot the 2016-2017 winter data for WAXWINGS and ROBINS onto a map of the eastern US and Great Plains
 ```{r}
 
 #get map for states of interest
@@ -65,18 +80,57 @@ states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tenn
                                            'illinois', 'iowa', 'nebraska','south dakota', 'north dakota',
                                            'minnesota', 'wisconsin', 'missouri', 'kansas'))
 
-cewa_1617winter <- cewa_1617 %>%
+cewa_1617winter <- waxwings %>%
   filter(year==2016 & month %in% c("11", "12") | year == 2017 & month %in% c("01", "02", "03")) %>%
   filter(STATE %in% c("Ohio", "Michigan", "Kentucky", "Tennessee", "Indiana", "Illinois", "Iowa", "Nebraska",
                       "South Dakota", "North Dakota", "Minnesota", "Wisconsin", "Missouri", "Kansas")) %>%
   filter(months %in% c("November", "December","January", "February", "March"))
 
+amro_1617winter <- robins %>%
+  filter(year==2016 & month %in% c("11", "12") | year == 2017 & month %in% c("01", "02", "03")) %>%
+  filter(STATE %in% c("Ohio", "Michigan", "Kentucky", "Tennessee", "Indiana", "Illinois", "Iowa", "Nebraska",
+                      "South Dakota", "North Dakota", "Minnesota", "Wisconsin", "Missouri", "Kansas")) %>%
+  filter(months %in% c("November", "December","January", "February", "March"))
+
+
+# plot winter waxwings only
 #TODO: add points for known cedar patches, repeat for robins?
 p <- ggplot() +
   geom_polygon( data=states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
   geom_point(data=cewa_1617winter, aes(x=LONGITUDE, y=LATITUDE), alpha=0.25, size=0.5, col="mediumpurple") +
   facet_wrap(~months) + 
   labs(title="Cedar Waxwing locations in winter 2016-2017") + 
+  theme_bw() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+p
+
+#plot winter robins only
+p <- ggplot() +
+  geom_polygon( data=states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
+  geom_point(data=amro_1617winter, aes(x=LONGITUDE, y=LATITUDE), alpha=0.25, size=0.5, col="indianred") +
+  facet_wrap(~months) + 
+  labs(title="American Robin locations in winter 2016-2017") + 
+  theme_bw() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+p
+
+#plot winter robins and waxwings together
+p <- ggplot() +
+  geom_polygon( data=states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
+  geom_point(data=amro_1617winter, aes(x=LONGITUDE, y=LATITUDE), alpha=0.25, size=0.5, col="indianred") +
+  geom_point(data=cewa_1617winter, aes(x=LONGITUDE, y=LATITUDE), alpha=0.25, size=0.5, col="mediumpurple") +
+  facet_wrap(~months) + 
+  labs(title="American Robin locations in winter 2016-2017") + 
   theme_bw() + 
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
