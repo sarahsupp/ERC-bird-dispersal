@@ -22,6 +22,7 @@ library(gamm4)
 library(sf)
 library(ggfortify)
 library(lubridate)
+library(ggplot2)
 
 waxwings <- read_tsv("data/ebd_cedwax_200708_201810_relAug-2018.txt")
 
@@ -54,20 +55,11 @@ cewa_1617 <- waxwings %>%
 write_csv(cewa_1617, "data/cewa_1617.csv")
 ```
 
-Make initial plot of waxwing locations by month for 2016
-```{r}
-cewa_1617 %>%
-  filter(year == 2016) %>%
-  ggplot(aes(LONGITUDE, LATITUDE)) + 
-    geom_point(aes(col=month), alpha=0.25, size=0.10) +
-    facet_wrap(~month)
-```
-
-
 
 # plot the 2016 data onto a map of the eastern US and Great Plains
 ```{r}
 
+#get map for states of interest
 all_states <- map_data("state")
 states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tennessee', 'indiana', 
                                            'illinois', 'iowa', 'nebraska','south dakota', 'north dakota',
@@ -79,7 +71,7 @@ cewa_1617winter <- cewa_1617 %>%
                       "South Dakota", "North Dakota", "Minnesota", "Wisconsin", "Missouri", "Kansas")) %>%
   filter(months %in% c("November", "December","January", "February", "March"))
 
-#TODO: suppress axis labels, add points for known cedar patches, repeat for robins?
+#TODO: add points for known cedar patches, repeat for robins?
 p <- ggplot() +
   geom_polygon( data=states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
   geom_point(data=cewa_1617winter, aes(x=LONGITUDE, y=LATITUDE), alpha=0.25, size=0.5, col="mediumpurple") +
@@ -97,33 +89,4 @@ p
 ```
 
 
-
-Create map boundaries to plot onto
-```{r}
-
-usa <- raster::getData('GADM', country='USA', level=0)
-canada <- raster::getData('GADM', country='Canada', level=0)
-mexico <- raster::getData('GADM', country='Mexico', level=0)
-
-usa <- fortify(usa)
-
-gg <- ggplot()
-gg <- gg + geom_map(data=usa, map=usa,
-                    aes(x=long, y=lat, map_id=id),
-                    color="black", fill="white", size=0.25)
-
-# plot elev + map for extent
-myext <- c(-103, -50, 15, 75)
-plot.new()
-plot(usa, ext = myext, xlab="Longitude", ylab = "Latitude", xlim = c(-103,-50), ylim = c(15,75), col=gray(0:256/256))
-
-borders <- function(){
-  plot(USAborder, ext=myext, border="black", add=TRUE)
-  plot(Mexborder, ext=myext, border="black", add=TRUE)
-  plot(Canborder, ext=myext, border="black", add=TRUE)
-}
-
-plot(elev, ext=myext, addfun=borders, ylab="Latitude", xlab="Longitude", xlim = c(-175,-50), ylim = c(15,75), col=gray(0:256/256)) 
-
-```
 
