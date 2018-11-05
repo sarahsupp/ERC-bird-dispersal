@@ -98,7 +98,7 @@ amro_1617winter <- robins %>%
 p <- ggplot() +
   geom_polygon( data=states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
   geom_point(data=cewa_1617winter, aes(x=LONGITUDE, y=LATITUDE), alpha=0.25, size=0.5, col="mediumpurple") +
-  facet_wrap(~months) + 
+  facet_wrap(~months, nrow=1) + 
   labs(title="Cedar Waxwing locations in winter 2016-2017") + 
   theme_bw() + 
   theme(axis.title.x=element_blank(),
