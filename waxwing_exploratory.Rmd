@@ -23,6 +23,8 @@ library(sf)
 library(ggfortify)
 library(lubridate)
 library(ggplot2)
+library(adehabitatHR)
+library(dggridR)
 
 waxwings <- read_tsv("data/ebd_cedwax_200708_201810_relAug-2018.txt")
 robins <- read_tsv("data/ebd_amerob_200708_201810_relAug-2018.txt")
@@ -142,5 +144,43 @@ p
 
 ```
 
+Plot icosahedron cells onto map
+```{r}
+#Construct a global grid with cells approximately 1000 miles across
+dggs <- dgconstruct(res=12, resround='down')
 
+#Get the corresponding grid cells for each earthquake epicenter (lat-long pair)
+cewa_1617winter$cell <- dgGEO_to_SEQNUM(dggs, cewa_1617winter$LONGITUDE, cewa_1617winter$LATITUDE)$seqnum
+
+#Converting SEQNUM to GEO gives the center coordinates of the cells
+cellcenters <- dgSEQNUM_to_GEO(dggs,cewa_1617winter$cell)
+
+#Get the number of earthquakes in each cell
+birdcounts <- cewa_1617winter %>% 
+  group_by(cell) %>% 
+  summarise(count=n())
+
+#Get the grid cell boundaries for cells which had birds
+grid <- dgcellstogrid(dggs, birdcounts$cell, frame=TRUE, wrapcells=TRUE)
+
+#Update the grid cells' properties to include the number of occurrences in each cell
+grid <- merge(grid, birdcounts, by.x="cell", by.y="cell")
+# 
+# #Make adjustments so the output is more visually interesting
+ grid$count <- log(grid$count)
+# cutoff <- quantile(grid$count, 0.9)
+# grid <- grid %>% mutate(count=ifelse(count>cutoff,cutoff,count))
+
+#Plot everything on a flat map
+p<- ggplot() + 
+    geom_polygon(data=states, aes(x=long, y=lat, group=group), fill="white", color="black")   +
+    geom_polygon(data=grid,      aes(x=long, y=lat, group=group, fill=count), alpha=0.4)    +
+    geom_path   (data=grid,      aes(x=long, y=lat, group=group, col=count), alpha=0.4) +
+    #geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg)) +
+    scale_fill_gradient(low="yellow", high="darkorchid") + 
+    scale_color_gradient(low="yellow", high="darkorchid")
+p
+
+
+```
 
