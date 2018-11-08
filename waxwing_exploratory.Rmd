@@ -28,6 +28,9 @@ library(dggridR)
 
 waxwings <- read_tsv("data/ebd_cedwax_200708_201810_relAug-2018.txt")
 robins <- read_tsv("data/ebd_amerob_200708_201810_relAug-2018.txt")
+bluebirds <-read_tsv("data/ebd_easblu_200708_201810_relAug-2018.txt")
+warblers <- read_tsv("data/ebd_yerwar_200708_201810_relAug-2018.txt")
+mockers <- read_tsv("data/ebd_normoc_200708_201810_relAug-2018.txt")
 
 ```
 
