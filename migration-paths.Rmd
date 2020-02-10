@@ -1,0 +1,58 @@
+---
+title: "Migration-path.Rmd"
+author: "Sarah Supp"
+date: "2/10/2020"
+output: html_document
+---
+
+##Code for cedar waxwing project, modified from eBird migration project (Supp et al. 2015)
+(c) 2020, Niu and Supp
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggmap)
+library(maptools)
+library(fields)
+library(sp)
+library(raster)
+library(maps)
+library(mapdata)
+library(rgdal)
+library(raster)
+library(gamm4)
+
+load("data/Bombycilla_cedrorum.RData")
+load("data/effort.Rdata")
+load("data/locs.Rdata")
+```
+
+## merge locs with Bombycilla on POLYFID
+```{r}
+
+```
+
+## Weight Bombycilla counts by eBirder effort counts  
+```{r} 
+#TODO Supp get starter code from hb project
+
+```
+
+## Create a map of eBird effort (all years, all dates)
+```{r}
+#FIXME
+```
+
+
+## Create a map of Bombycilla counts (all years, all dates)
+```{r}
+
+```
+
+
+## Estimate migration pathway for Bombycilla each year separately
+```{r}
+#TOOD Supp get starter code from hb project
+
+```
+
