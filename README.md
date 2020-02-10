@@ -6,6 +6,7 @@ Authors: Sarah Supp, Jessy Niu
 Email: supps@denison.edu
 
 **TODO**
+*working from 
 1. merge locs.Rdata with Bombycilla_cedorum.Rdata
 2. weight Bombycilla_cedorum counts by effort.Rdata
 3. Create migration path for 2008-2019, separately by year
@@ -13,6 +14,7 @@ Email: supps@denison.edu
 
 Files:
 * waxwing_exploratory.Rmd - This file takes eBird data as input and outputs a figure used for the NSF proposal (2019)
+* migration-paths.Rmd - This file will be used to create average migration pathways for species, starting with cedar waxwing
 * hb-migration.r - This file was originally from Supp et al. 2015, and is being modified with updated packages and for the purposes of this new project. 
 * continue to add...
 
