@@ -71,7 +71,7 @@ cewa_1617 <- waxwings %>%
 amro_1617 <- robins %>%
   filter(year %in% c(2016, 2017))
 
-write_csv(cewa_1617, "data/cewa_1617.csv")
+write_csv(cewa_1617, "data/cewa_0708.csv")
 write_csv(amro_1617, "data/amro_1617.csv")
 ```
 
