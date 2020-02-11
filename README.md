@@ -2,8 +2,9 @@
 Evaluate abundance and distribution of potential birds dispersing Eastern Red Cedar seeds.
 Project is currently under development.
 
-Authors: Sarah Supp, Jessy Niu
-Email: supps@denison.edu
+**Authors:** Sarah Supp, Jessy Niu (Denison University)
+
+**Email:** supps@denison.edu
 
 **TODO**
 *working from 
@@ -15,8 +16,13 @@ Email: supps@denison.edu
 Files:
 * waxwing_exploratory.Rmd - This file takes eBird data as input and outputs a figure used for the NSF proposal (2019)
 * migration-paths.Rmd - This file will be used to create average migration pathways for species, starting with cedar waxwing
-* hb-migration.r - This file was originally from Supp et al. 2015, and is being modified with updated packages and for the purposes of this new project. 
 * continue to add...
+
+
+Old files: 
+*These contain code from a previous project, for reference (Supp et al. 2015)*
+* hb-migration.r - This file was originally from Supp et al. 2015, and pieces can be used and modified in a new file for the purposes of this new project. 
+* migration-fxns.r - This file contains source code for implementing tasts in hb-migration.r
 
 
 Data: 
