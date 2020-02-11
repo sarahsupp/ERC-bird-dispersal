@@ -32,30 +32,53 @@ We need to decide if we look at migration for ALL cewa, or just for eastern flyw
 
 ## merge locs with Bombycilla on POLYFID
 ```{r}
+#TODO: example code you could modify or test from old code (feel free to delete when done)  
+#merge data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
+  #dat_merged = merge(dat, hexdat, by.x = "POLYFID", by.y = "POLYFID")
 
 ```
 
 ## Weight Bombycilla counts by eBirder effort counts  
 ```{r} 
-#TODO Supp get starter code from hb project
+#TODO Supp get starter code from hb project - we used the wt.mean function before, from SDMTools package. You can find example in "migration-fxns.r" in the function written for AlternateMeanLocs (see also the code chunk below for Estimate migration pathway)
 
 ```
 
 ## Create a map of eBird effort (all years, all dates)
 ```{r}
-#FIXME
+#TODO: You can come up with your own methods for making a map (there are SO many), and/or you can use #       the code from "hb-migration.r" and "migration-fxns.r" as a starting point for ideas.
 ```
 
 
 ## Create a map of Bombycilla counts (all years, all dates)
 ```{r}
-
+#TODO: Make how you prefer, but feel free to plot the data as the actual locations of the birds 
+#       (from the .csv files), or to use the .Rdata files to plot the polygon center, maybe with 
+#       point sized or colored by magnitude of the count.
 ```
 
 
 ## Estimate migration pathway for Bombycilla each year separately
 ```{r}
-#TOOD Supp get starter code from hb project
+#TODO: use or modify code from "migration-fxns.r" file, AlternateMeanLocs
+#       that method used a loop to go through each year separately, 
+#       but could probably be written using dplyr or apply (purr??) to simplify and optimize
+#       I'm sure there's a more elegant way to do it. Basically, we need to calculate a weighted mean
+#       for longitue and latitude, separately. We could use the wt.mean function (pkg=SDMTools), and #       the weight would be the cedarwaxwing count/total ebirder count from each row in the merged 
+#       Bombycilla-effort dataset. I wrote the referenced code before I became a tidyverse user. 
+#       for example: wt.mean(mergedata$Longitude, mergedata$BombycillaCount/mergedata$ebirdCount)
+
+
 
 ```
+
+
+## Use GAM model to predict daily location along a smoothing line, from the weighted mean locations
+```{r}
+#TODO: Modify and update code from "migration-fxns.r" file, for EstimateDailyLocs. 
+#       Takes the new mean locations as input and outputs the smoothed migration path day by day.
+#       Can also see implemented in hb-migration.r: preds = EstimateDailyLocs(meanlocs)
+
+```
+
 
