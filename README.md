@@ -7,7 +7,7 @@ Project is currently under development.
 **Email:** supps@denison.edu
 
 **TODO**
-*working from 
+*working from migration-pathways.Rmd
 1. merge locs.Rdata with Bombycilla_cedorum.Rdata
 2. weight Bombycilla_cedorum counts by effort.Rdata
 3. Create migration path for 2008-2019, separately by year
