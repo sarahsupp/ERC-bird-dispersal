@@ -18,13 +18,16 @@ library(sp)
 library(raster)
 library(maps)
 library(mapdata)
-library(rgdal)
+library(rgdal)#FIXME
 library(raster)
 library(gamm4)
-
-load("data/Bombycilla_cedrorum.RData")
-load("data/effort.Rdata")
-load("data/locs.Rdata")
+library(tidyverse)
+library(dplyr)
+library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
+#load("data/Bombycilla_cedrorum.RData")
+#load("data/effort.Rdata")
+#load("data/locs.Rdata")
+load("data/dat_effort.RData")
 ```
 
 We need to decide if we look at migration for ALL cewa, or just for eastern flyway (103 Longitude and east). Maybe do it both ways and compare?
@@ -34,7 +37,8 @@ We need to decide if we look at migration for ALL cewa, or just for eastern flyw
 ```{r}
 #TODO: example code you could modify or test from old code (feel free to delete when done)  
 #merge data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
-  #dat_merged = merge(dat, hexdat, by.x = "POLYFID", by.y = "POLYFID")
+
+dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
 
 ```
 
@@ -42,11 +46,29 @@ We need to decide if we look at migration for ALL cewa, or just for eastern flyw
 ```{r} 
 #TODO Supp get starter code from hb project - we used the wt.mean function before, from SDMTools package. You can find example in "migration-fxns.r" in the function written for AlternateMeanLocs (see also the code chunk below for Estimate migration pathway)
 
+dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
+save(dat_effort, file = "data/dat_effort.RData")
+
+
+weighted_mean_locs <- dat_effort %>%
+  group_by(DAY) %>%
+  summarise(
+            numcells = n(), 
+            numobs = sum(count.x),
+            wtmean_lon = wt.mean(lon, count.x/count.y), #FIXME
+            wtmean_lat = wt.mean(lat, count.x/count.y), 
+            wtsd_lon <- wt.sd(lon, count.x/count.y),
+            wtsd_lon <- wt.sd(lat, count.x/count.y))
 ```
+
+
 
 ## Create a map of eBird effort (all years, all dates)
 ```{r}
 #TODO: You can come up with your own methods for making a map (there are SO many), and/or you can use #       the code from "hb-migration.r" and "migration-fxns.r" as a starting point for ideas.
+
+
+
 ```
 
 
@@ -55,6 +77,24 @@ We need to decide if we look at migration for ALL cewa, or just for eastern flyw
 #TODO: Make how you prefer, but feel free to plot the data as the actual locations of the birds 
 #       (from the .csv files), or to use the .Rdata files to plot the polygon center, maybe with 
 #       point sized or colored by magnitude of the count.
+all_states <- map_data("state")
+#states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tennessee', 'indiana', 
+#                                           'illinois', 'iowa', 'nebraska','south dakota', 'north dakota',
+#                                           'minnesota', 'wisconsin', 'missouri', 'kansas'))
+
+p <- ggplot() +
+  geom_polygon( data=all_states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
+  geom_point(data=dat_effort, aes(x=lon, y=lat), alpha=0.25, size=0.5, col="mediumpurple")  + 
+  labs(title="Cedar Waxwing locations") + 
+  theme_bw() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+p
+
 ```
 
 
