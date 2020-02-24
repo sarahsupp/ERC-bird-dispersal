@@ -18,15 +18,17 @@ library(sp)
 library(raster)
 library(maps)
 library(mapdata)
-library(rgdal)#FIXME
+library(rgdal)
 library(raster)
 library(gamm4)
 library(tidyverse)
 library(dplyr)
-library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
+#library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
 library(dggridR)
 library(geojsonio)
 library(RColorBrewer)
+library(geosphere)
+library(mgcv)
 #load("data/Bombycilla_cedrorum.RData")
 #load("data/effort.Rdata")
 #load("data/locs.Rdata")
@@ -59,10 +61,11 @@ weighted_mean_locs <- dat_effort %>%
   summarise(
             numcells = n(), 
             numobs = sum(count.x),
-            wtmean_lon = wt.mean(lon, count.x/count.y), #FIXME: New way to calculate weighted count?
-            wtmean_lat = wt.mean(lat, count.x/count.y), 
-            wtsd_lon <- wt.sd(lon, count.x/count.y),
-            wtsd_lon <- wt.sd(lat, count.x/count.y))
+            wtmean_lon = weighted.mean(lon, count.x/count.y), #FIXME: New way to calculate weighted count?
+            wtmean_lat = weighted.mean(lat, count.x/count.y)#, 
+            #wtsd_lon <- weighted.sd(lon, count.x/count.y),
+            #wtsd_lon <- weighted.sd(lat, count.x/count.y) FIXME: standard deviation
+            )
 ```
 
 ```{r}
@@ -146,6 +149,18 @@ p
 
 
 
+```
+
+```{r}
+daily_travel <- weighted_mean_locs %>%
+  arrange(DAY) %>%
+  mutate(distance = distVincentyEllipsoid(wtmean_lon, wtmean_lat)) %>% 
+  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
+#FIXME: error in distVincentyEllipsoid()
+ggplot(daily_travel, aes(DAY, distance)) + geom_line(size=1, col = "#4daf4a") + 
+  theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
+  ggtitle(paste(species, year, sep = " ")) + theme(text = element_text(size=20)) +  
+  geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
 ```
 
 
