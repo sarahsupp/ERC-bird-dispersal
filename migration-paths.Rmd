@@ -29,6 +29,7 @@ library(geojsonio)
 library(RColorBrewer)
 library(geosphere)
 library(mgcv)
+library(radiant.data)
 #load("data/Bombycilla_cedrorum.RData")
 #load("data/effort.Rdata")
 #load("data/locs.Rdata")
@@ -69,18 +70,25 @@ weighted_mean_locs <- dat_effort %>%
 ```
 
 ```{r}
-dgg <- dgconstruct( res = 8)
+dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
 dat_effort$cell <- dgGEO_to_SEQNUM(dgg, dat_effort$lon, dat_effort$lat)$seqnum
 dat_effort$cell_lat <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lat_deg 
 dat_effort$cell_lon <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lon_deg 
 
-cellcenters   <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)
+dat_effort <- dat_effort %>%
+  mutate(count_weighted = count.x/count.y)
+
+
+#cellcenters   <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)
 cewa_counts <- dat_effort %>%
   group_by(cell) %>% 
-  summarise(count=n())
-ggplot(cewa_counts, aes(x=count)) + geom_histogram(binwidth=10)
+  summarise(count_new=sum(count_weighted))
+
+ggplot(cewa_counts, aes(x=count_new)) + geom_histogram(binwidth=10)
 ```
 ## Create a map of eBird effort (all years, all dates)
+
+
 ```{r}
 #TODO: You can come up with your own methods for making a map (there are SO many), and/or you can use #       the code from "hb-migration.r" and "migration-fxns.r" as a starting point for ideas.
 
@@ -94,12 +102,12 @@ countries <- map_data("usa")
 
 ggplot() + 
   #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  geom_polygon(data=grid,      aes(x=long, y=lat, group=cell, fill=count), alpha=0.4)    +
+  geom_polygon(data=grid,      aes(x=long, y=lat, group=cell, fill=count_new), alpha=0.4)    +
   
-  #FIXME: this is still unweighted!
+  
   geom_path   (data=grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient(low="blue", high="red")
+  scale_fill_gradient2(low="blue", high="red", midpoint = 250)
 
 
 ```
@@ -162,7 +170,6 @@ ggplot(daily_travel, aes(DAY, distance)) + geom_line(size=1, col = "#4daf4a") +
   ggtitle(paste(species, year, sep = " ")) + theme(text = element_text(size=20)) +  
   geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
 ```
-
 
 ## Use GAM model to predict daily location along a smoothing line, from the weighted mean locations
 ```{r}
