@@ -67,13 +67,13 @@ weighted_mean_locs <- dat_effort %>%
 
 ```{r}
 dgg <- dgconstruct( res = 8)
-#dat_effort$cell <- dgGEO_to_SEQNUM(dgg, dat_effort$lon, dat_effort$lat)$seqnum
-#dat_effort$cell_lat <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lat_deg 
-#Wdat_effort$cell_lon <-dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lon_deg 
+dat_effort$cell <- dgGEO_to_SEQNUM(dgg, dat_effort$lon, dat_effort$lat)$seqnum
+dat_effort$cell_lat <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lat_deg 
+dat_effort$cell_lon <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lon_deg 
 
-cellcenters   <- dgSEQNUM_to_GEO(dgg, dat_effort$POLYFID)
+cellcenters   <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)
 cewa_counts <- dat_effort %>%
-  group_by(POLYFID) %>% 
+  group_by(cell) %>% 
   summarise(count=n())
 ggplot(cewa_counts, aes(x=count)) + geom_histogram(binwidth=10)
 ```
@@ -82,19 +82,19 @@ ggplot(cewa_counts, aes(x=count)) + geom_histogram(binwidth=10)
 #TODO: You can come up with your own methods for making a map (there are SO many), and/or you can use #       the code from "hb-migration.r" and "migration-fxns.r" as a starting point for ideas.
 
 #Get the grid cell boundaries for cells which had bird observations
-grid <- dgcellstogrid(dgg, dat_effort$POLYFID, frame=TRUE, wrapcells=TRUE)
+grid <- dgcellstogrid(dgg, cewa_counts$cell, frame=TRUE, wrapcells=TRUE)
 
 #Update the grid cells' properties to include the number of observations in each cell
-grid <- merge(grid, cewa_counts, by.x="cell", by.y="POLYFID")
+grid <- merge(grid, cewa_counts, by.x="cell", by.y="cell")
 #Get polygons for the spatial range and make a map of bird observations
 countries <- map_data("usa") 
 
 ggplot() + 
   #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  geom_polygon(data=grid,      aes(x=long, y=lat, group=group, fill=count), alpha=0.4)    +
+  geom_polygon(data=grid,      aes(x=long, y=lat, group=cell, fill=count), alpha=0.4)    +
   
-  #FIXME: something wrong with the long and lat of each hexagon
-  geom_path   (data=grid,      aes(x=long, y=lat, group=group), alpha=0.4, color="white") +
+  #FIXME: this is still unweighted!
+  geom_path   (data=grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
   scale_fill_gradient(low="blue", high="red")
 
@@ -115,7 +115,11 @@ all_states <- map_data("state")
 
 p <- ggplot() +
   geom_polygon( data=all_states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
-  geom_point(data=dat_effort, aes(x=lon, y=lat), alpha=0.25, size=0.5, col="mediumpurple")  + 
+  geom_polygon(data=grid,      aes(x=long, y=lat, group=cell, fill=count), alpha=0.4)    +
+  
+  geom_path   (data=grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+#  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
+  scale_fill_gradient(low="blue", high="red")
   labs(title="Cedar Waxwing locations") + 
   theme_bw() + 
   theme(axis.title.x=element_blank(),
@@ -125,6 +129,7 @@ p <- ggplot() +
         axis.text.y=element_blank(),
         axis.ticks.y=element_blank())
 p
+
 
 ```
 
