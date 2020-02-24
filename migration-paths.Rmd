@@ -25,6 +25,8 @@ library(tidyverse)
 library(dplyr)
 library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
 library(dggridR)
+library(geojsonio)
+library(RColorBrewer)
 #load("data/Bombycilla_cedrorum.RData")
 #load("data/effort.Rdata")
 #load("data/locs.Rdata")
@@ -43,7 +45,8 @@ dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
 
 ```
 
-## Weight Bombycilla counts by eBirder effort counts  
+## Weight Bombycilla counts by eBirder 
+effort counts  
 ```{r} 
 #TODO Supp get starter code from hb project - we used the wt.mean function before, from SDMTools package. You can find example in "migration-fxns.r" in the function written for AlternateMeanLocs (see also the code chunk below for Estimate migration pathway)
 
@@ -56,7 +59,7 @@ weighted_mean_locs <- dat_effort %>%
   summarise(
             numcells = n(), 
             numobs = sum(count.x),
-            wtmean_lon = wt.mean(lon, count.x/count.y), #FIXME
+            wtmean_lon = wt.mean(lon, count.x/count.y), #FIXME: New way to calculate weighted count?
             wtmean_lat = wt.mean(lat, count.x/count.y), 
             wtsd_lon <- wt.sd(lon, count.x/count.y),
             wtsd_lon <- wt.sd(lat, count.x/count.y))
@@ -64,43 +67,43 @@ weighted_mean_locs <- dat_effort %>%
 
 ```{r}
 dgg <- dgconstruct( res = 8)
-dat_effort$cell <- dgGEO_to_SEQNUM(dgg, dat_effort$lon, dat_effort$lat)$seqnum
-dat_effort$cell_lat <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lat_deg 
-dat_effort$cell_lon <-dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lon_deg 
+#dat_effort$cell <- dgGEO_to_SEQNUM(dgg, dat_effort$lon, dat_effort$lat)$seqnum
+#dat_effort$cell_lat <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lat_deg 
+#Wdat_effort$cell_lon <-dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lon_deg 
 
 cellcenters   <- dgSEQNUM_to_GEO(dgg, dat_effort$POLYFID)
 cewa_counts <- dat_effort %>%
   group_by(POLYFID) %>% 
   summarise(count=n())
+ggplot(cewa_counts, aes(x=count)) + geom_histogram(binwidth=10)
 ```
-
-```{r}
-#Get the grid cell boundaries for cells which had bird observations
-grid <- dgcellstogrid(dgg, dat_effort$POLYFID, frame=TRUE, wrapcells=TRUE)
-
-#Update the grid cells' properties to include the number of observations in each cell
-grid <- merge(dat_effort, grid, by.x="POLYFID", by.y="cell")
-#Get polygons for the spatial range and make a map of bird observations
-countries <- map_data("usa") 
-
-ggplot() + 
- # geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  geom_polygon(data=grid,      aes(x=lon, y=lat.x, group=group, fill=count.x), alpha=0.4)    +
-  geom_path   (data=grid,      aes(x=long, y=lat, group=group), alpha=0.4, color="white") +
-#  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient(low="blue", high="red")
-```
-
 ## Create a map of eBird effort (all years, all dates)
 ```{r}
 #TODO: You can come up with your own methods for making a map (there are SO many), and/or you can use #       the code from "hb-migration.r" and "migration-fxns.r" as a starting point for ideas.
 
+#Get the grid cell boundaries for cells which had bird observations
+grid <- dgcellstogrid(dgg, dat_effort$POLYFID, frame=TRUE, wrapcells=TRUE)
+
+#Update the grid cells' properties to include the number of observations in each cell
+grid <- merge(grid, cewa_counts, by.x="cell", by.y="POLYFID")
+#Get polygons for the spatial range and make a map of bird observations
+countries <- map_data("usa") 
+
+ggplot() + 
+  #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  geom_polygon(data=grid,      aes(x=long, y=lat, group=group, fill=count), alpha=0.4)    +
+  
+  #FIXME: something wrong with the long and lat of each hexagon
+  geom_path   (data=grid,      aes(x=long, y=lat, group=group), alpha=0.4, color="white") +
+#  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
+  scale_fill_gradient(low="blue", high="red")
 
 
 ```
 
 
 ## Create a map of Bombycilla counts (all years, all dates)
+
 ```{r}
 #TODO: Make how you prefer, but feel free to plot the data as the actual locations of the birds 
 #       (from the .csv files), or to use the .Rdata files to plot the polygon center, maybe with 
