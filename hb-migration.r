@@ -1,5 +1,5 @@
 #Code for eBird migration project
-# (c) 2013 -2014 Sarah Supp 
+# (c) 2013 -2014 Sarah Supp
 
 library(ggmap)
 library(maptools)

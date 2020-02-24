@@ -53,20 +53,34 @@ effort counts
 #TODO Supp get starter code from hb project - we used the wt.mean function before, from SDMTools package. You can find example in "migration-fxns.r" in the function written for AlternateMeanLocs (see also the code chunk below for Estimate migration pathway)
 
 dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
-save(dat_effort, file = "data/dat_effort.RData")
+#save(dat_effort, file = "data/dat_effort.RData")
 
 
 weighted_mean_locs <- dat_effort %>%
-  group_by(DAY) %>%
+group_by(YEAR, DAY) %>%
   summarise(
             numcells = n(), 
             numobs = sum(count.x),
-            wtmean_lon = weighted.mean(lon, count.x/count.y), #FIXME: New way to calculate weighted count?
-            wtmean_lat = weighted.mean(lat, count.x/count.y)#, 
+            wtmean_lon = weighted.mean(lon, count.x/count.y), 
+            wtmean_lat = weighted.mean(lat, count.x/count.y) 
             #wtsd_lon <- weighted.sd(lon, count.x/count.y),
-            #wtsd_lon <- weighted.sd(lat, count.x/count.y) FIXME: standard deviation
+            #wtsd_lon <- weighted.sd(lat, count.x/count.y) FIXME: weighted standard deviation
             )
 ```
+
+
+Initial plot of bird average locations for cedar waxwing species and latitude by day across years
+```{r}
+ggplot(weighted_mean_locs, aes(wtmean_lon, wtmean_lat)) +
+  geom_point(alpha=0.25) + geom_line(alpha=0.25) +
+  facet_wrap(~YEAR)
+
+ggplot(weighted_mean_locs, aes(DAY, wtmean_lat, group=YEAR)) +
+  geom_point(alpha=0.25) + geom_line(alpha=0.25) +
+  facet_wrap(~YEAR)
+```
+
+
 
 ```{r}
 dgg <- dgconstruct( res = 8)
@@ -80,6 +94,8 @@ cewa_counts <- dat_effort %>%
   summarise(count=n())
 ggplot(cewa_counts, aes(x=count)) + geom_histogram(binwidth=10)
 ```
+
+
 ## Create a map of eBird effort (all years, all dates)
 ```{r}
 #TODO: You can come up with your own methods for making a map (there are SO many), and/or you can use #       the code from "hb-migration.r" and "migration-fxns.r" as a starting point for ideas.
@@ -172,4 +188,10 @@ ggplot(daily_travel, aes(DAY, distance)) + geom_line(size=1, col = "#4daf4a") +
 
 ```
 
+
+# estimate 3 migration dates, beginning of spring, peak latitude (summer), end of fall migration
+```{r}
+# TODO: from old function Est3MigrationDates in migration-fxns
+
+```
 
