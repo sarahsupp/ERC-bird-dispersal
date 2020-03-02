@@ -139,14 +139,20 @@ all_states <- map_data("state")
 #states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tennessee', 'indiana', 
 #                                           'illinois', 'iowa', 'nebraska','south dakota', 'north dakota',
 #                                           'minnesota', 'wisconsin', 'missouri', 'kansas'))
+uw_cewa_counts <- dat_effort %>%
+  group_by(cell) %>% 
+  summarise(count_new_uw=sum(count.x))
+uw_grid <- dgcellstogrid(dgg, uw_cewa_counts$cell, frame=TRUE, wrapcells=TRUE)
+
+uw_grid <- merge(grid, uw_cewa_counts, by.x="cell", by.y="cell")
 
 p <- ggplot() +
   geom_polygon( data=all_states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
-  geom_polygon(data=grid,      aes(x=long, y=lat, group=cell, fill=count), alpha=0.4)    +
+  geom_polygon(data=uw_grid,      aes(x=long, y=lat, group=cell, fill=count_new_uw), alpha=0.4)    +
   
-  geom_path   (data=grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+  geom_path   (data=uw_grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient(low="blue", high="red")
+  scale_fill_gradient2(low="blue", high="red",midpoint = 10000 )
   labs(title="Cedar Waxwing locations") + 
   theme_bw() + 
   theme(axis.title.x=element_blank(),
