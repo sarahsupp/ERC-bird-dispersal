@@ -22,10 +22,13 @@ library(rgdal)
 library(raster)
 library(gamm4)
 library(tidyverse)
-library(dplyr)
+#library(dplyr)
 #library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
+#library(devtools)
+#install_github('r-barnes/dggridR', vignette=TRUE)
+#install_github("r-spatial/sf") #C compiler error on mac
 library(dggridR)
-library(geojsonio)
+#library(geojsonio)
 library(RColorBrewer)
 library(geosphere)
 library(mgcv)
@@ -54,6 +57,7 @@ effort counts
 #TODO Supp get starter code from hb project - we used the wt.mean function before, from SDMTools package. You can find example in "migration-fxns.r" in the function written for AlternateMeanLocs (see also the code chunk below for Estimate migration pathway)
 
 dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
+dat_effort$DAY <- as.numeric(dat_effort$DAY)
 #save(dat_effort, file = "data/dat_effort.RData")
 
 
@@ -70,7 +74,25 @@ group_by(YEAR, DAY) %>%
 ```
 
 
-Initial plot of bird average locations for cedar waxwing species and latitude by day across years
+Count number of records by year *for 2020 NSF report*
+```{r}
+counts <- dat_effort %>%
+  group_by(YEAR) %>%
+  tally()
+
+ggplot(counts, aes(YEAR, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number of binned observations") + xlab("Year")
+
+nPOLYFID <- dat_effort %>%
+  group_by(YEAR) %>%
+  summarise(n=n_distinct(POLYFID))
+
+ggplot(nPOLYFID, aes(YEAR, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number of unique grid cells") + xlab("Year")
+```
+
+
+Initial plot of bird average locations for cedar waxwing species and latitude by day across years *for 2020 NSF report*
 ```{r}
 ggplot(weighted_mean_locs, aes(wtmean_lon, wtmean_lat)) +
   geom_point(alpha=0.25) + geom_line(alpha=0.25) +
@@ -79,6 +101,11 @@ ggplot(weighted_mean_locs, aes(wtmean_lon, wtmean_lat)) +
 ggplot(weighted_mean_locs, aes(DAY, wtmean_lat, group=YEAR)) +
   geom_point(alpha=0.25) + geom_line(alpha=0.25) +
   facet_wrap(~YEAR)
+
+ggplot(weighted_mean_locs, aes(as.numeric(DAY), wtmean_lat, group=YEAR)) +
+  stat_smooth(aes(col=as.numeric(YEAR))) + ylab("Weighted mean latitude") +
+  xlab("Day of the year") + 
+  scale_x_continuous(breaks = seq(1, 366, by = 15))
 ```
 
 
@@ -96,9 +123,18 @@ dat_effort <- dat_effort %>%
 #cellcenters   <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)
 cewa_counts <- dat_effort %>%
   group_by(cell) %>% 
-  summarise(count_new=sum(count_weighted))
+  summarise(sum_weighted_count=sum(count_weighted),
+            mean_weighted_count=mean(count_weighted),
+            sum_count=sum(count.x))
 
-ggplot(cewa_counts, aes(x=count_new)) + geom_histogram(binwidth=10)
+ggplot(cewa_counts, aes(x=sum_weighted_count)) +
+  geom_histogram(binwidth=10)
+
+ggplot(cewa_counts, aes(x=mean_weighted_count)) +
+  geom_histogram(binwidth=0.01)
+
+ggplot(cewa_counts, aes(x=sum_count)) +
+  geom_histogram(binwidth=100)
 ```
 
 
@@ -113,18 +149,21 @@ grid <- dgcellstogrid(dgg, cewa_counts$cell, frame=TRUE, wrapcells=TRUE)
 
 #Update the grid cells' properties to include the number of observations in each cell
 grid <- merge(grid, cewa_counts, by.x="cell", by.y="cell")
+#zoom to just eastern USA
+grid <- grid %>%
+  filter(long >= -103,
+         lat >= 25)
 #Get polygons for the spatial range and make a map of bird observations
 countries <- map_data("usa") 
 
 ggplot() + 
   #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  geom_polygon(data=grid,      aes(x=long, y=lat, group=cell, fill=count_new), alpha=0.4)    +
-  
-  
-  geom_path   (data=grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+  geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), alpha=0.4)    +
+  geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient2(low="blue", high="red", midpoint = 250)
-
+  scale_fill_gradient(low="gray90", high="black") + 
+ theme_bw()
+  #scale_fill_gradient2(low="blue", high="red", midpoint = 250)
 
 ```
 
@@ -152,7 +191,7 @@ p <- ggplot() +
   
   geom_path   (data=uw_grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient2(low="blue", high="red",midpoint = 10000 )
+  scale_fill_gradient2(low="blue", high="red",midpoint = 10000 ) +
   labs(title="Cedar Waxwing locations") + 
   theme_bw() + 
   theme(axis.title.x=element_blank(),
@@ -167,7 +206,7 @@ p
 ```
 
 
-## Estimate migration pathway for Bombycilla each year separately
+## Estimate migration pathway for Bombycilla each year separately - DONE (ABOVE)
 ```{r}
 #TODO: use or modify code from "migration-fxns.r" file, AlternateMeanLocs
 #       that method used a loop to go through each year separately, 
@@ -181,23 +220,42 @@ p
 
 ```
 
-```{r}
-daily_travel <- weighted_mean_locs %>%
-  arrange(DAY) %>%
-  mutate(distance = distVincentyEllipsoid(wtmean_lon, wtmean_lat)) %>% 
-  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
-#FIXME: error in distVincentyEllipsoid()
-ggplot(daily_travel, aes(DAY, distance)) + geom_line(size=1, col = "#4daf4a") + 
-  theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
-  ggtitle(paste(species, year, sep = " ")) + theme(text = element_text(size=20)) +  
-  geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
-```
+
 
 ## Use GAM model to predict daily location along a smoothing line, from the weighted mean locations
 ```{r}
 #TODO: Modify and update code from "migration-fxns.r" file, for EstimateDailyLocs. 
 #       Takes the new mean locations as input and outputs the smoothed migration path day by day.
 #       Can also see implemented in hb-migration.r: preds = EstimateDailyLocs(meanlocs)
+
+EstimateDailyLocs = function(dat) {
+  #input a dataframe with the mean daily locations for the year, and uses a GAM smoothing function
+  # to estimate daily occurrence lat and long separately. Binds the fitted lat and long values together,
+  # with standard errors. Returns a dataframe.
+      #check choice of k and gamma in the GAM function - same as FAL 2013
+  #find the best fit line for the data, for longitude and latitude separately
+  lon_gam = gam(wtmean_lon ~ s(DAY, k=20), data = weighted_mean_locs, gamma = 1.5) # TODO: consider upping gamma? and changing basis? (adaptive spline or penalized spline?)
+  lat_gam = gam(wtmean_lat ~ s(DAY, k=20), data = dat, gamma = 1.5)
+  
+  #predict values along the smoothing line
+  xpred = data.frame(DAY=sort(unique(dat$DAY)))
+  lonpred = predict(lon_gam, newdata = xpred, type="response", se.fit=T)
+  latpred = predict(lat_gam, newdata = xpred, type="response", se.fit=T)
+  
+  #bring the data back together
+  preds =  data.frame(DAY = xpred$DAY, lon = lonpred$fit, 
+                      lat = latpred$fit, lon_se = lonpred$se.fit, lat_se = latpred$se.fit)
+  
+  return(preds)
+}
+
+#FIXME: How to elegantly apply this to each year separately? Or should I do it continuously for the whole dataset, in which case I need to create a date variable?
+dailylocs <- EstimateDailyLocs(weighted_mean_locs)
+
+ggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1) + 
+  geom_vline(xintercept=c(101, 209, 362), col="gray30") +
+  xlab("Day of Year") + ylab("weighted mean latitude") +
+  theme_bw()
 
 ```
 
@@ -206,5 +264,76 @@ ggplot(daily_travel, aes(DAY, distance)) + geom_line(size=1, col = "#4daf4a") +
 ```{r}
 # TODO: from old function Est3MigrationDates in migration-fxns
 
+Est3MigrationDates = function(dat){
+  #takes in predicted centroids for migration path, and estimates the beginning of spring migration,
+  # the end of fall migration, and the date where the species reaches maximum latitude.
+  
+  #GAM model on predicted latitude of centroids by julian date
+  gam1 = gam(wtmean_lat ~ s(DAY, k = 40), data = dat, gamma = 1.5) 
+  xpred = data.frame(DAY = c(1:max(dat$DAY)))
+  dpred = predict(gam1, newdata=xpred, type="response", se.fit=TRUE)
+  
+  ## cutoff based on 2 SE for spring and fall combined, following La Sorte et al. 2013 methods
+  # Spring migration should be between 11 Jan and 9 July
+  # Fall migration should be between 8 August and 21 Dec
+  spring_threshold = min(dpred$se.fit[c(1:120)]*2.56 + dpred$fit[c(1:120)])
+  fall_threshold = min(dpred$se.fit[c(280:365)]*2.56 + dpred$fit[c(280:365)])
+  spring_index = 11:190
+  fall_index = 220:355
+  spring_max = spring_index[which.max(dpred$fit[spring_index])]
+  fall_max = fall_index[which.max(dpred$fit[fall_index])]
+  
+  #identify beginning of spring migration
+  tst = 1000
+  spring_index2 = spring_max
+  while(tst > spring_threshold){
+    tst = dpred$fit[spring_index2]
+    if(spring_index2 == 1) break
+    spring_index2 = spring_index2 - 1
+  }
+  spring_begin = spring_index2 + 1
+  
+  #identify end of fall migration
+  tst <- 1000
+  fall_index2 = fall_max
+  while(tst > fall_threshold){
+    tst = dpred$fit[fall_index2]
+    if(fall_index2==365) break
+    fall_index2 <- fall_index2 + 1
+  }
+  fall_end <- fall_index2 - 1
+  
+  max_lat =   xpred$DAY[which.max(dpred$fit[xpred$DAY])]
+  
+  dates = c(spring_begin, max_lat, fall_end)
+  return(dates)
+}
+
+dates <- Est3MigrationDates(weighted_mean_locs)
 ```
 
+Find the distances traveled between the mean locations 
+#FIXME: I should be using the predicted locations here, not the raw weighted ones
+```{r}
+#order everything by year and day of year
+weighted_mean_locs <- weighted_mean_locs %>%
+  group_by(YEAR)%>%
+  arrange(YEAR,DAY)
+
+#FIXME: Check values. Some of these seem WAY too high
+#calculate sequential distances, adding NA for the first record
+distances <- append(NA, distVincentyEllipsoid(as.matrix(weighted_mean_locs[,c(5,6)])))/1000
+
+# add column to original dataset
+weighted_mean_locs$distance <- distances
+
+
+#  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
+
+#FIXME: 
+ggplot(weighted_mean_locs, aes(as.numeric(DAY), distance, group=YEAR)) + geom_line() + 
+  theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
+  theme(text = element_text(size=20)) + 
+  facet_wrap(~YEAR)#+  
+  #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
+```
