@@ -59,8 +59,10 @@ effort counts
 dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
 dat_effort$DAY <- as.numeric(dat_effort$DAY)
 #save(dat_effort, file = "data/dat_effort.RData")
+```
 
-
+##Weight mean locations
+```{r} 
 weighted_mean_locs <- dat_effort %>%
 group_by(YEAR, DAY) %>%
   summarise(
