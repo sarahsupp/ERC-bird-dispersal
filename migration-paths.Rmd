@@ -33,35 +33,33 @@ library(RColorBrewer)
 library(geosphere)
 library(mgcv)
 library(radiant.data)
+```
+
+If starting from scratch, input the three raw data files and 
+```{r}
 #load("data/Bombycilla_cedrorum.RData")
 #load("data/effort.Rdata")
 #load("data/locs.Rdata")
-load("data/dat_effort.RData")
-```
 
-We need to decide if we look at migration for ALL cewa, or just for eastern flyway (103 Longitude and east). Maybe do it both ways and compare?
-
-
-## merge locs with Bombycilla on POLYFID
-```{r}
-#TODO: example code you could modify or test from old code (feel free to delete when done)  
-#merge data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
-
-dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
-
-```
-
-## Weight Bombycilla counts by eBirder 
-effort counts  
-```{r} 
-#TODO Supp get starter code from hb project - we used the wt.mean function before, from SDMTools package. You can find example in "migration-fxns.r" in the function written for AlternateMeanLocs (see also the code chunk below for Estimate migration pathway)
-
-dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
-dat_effort$DAY <- as.numeric(dat_effort$DAY)
+# #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
+# dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
+# 
+# #now merge with the third data file for effort
+# dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
+# dat_effort$DAY <- as.numeric(dat_effort$DAY)
 #save(dat_effort, file = "data/dat_effort.RData")
 ```
 
-##Weight mean locations
+If you have already completed the initial steps and have saved out the effort file, start here instead, with loading it.
+```{r}
+load("data/dat_effort.RData")
+```
+
+TODO: We need to decide if we look at migration for ALL cewa, or just for eastern flyway (103 Longitude and east). Maybe do it both ways and compare?
+
+
+## Weight mean locations 
+Weight Bombycilla counts by eBirder effort counts for each cell
 ```{r} 
 weighted_mean_locs <- dat_effort %>%
 group_by(YEAR, DAY) %>%
@@ -71,13 +69,14 @@ group_by(YEAR, DAY) %>%
             wtmean_lon = weighted.mean(lon, count.x/count.y), 
             wtmean_lat = weighted.mean(lat, count.x/count.y) 
             #wtsd_lon <- weighted.sd(lon, count.x/count.y),
-            #wtsd_lon <- weighted.sd(lat, count.x/count.y) FIXME: weighted standard deviation
+            #wtsd_lon <- weighted.sd(lat, count.x/count.y) FIXME: add weighted standard deviation
             )
 ```
 
 
 Count number of records by year *for 2020 NSF report*
 ```{r}
+#count total number of records across the years. (increasing strongly)
 counts <- dat_effort %>%
   group_by(YEAR) %>%
   tally()
@@ -85,12 +84,21 @@ counts <- dat_effort %>%
 ggplot(counts, aes(YEAR, n)) + geom_bar(stat="identity") + 
   theme_bw() + ylab("Number of binned observations") + xlab("Year")
 
+#checking how many unique grid cells logged an observation in each year (relatively flat)
 nPOLYFID <- dat_effort %>%
   group_by(YEAR) %>%
   summarise(n=n_distinct(POLYFID))
 
 ggplot(nPOLYFID, aes(YEAR, n)) + geom_bar(stat="identity") + 
   theme_bw() + ylab("Number of unique grid cells") + xlab("Year")
+
+#checking how many days per year have at least 1 observation (ALL of them)
+nDAYSofyear <- dat_effort %>%
+  group_by(YEAR) %>%
+  summarise(n=n_distinct(DAY))
+
+ggplot(nDAYSofyear, aes(YEAR, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number of unique days per year") + xlab("Year")
 ```
 
 
