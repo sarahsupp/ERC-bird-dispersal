@@ -233,10 +233,12 @@ p
 
 
 ## Use GAM model to predict daily location along a smoothing line, from the weighted mean locations
+
 ```{r}
 #TODO: Modify and update code from "migration-fxns.r" file, for EstimateDailyLocs. 
 #       Takes the new mean locations as input and outputs the smoothed migration path day by day.
 #       Can also see implemented in hb-migration.r: preds = EstimateDailyLocs(meanlocs)
+weighted_mean_locs$DAY <- as.numeric(weighted_mean_locs$DAY)
 
 EstimateDailyLocs = function(dat) {
   #input a dataframe with the mean daily locations for the year, and uses a GAM smoothing function
@@ -268,7 +270,6 @@ ggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1) +
   theme_bw()
 
 ```
-
 
 # estimate 3 migration dates, beginning of spring, peak latitude (summer), end of fall migration
 ```{r}
