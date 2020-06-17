@@ -55,7 +55,10 @@ If you have already completed the initial steps and have saved out the effort fi
 load("data/dat_effort.RData")
 ```
 
-TODO: We need to decide if we look at migration for ALL cewa, or just for eastern flyway (103 Longitude and east). Maybe do it both ways and compare?
+TODO: We should filter data to only include the eastern flyway >=103 Longitude
+```{r}
+#TODO
+```
 
 
 ## Weight mean locations 
