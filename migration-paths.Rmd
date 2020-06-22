@@ -266,7 +266,7 @@ EstimateDailyLocs = function(dat) {
 dailylocs <- EstimateDailyLocs(weighted_mean_locs)
 
 ggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1) + 
-  geom_vline(xintercept=c(101, 209, 362), col="gray30") +
+  geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts
   xlab("Day of Year") + ylab("weighted mean latitude") +
   theme_bw()
 
@@ -326,7 +326,7 @@ dates <- Est3MigrationDates(weighted_mean_locs)
 ```
 
 Find the distances traveled between the mean locations 
-#FIXME: I should be using the predicted locations here, not the raw weighted ones
+#FIXME: I should be using the predicted locations (daily locs) here, not the raw weighted ones
 ```{r}
 #order everything by year and day of year
 weighted_mean_locs <- weighted_mean_locs %>%
