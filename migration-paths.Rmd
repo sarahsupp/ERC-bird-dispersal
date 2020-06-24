@@ -55,9 +55,10 @@ If you have already completed the initial steps and have saved out the effort fi
 load("data/dat_effort.RData")
 ```
 
-TODO: We should filter data to only include the eastern flyway >=103 Longitude
+[La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
 ```{r}
-#TODO
+dat_effort <- dat_effort %>%
+  filter(lon >=-103)
 ```
 
 
