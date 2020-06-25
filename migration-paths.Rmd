@@ -251,8 +251,6 @@ In the GAM, we can use the weighted mean locations (latitude and longitude) that
 #TODO: Modify and update code from "migration-fxns.r" file, for EstimateDailyLocs. 
 #       Takes the new mean locations as input and outputs the smoothed migration path day by day.
 #       Can also see implemented in hb-migration.r: preds = EstimateDailyLocs(meanlocs)
-weighted_mean_locs$DAY <- as.numeric(weighted_mean_locs$DAY)
-weighted_mean_locs$YEAR <- as.numeric(weighted_mean_locs$YEAR)
 
 EstimateDailyLocs = function(dat) {
   #input a dataframe with the mean daily locations for the year, and uses a GAM smoothing function
