@@ -36,6 +36,7 @@ library(radiant.data)
 library(rnaturalearth)
 #devtools::install_github("ropensci/rnaturalearthhires")
 library(rnaturalearthhires)
+library(lubridate)
 ```
 
 If starting from scratch, input the three raw data files and 
@@ -69,6 +70,7 @@ dat_effort <- dat_effort %>%
 Weight Bombycilla counts by eBirder effort counts for each cell
 ```{r} 
 weighted_mean_locs <- dat_effort %>%
+mutate(YEAR = as.numeric(YEAR), DAY = as.numeric(DAY)) %>% 
 group_by(YEAR, DAY) %>%
   summarise(
             numcells = n(), 
@@ -78,6 +80,19 @@ group_by(YEAR, DAY) %>%
             wtsd_lon <- weighted.sd(lon, count.x/count.y),
             wtsd_lon <- weighted.sd(lat, count.x/count.y)
             )
+```
+
+
+## Add more detail to dates in the weighted mean location dataframe
+a DATE and MONTH formatted column to mean_daily_locs dataframe
+**It is important to note when converting to Dates that for this data type only (why!?!) R uses a 0 based index. This means Day 1 is 0. So to convert our "day of year" integers to a Year-Month-Day format, we need to use DAY-1 and YEAR.**
+```{r}
+weighted_mean_locs <- weighted_mean_locs %>%
+  mutate(DAYm1 = DAY-1,
+         origin = paste0(YEAR, "-01-01"),
+         DATE = as.Date(DAYm1, origin=origin), 
+         MONTH = month(DATE)) %>%
+  select(-DAYm1, -origin)
 ```
 
 
@@ -225,22 +240,9 @@ p
 
 
 ## Estimate migration pathway for Bombycilla each year separately using GAMs
-```{r}
-#TODO: use or modify code from "migration-fxns.r" file, AlternateMeanLocs
-#       that method used a loop to go through each year separately, 
-#       but could probably be written using dplyr or apply (purr??) to simplify and optimize
-#       I'm sure there's a more elegant way to do it. Basically, we need to calculate a weighted mean
-#       for longitue and latitude, separately. We could use the wt.mean function (pkg=SDMTools), and #       the weight would be the cedarwaxwing count/total ebirder count from each row in the merged 
-#       Bombycilla-effort dataset. I wrote the referenced code before I became a tidyverse user. 
-#       for example: wt.mean(mergedata$Longitude, mergedata$BombycillaCount/mergedata$ebirdCount)
+Use GAM model to predict daily location along a smoothing line, from the weighted mean locations. Daily location should be calculated for each year separately, but could probably be written using dplyr or apply (purr??) to simplify and optimize (used a series of for loops in 2014 code instead).
 
-
-
-```
-
-
-
-## Use GAM model to predict daily location along a smoothing line, from the weighted mean locations
+In the GAM, we can use the weighted mean locations (latitude and longitude) that we have already calculated above. These become the inputs to the gam model, which finds the predicted (smooth) migration path for each day. The predicted (fitted) values become the migration path for the species, which we will then use to estimate start of spring, peak latitude (breeding), and end of autumn migration. Between end Autumn migration and begin of Spring migration, is the expected time that most individual birds are on their wintering grounds and not actively migrating. 
 ```{r}
 #TODO: Modify and update code from "migration-fxns.r" file, for EstimateDailyLocs. 
 #       Takes the new mean locations as input and outputs the smoothed migration path day by day.
@@ -263,8 +265,8 @@ EstimateDailyLocs = function(dat) {
   latpred = predict(lat_gam, newdata = xpred, type="response", se.fit=T)
   
   #bring the data back together
-  preds =  data.frame(DAY = xpred$DAY, lon = lonpred$fit, 
-                      lat = latpred$fit, lon_se = lonpred$se.fit, lat_se = latpred$se.fit)
+  preds =  data.frame(DAY = xpred$DAY, pred_lon = lonpred$fit, 
+                      pred_lat = latpred$fit, lon_se = lonpred$se.fit, lat_se = latpred$se.fit)
   
   return(preds)
 }
@@ -272,9 +274,14 @@ EstimateDailyLocs = function(dat) {
 #FIXME: How to elegantly apply this to each year separately? Or should I do it continuously for the whole dataset, in which case I need to create a date variable?
 dailylocs <- EstimateDailyLocs(weighted_mean_locs)
 
-ggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1) + 
+ggplot(dailylocs, aes(DAY, pred_lat)) + geom_line(size=1) + 
   geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts
-  xlab("Day of Year") + ylab("weighted mean latitude") +
+  xlab("Day of Year") + ylab("predicted latitude centroid") +
+  theme_bw()
+
+#cool! Spring migration really stands out at the widely spaced dots. This means the species is moving rapidly across the landscape during these 2-3 weeks.
+ggplot(dailylocs, (aes(pred_lon, pred_lat))) + geom_point() + 
+  xlab("predicted latitude centroid") + ylab("predicted longitude centroid") +
   theme_bw()
 
 ```
