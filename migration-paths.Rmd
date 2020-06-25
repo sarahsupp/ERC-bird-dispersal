@@ -55,7 +55,7 @@ If you have already completed the initial steps and have saved out the effort fi
 load("data/dat_effort.RData")
 ```
 
-[La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
+[La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on *eastern and central* populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
 ```{r}
 dat_effort <- dat_effort %>%
   filter(lon >=-103)
@@ -71,9 +71,9 @@ group_by(YEAR, DAY) %>%
             numcells = n(), 
             numobs = sum(count.x),
             wtmean_lon = weighted.mean(lon, count.x/count.y), 
-            wtmean_lat = weighted.mean(lat, count.x/count.y) 
-            #wtsd_lon <- weighted.sd(lon, count.x/count.y),
-            #wtsd_lon <- weighted.sd(lat, count.x/count.y) FIXME: add weighted standard deviation
+            wtmean_lat = weighted.mean(lat, count.x/count.y), 
+            wtsd_lon <- weighted.sd(lon, count.x/count.y),
+            wtsd_lon <- weighted.sd(lat, count.x/count.y)
             )
 ```
 
@@ -123,10 +123,12 @@ ggplot(weighted_mean_locs, aes(as.numeric(DAY), wtmean_lat, group=YEAR)) +
 ```
 
 
-
+This section generates the icosahedron cells and assigns the observations, weighted by total eBirder effort, for each cell in each day in each year, separately.
 ```{r}
-dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
-dat_effort$cell <- dgGEO_to_SEQNUM(dgg, dat_effort$lon, dat_effort$lat)$seqnum
+dgg <- dgconstruct(project = "FULLER", aperture = 4, 
+                   topology = "HEXAGON", res = 6)
+dat_effort$cell <- dgGEO_to_SEQNUM(dgg, dat_effort$lon, 
+                                   dat_effort$lat)$seqnum
 dat_effort$cell_lat <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lat_deg 
 dat_effort$cell_lon <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lon_deg 
 
@@ -153,11 +155,8 @@ ggplot(cewa_counts, aes(x=sum_count)) +
 
 
 ## Create a map of eBird effort (all years, all dates)
-
-
+Plots the weighted observations of the species (Cewa) by icosahedron grid cells across Central and Eastern North America.
 ```{r}
-#TODO: You can come up with your own methods for making a map (there are SO many), and/or you can use #       the code from "hb-migration.r" and "migration-fxns.r" as a starting point for ideas.
-
 #Get the grid cell boundaries for cells which had bird observations
 grid <- dgcellstogrid(dgg, cewa_counts$cell, frame=TRUE, wrapcells=TRUE)
 
