@@ -84,7 +84,8 @@ group_by(YEAR, DAY) %>%
 
 
 ## Add more detail to dates in the weighted mean location dataframe
-a DATE and MONTH formatted column to mean_daily_locs dataframe
+A DATE and MONTH formatted column to mean_daily_locs dataframe.
+An ID column is also added, which is an integer of each of the dates in order, 1-4383.
 **It is important to note when converting to Dates that for this data type only (why!?!) R uses a 0 based index. This means Day 1 is 0. So to convert our "day of year" integers to a Year-Month-Day format, we need to use DAY-1 and YEAR.**
 ```{r}
 weighted_mean_locs <- weighted_mean_locs %>%
@@ -92,6 +93,9 @@ weighted_mean_locs <- weighted_mean_locs %>%
          origin = paste0(YEAR, "-01-01"),
          DATE = as.Date(DAYm1, origin=origin), 
          MONTH = month(DATE)) %>%
+  arrange(DATE) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
   select(-DAYm1, -origin)
 ```
 
