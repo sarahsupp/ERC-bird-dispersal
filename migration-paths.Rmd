@@ -33,6 +33,9 @@ library(RColorBrewer)
 library(geosphere)
 library(mgcv)
 library(radiant.data)
+library(rnaturalearth)
+#devtools::install_github("ropensci/rnaturalearthhires")
+library(rnaturalearthhires)
 ```
 
 If starting from scratch, input the three raw data files and 
@@ -187,7 +190,10 @@ ggplot() +
 #TODO: Make how you prefer, but feel free to plot the data as the actual locations of the birds 
 #       (from the .csv files), or to use the .Rdata files to plot the polygon center, maybe with 
 #       point sized or colored by magnitude of the count.
-all_states <- map_data("state")
+#all_states <- map_data("state")
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada"))
+
+
 #states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tennessee', 'indiana', 
 #                                           'illinois', 'iowa', 'nebraska','south dakota', 'north dakota',
 #                                           'minnesota', 'wisconsin', 'missouri', 'kansas'))
@@ -199,10 +205,11 @@ uw_grid <- dgcellstogrid(dgg, uw_cewa_counts$cell, frame=TRUE, wrapcells=TRUE)
 uw_grid <- merge(grid, uw_cewa_counts, by.x="cell", by.y="cell")
 
 p <- ggplot() +
-  geom_polygon( data=all_states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
+  geom_polygon( data=state_prov, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
   geom_polygon(data=uw_grid,      aes(x=long, y=lat, group=cell, fill=count_new_uw), alpha=0.4)    +
   
-  geom_path   (data=uw_grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+  geom_path(data=uw_grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+  xlim(-102,-52) +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
   scale_fill_gradient2(low="blue", high="red",midpoint = 10000 ) +
   labs(title="Cedar Waxwing locations") + 
@@ -217,7 +224,7 @@ p
 ```
 
 
-## Estimate migration pathway for Bombycilla each year separately - DONE (ABOVE)
+## Estimate migration pathway for Bombycilla each year separately using GAMs
 ```{r}
 #TODO: use or modify code from "migration-fxns.r" file, AlternateMeanLocs
 #       that method used a loop to go through each year separately, 
