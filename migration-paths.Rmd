@@ -333,7 +333,7 @@ EstimateDailyLocs_year = function(dat) {
    
    preds =  data.frame(DAY = xpred$DAY, lon = lonpred$fit, 
                         lat = latpred$fit, lon_se = lonpred$se.fit, lat_se = latpred$se.fit)
-  df <- data.frame(append(df, preds))
+  df <- data.frame(bind_rows(df, preds))
  
   }
   return(df)
