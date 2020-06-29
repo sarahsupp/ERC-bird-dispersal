@@ -277,10 +277,15 @@ ggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1) +
 
 #Each year per graph
 ```{r}
-x <- c(2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019)
+weighted_mean_locs$DAY <- as.numeric(weighted_mean_locs$DAY)
+weighted_mean_locs$YEAR <- as.numeric(weighted_mean_locs$YEAR)
 
-df <- data.frame(DAY = 0, lon = 0, lat = 0, lon_se = 0, lat_se = 0, YEAR =0)
 EstimateDailyLocs_year = function(dat) {
+  
+  x <- c(2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019)
+
+  df <- data.frame(DAY = 0, lon = 0, lat = 0, lon_se = 0, lat_se = 0, YEAR =0)
+  
   for (i in x) {
    sub_weighted_mean_locs <- 
      dat %>%
