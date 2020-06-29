@@ -35,7 +35,7 @@ library(mgcv)
 library(radiant.data)
 ```
 
-If starting from scratch, input the three raw data files and 
+If starting from scratch, input the three raw data files and merge together.
 ```{r}
 #load("data/Bombycilla_cedrorum.RData")
 #load("data/effort.Rdata")
@@ -282,7 +282,7 @@ weighted_mean_locs$YEAR <- as.numeric(weighted_mean_locs$YEAR)
 
 EstimateDailyLocs_year = function(dat) {
   
-  x <- c(2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019)
+  x <- c(2008:2019)
 
   df <- data.frame(DAY = 0, lon = 0, lat = 0, lon_se = 0, lat_se = 0, YEAR =0)
   
@@ -310,14 +310,50 @@ EstimateDailyLocs_year = function(dat) {
 dailylocs_year <- EstimateDailyLocs_year(weighted_mean_locs)
 
 ggplot(dailylocs_year, aes(DAY, lat)) + geom_line(size=1) + 
-  geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts
+  # geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts with dates
   facet_wrap( ~ YEAR, ncol=3)+ xlab("Day of Year") + ylab("weighted mean latitude") +
   theme_bw()
 ```
 
 
+Find the distances traveled between the mean locations. 
+The first day distance will be "wrong"" for all years, and it can be omitted after the calculation. 
+#FIXME: I should be using the predicted locations (daily locs) here, not the raw weighted ones
+```{r}
+#order everything by year and day of year
+#dailylocs_order<- dailylocs %>%
+ # group_by(YEAR)%>%
+  #arrange(YEAR,DAY)
+
+#FIXME: Check values. Some of these seem WAY too high
+#calculate sequential distances, adding NA for the first record
+distances <- append(NA, distVincentyEllipsoid(as.matrix(dailylocs_year[,c(2,3)])))/1000
+
+# add column to original dataset
+dailylocs_year$distance <- distances
+
+
+#  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
+
+#FIXME: 
+ggplot(dailylocs_year, aes(as.numeric(DAY), distance, group=YEAR)) + geom_line() + 
+  theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
+  theme(text = element_text(size=20)) + 
+  facet_wrap(~YEAR)#+  
+  #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
+```
+
+
+Use the median of the top 5 migration speeds for each year separately, as the estimated maximum migration speed (km/day) for the species. 
+```{r}
+
+```
+
+
 
 # estimate 3 migration dates, beginning of spring, peak latitude (summer), end of fall migration
+This will need some editing to work on each year separately. Ideally a resulting data frame with columns for year, begin_spring, peak_latitude, end_autumn
+Ask Dr. Supp if you have questions :)
 ```{r}
 # TODO: from old function Est3MigrationDates in migration-fxns
 
@@ -369,28 +405,3 @@ Est3MigrationDates = function(dat){
 dates <- Est3MigrationDates(weighted_mean_locs)
 ```
 
-Find the distances traveled between the mean locations 
-#FIXME: I should be using the predicted locations (daily locs) here, not the raw weighted ones
-```{r}
-#order everything by year and day of year
-#dailylocs_order<- dailylocs %>%
- # group_by(YEAR)%>%
-  #arrange(YEAR,DAY)
-
-#FIXME: Check values. Some of these seem WAY too high
-#calculate sequential distances, adding NA for the first record
-distances <- append(NA, distVincentyEllipsoid(as.matrix(dailylocs_year[,c(2,3)])))/1000
-
-# add column to original dataset
-dailylocs_year$distance <- distances
-
-
-#  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
-
-#FIXME: 
-ggplot(dailylocs_year, aes(as.numeric(DAY), distance, group=YEAR)) + geom_line() + 
-  theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
-  theme(text = element_text(size=20)) + 
-  facet_wrap(~YEAR)#+  
-  #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
-```
