@@ -236,45 +236,6 @@ p
 
 ## Use GAM model to predict daily location along a smoothing line, from the weighted mean locations
 
-#All year in one graph
-```{r}
-#TODO: Modify and update code from "migration-fxns.r" file, for EstimateDailyLocs. 
-#       Takes the new mean locations as input and outputs the smoothed migration path day by day.
-#       Can also see implemented in hb-migration.r: preds = EstimateDailyLocs(meanlocs)
-weighted_mean_locs$DAY <- as.numeric(weighted_mean_locs$DAY)
-weighted_mean_locs$YEAR <- as.numeric(weighted_mean_locs$YEAR)
-
-EstimateDailyLocs = function(dat) {
-  #input a dataframe with the mean daily locations for the year, and uses a GAM smoothing function
-  # to estimate daily occurrence lat and long separately. Binds the fitted lat and long values together,
-  # with standard errors. Returns a dataframe.
-      #check choice of k and gamma in the GAM function - same as FAL 2013
-  #find the best fit line for the data, for longitude and latitude separately
-  lon_gam = gam(wtmean_lon ~ s(DAY, k=20), data = weighted_mean_locs, gamma = 1.5) # TODO: consider upping gamma? and changing basis? (adaptive spline or penalized spline?)
-  lat_gam = gam(wtmean_lat ~ s(DAY, k=20), data = dat, gamma = 1.5)
-  
-  #predict values along the smoothing line
-  xpred = data.frame(DAY=sort(unique(dat$DAY)))
-  lonpred = predict(lon_gam, newdata = xpred, type="response", se.fit=T)
-  latpred = predict(lat_gam, newdata = xpred, type="response", se.fit=T)
-  
-  #bring the data back together
-  preds =  data.frame(DAY = xpred$DAY, lon = lonpred$fit, 
-                      lat = latpred$fit, lon_se = lonpred$se.fit, lat_se = latpred$se.fit)
-  
-  return(preds)
-}
-
-#FIXME: How to elegantly apply this to each year separately? Or should I do it continuously for the whole dataset, in which case I need to create a date variable?
-dailylocs <- EstimateDailyLocs(weighted_mean_locs)
-
-ggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1) + 
-  geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts
-  xlab("Day of Year") + ylab("weighted mean latitude") +
-  theme_bw()
-
-```
-
 #Each year per graph
 ```{r}
 weighted_mean_locs$DAY <- as.numeric(weighted_mean_locs$DAY)
