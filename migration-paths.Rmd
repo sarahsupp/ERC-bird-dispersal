@@ -33,6 +33,10 @@ library(RColorBrewer)
 library(geosphere)
 library(mgcv)
 library(radiant.data)
+library(rnaturalearth)
+#devtools::install_github("ropensci/rnaturalearthhires")
+library(rnaturalearthhires)
+library(lubridate)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
@@ -75,6 +79,22 @@ group_by(YEAR, DAY) %>%
             #wtsd_lon <- weighted.sd(lon, count.x/count.y),
             #wtsd_lon <- weighted.sd(lat, count.x/count.y) FIXME: add weighted standard deviation
             )
+```
+
+## Add more detail to dates in the weighted mean location dataframe
+A DATE and MONTH formatted column to mean_daily_locs dataframe.
+An ID column is also added, which is an integer of each of the dates in order, 1-4383.
+**It is important to note when converting to Dates that for this data type only (why!?!) R uses a 0 based index. This means Day 1 is 0. So to convert our "day of year" integers to a Year-Month-Day format, we need to use DAY-1 and YEAR.**
+```{r}
+weighted_mean_locs <- weighted_mean_locs %>%
+  mutate(DAYm1 = DAY-1,
+         origin = paste0(YEAR, "-01-01"),
+         DATE = as.Date(DAYm1, origin=origin), 
+         MONTH = month(DATE)) %>%
+  arrange(DATE) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
+  select(-DAYm1, -origin)
 ```
 
 
@@ -154,7 +174,6 @@ ggplot(cewa_counts, aes(x=sum_count)) +
 
 ## Create a map of eBird effort (all years, all dates)
 
-
 ```{r}
 #TODO: You can come up with your own methods for making a map (there are SO many), and/or you can use #       the code from "hb-migration.r" and "migration-fxns.r" as a starting point for ideas.
 
@@ -188,7 +207,8 @@ ggplot() +
 #TODO: Make how you prefer, but feel free to plot the data as the actual locations of the birds 
 #       (from the .csv files), or to use the .Rdata files to plot the polygon center, maybe with 
 #       point sized or colored by magnitude of the count.
-all_states <- map_data("state")
+#all_states <- map_data("state")
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada"))
 #states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tennessee', 'indiana', 
 #                                           'illinois', 'iowa', 'nebraska','south dakota', 'north dakota',
 #                                           'minnesota', 'wisconsin', 'missouri', 'kansas'))
@@ -196,14 +216,13 @@ uw_cewa_counts <- dat_effort %>%
   group_by(cell) %>% 
   summarise(count_new_uw=sum(count.x))
 uw_grid <- dgcellstogrid(dgg, uw_cewa_counts$cell, frame=TRUE, wrapcells=TRUE)
-
 uw_grid <- merge(grid, uw_cewa_counts, by.x="cell", by.y="cell")
-
 p <- ggplot() +
-  geom_polygon( data=all_states, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
+  geom_polygon( data=state_prov, aes(x=long, y=lat, group = group), colour="black", fill="white" ) +
   geom_polygon(data=uw_grid,      aes(x=long, y=lat, group=cell, fill=count_new_uw), alpha=0.4)    +
   
-  geom_path   (data=uw_grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+  geom_path(data=uw_grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+  xlim(-102,-52) +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
   scale_fill_gradient2(low="blue", high="red",midpoint = 10000 ) +
   labs(title="Cedar Waxwing locations") + 
@@ -218,23 +237,10 @@ p
 ```
 
 
-## Estimate migration pathway for Bombycilla each year separately - DONE (ABOVE)
-```{r}
-#TODO: use or modify code from "migration-fxns.r" file, AlternateMeanLocs
-#       that method used a loop to go through each year separately, 
-#       but could probably be written using dplyr or apply (purr??) to simplify and optimize
-#       I'm sure there's a more elegant way to do it. Basically, we need to calculate a weighted mean
-#       for longitue and latitude, separately. We could use the wt.mean function (pkg=SDMTools), and #       the weight would be the cedarwaxwing count/total ebirder count from each row in the merged 
-#       Bombycilla-effort dataset. I wrote the referenced code before I became a tidyverse user. 
-#       for example: wt.mean(mergedata$Longitude, mergedata$BombycillaCount/mergedata$ebirdCount)
+## Estimate migration pathway for Bombycilla each year separately using GAMs
+Use GAM model to predict daily location along a smoothing line, from the weighted mean locations. Daily location should be calculated for each year separately, but could probably be written using dplyr or apply (purr??) to simplify and optimize (used a series of for loops in 2014 code instead).
 
-
-
-```
-
-
-
-## Use GAM model to predict daily location along a smoothing line, from the weighted mean locations
+In the GAM, we can use the weighted mean locations (latitude and longitude) that we have already calculated above. These become the inputs to the gam model, which finds the predicted (smooth) migration path for each day. The predicted (fitted) values become the migration path for the species, which we will then use to estimate start of spring, peak latitude (breeding), and end of autumn migration. Between end Autumn migration and begin of Spring migration, is the expected time that most individual birds are on their wintering grounds and not actively migrating. 
 
 #All year in one graph
 ```{r}
