@@ -358,7 +358,7 @@ Est3MigrationDates = function(dat){
   dat <- dat %>%
   filter(DAY != 1)
   x <- c(2008:2019)
-  df <- data.frame(YEAR =0, DATES = 0)
+  df <- data.frame(YEAR =0)
   for (i in x){
    sub_dailylocs <- 
        dailylocs %>%
@@ -400,7 +400,7 @@ Est3MigrationDates = function(dat){
     
     max_lat =   xpred$DAY[which.max(dpred$fit[xpred$DAY])]
     
-    dates = c(spring_begin, max_lat, fall_end)
+    dates = data.frame(YEAR = i, SPRING = spring_begin, MAXLAT = max_lat, FALL = fall_end)
     
     df <- data.frame(bind_rows(df, dates))
   }
