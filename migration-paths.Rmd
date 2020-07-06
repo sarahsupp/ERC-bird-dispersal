@@ -421,6 +421,7 @@ return(df)
     
 }
 
-dates <- Est3MigrationDates(weighted_mean_locs)
+dates <- Est3MigrationDates(weighted_mean_locs) #FIXME : The input here should be the daily locs from the GAM
+
 ```
 
