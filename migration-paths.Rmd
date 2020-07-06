@@ -299,6 +299,10 @@ distances <- append(NA, distVincentyEllipsoid(as.matrix(dailylocs[,c(3,4)])))/10
 # add column to original dataset
 dailylocs$distance <- distances
 
+#Remove Day 1 for all year, because we know, due to our method of separating GAM by year, it will be a flawed value
+dailylocs <- dailylocs %>%
+  filter(DAY != 1)
+
 #TODO: If placed after the dates are calculated, then the speeds used can be limited to the migraiton seasons using the filter below. Not sure we need to do that here, but I think this is how I got around the year-to-year day 1 being wrong things last time, plus, that project was really only focused on th e migration seasons alone.
 #  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
 
@@ -314,15 +318,14 @@ ggplot(dailylocs, aes(as.numeric(DAY), distance, group=YEAR)) + geom_line() +
 First, remove all values for Day = 1. Because each GAM was calculated separately by year, distance between Dec 31 and Jan 1 will not be valid. 
 Use the median of the top 5 migration speeds for each year separately, as the estimated maximum migration speed (km/day) for the species. 
 ```{r}
-#Remove Day 1 for all year
-dailylocs <- dailylocs %>%
-  filter(DAY != 1)
+
+# function to estimate the maximum speed of migration (km/day)
 EstimateMaxSpeed = function(dat) {
   dat <- dat %>%
   filter(DAY != 1)
-  x <- c(2008:2019)
-  df <- data.frame(YEAR =0, MAX_SPEED = 0)
-  for (i in x){
+  years <- c(2008:2019)
+  df <- data.frame(YEAR = 0, MAX_SPEED = 0)
+  for (i in years){
    sub_dailylocs <- 
        dailylocs %>%
        filter(YEAR == i)
@@ -337,10 +340,19 @@ EstimateMaxSpeed = function(dat) {
   df = df[-1,]
 return(df)
 }
+
+#estimate the maximim migration speed for each year
 max_speed <- EstimateMaxSpeed(dailylocs)
+
+#plot the results estimating yearly maximum migration speed (km/day)
 ggplot(max_speed, aes(YEAR, MAX_SPEED)) + geom_line() + 
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
   theme(text = element_text(size=20))
+
+#suggest using points instead of lines, because we're not really plotting something continuous with an expected trend here, where speed in one year depends on speed in the previous year (depends on weather/climate?)
+ggplot(max_speed, aes(as.factor(YEAR), MAX_SPEED)) + geom_point() + 
+  theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
+  theme(text = element_text(size=20), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 ```
 
 
@@ -409,5 +421,6 @@ return(df)
     
 }
 
-dates <- Est3MigrationDates(dailylocs)
+dates <- Est3MigrationDates(weighted_mean_locs) #FIXME : The input here should be the daily locs from the GAM
+
 ```
