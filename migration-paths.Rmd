@@ -35,7 +35,7 @@ library(mgcv)
 library(radiant.data)
 library(rnaturalearth)
 #devtools::install_github("ropensci/rnaturalearthhires")
-library(rnaturalearthhires)
+#library(rnaturalearthhires)package ‘rnaturalearthhires’ is not available (for R version 3.6.0)
 library(lubridate)
 ```
 
