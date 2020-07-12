@@ -369,11 +369,11 @@ Est3MigrationDates = function(dat){
   # the end of fall migration, and the date where the species reaches maximum latitude.
   dat <- dat %>%
   filter(DAY != 1)
-  x <- c(2008:2019)
+  year <- c(2008:2019)
   df <- data.frame(YEAR =0)
-  for (i in x){
-   sub_dailylocs <- 
-       dailylocs %>%
+  for (i in year){
+   dat_subset <- 
+       dat %>%
        filter(YEAR == i)
     #GAM model on predicted latitude of centroids by julian date
     #gam1 = gam(wtmean_lat ~ s(DAY, k = 40), data = dat, gamma = 1.5) 
@@ -383,18 +383,19 @@ Est3MigrationDates = function(dat){
     ## cutoff based on 2 SE for spring and fall combined, following La Sorte et al. 2013 methods
     # Spring migration should be between 11 Jan and 9 July
     # Fall migration should be between 8 August and 21 Dec
-    spring_threshold = min(dat$lat_se[c(1:120)]*2.56 + dat$lat[c(1:120)])
-    fall_threshold = min(dat$lat_se[c(280:365)]*2.56 + dat$lat[c(280:365)])
+    spring_threshold = min(dat_subset$lat_se[c(1:120)]*2.56 + dat_subset$lat[c(1:120)])
+    fall_threshold = min(dat_subset$lat_se[c(280:364)]*2.56 + dat_subset$lat[c(280:364)])
+    #FIXME: after removing DAY=1, there are years with 364 days and with 365 days.If we ignore the last day of the leap years, will this influence fall threshold?
     spring_index = 11:190
     fall_index = 220:355
-    spring_max = spring_index[which.max(dat$lat[spring_index])]
-    fall_max = fall_index[which.max(dat$lat[fall_index])]
+    spring_max = spring_index[which.max(dat_subset$lat[spring_index])]
+    fall_max = fall_index[which.max(dat_subset$lat[fall_index])]
     
     #identify beginning of spring migration
     tst = 1000
     spring_index2 = spring_max
     while(tst > spring_threshold){
-      tst = dat$lat[spring_index2]
+      tst = dat_subset$lat[spring_index2]
       if(spring_index2 == 1) break
       spring_index2 = spring_index2 - 1
     }
@@ -404,13 +405,13 @@ Est3MigrationDates = function(dat){
     tst <- 1000
     fall_index2 = fall_max
     while(tst > fall_threshold){
-      tst = dat$lat[fall_index2]
-      if(fall_index2==365) break
+      tst = dat_subset$lat[fall_index2]
+      if(fall_index2==364) break
       fall_index2 <- fall_index2 + 1
     }
     fall_end <- fall_index2 - 1
     
-    max_lat =   dat$DAY[which.max(dat$lat[dat$DAY])]
+    max_lat =   dat_subset$DAY[which.max(dat_subset$lat[dat_subset$DAY])]
     
     dates = data.frame(YEAR = i, SPRING = spring_begin, MAXLAT = max_lat, FALL = fall_end)
     
@@ -421,6 +422,11 @@ return(df)
     
 }
 
-dates <- Est3MigrationDates(weighted_mean_locs) #FIXME : The input here should be the daily locs from the GAM
+dates <- Est3MigrationDates(dailylocs) 
 
 ```
+
+
+
+
+
