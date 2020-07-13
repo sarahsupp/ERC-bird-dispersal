@@ -428,5 +428,17 @@ dates <- Est3MigrationDates(dailylocs)
 
 
 
+#Add Season to dailylocs
+#Map based on GAM Model
+
+```{r}
+qmplot(lon, lat, data = dailylocs, color = YEAR)
+
+```
+
+```{r}
+qmplot(lon, lat, data = dailylocs, color = DAY)
+
+```
 
 
