@@ -1,3 +1,5 @@
+
+[![NSF-0000000](https://img.shields.io/badge/NSF-1915913-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1915913)
 # ERC-bird-dispersal
 Evaluate abundance and distribution of potential birds dispersing Eastern Red Cedar seeds.
 Project is currently under development (2020).
@@ -33,5 +35,3 @@ Data:
 * effort.Rdata - Total eBirder count of activity by hexagonal polygon grid
 * locs.Rdata - latitude and longitude locations of hexagonal polygon grid cells
 * dat_effort.Rdata - merged datafile, created using the three files above in the migration-paths.Rmd file.
-
-[![NSF-0000000](https://img.shields.io/badge/NSF-1915913-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1915913)
