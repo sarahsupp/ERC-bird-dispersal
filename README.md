@@ -34,4 +34,4 @@ Data:
 * locs.Rdata - latitude and longitude locations of hexagonal polygon grid cells
 * dat_effort.Rdata - merged datafile, created using the three files above in the migration-paths.Rmd file.
 
-[![NSF-0000000](https://img․shields․io/badge/NSF-0000000-blue.svg)](https://nsf․gov/awardsearch/showAward?AWD_ID=0000000)
+[![NSF-0000000](https://img.shields.io/badge/NSF-1915913-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1915913)
