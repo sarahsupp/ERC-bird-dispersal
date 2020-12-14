@@ -131,7 +131,7 @@ DATE <- seq(from =ymd("2008-01-01"),to= ymd("2019-12-31"), by="days")
 set.seed(123)
 values <- sample(seq(from = 20, to = 50, by = 5), size = length(DATE), replace = TRUE)
 df2 <- data_frame(DATE, values)
-df2 <- df2 %>% mutate(day_of_week = wday(DATE, label = TRUE))
+df2 <- df2 %>% mutate(week = isoweek(DATE))
 
 loc_1$DAY <- as.numeric( loc_1$DAY)
 loc_1$YEAR <- as.numeric( loc_1$YEAR)
@@ -170,13 +170,13 @@ loc_2_merged<- merge(loc_2_week, df2, by = "DATE")
 ```{r}
 #aggregate weighted count each week in each year
 loc_1_merged <- loc_1_merged%>% 
-   group_by(YEAR, day_of_week) %>%                         # Specify group indicator
+   group_by(YEAR, week) %>%                         # Specify group indicator
   summarise_at(vars(count_weighted),              # Specify column
                list(sum = sum)) 
 
 
 loc_2_merged <- loc_2_merged%>% 
-   group_by(YEAR, day_of_week) %>%                         # Specify group indicator
+   group_by(YEAR, week) %>%                         # Specify group indicator
   summarise_at(vars(count_weighted),              # Specify column
                list(sum = sum)) 
 ```
