@@ -1,0 +1,196 @@
+---
+title: "Kaitlin's Location"
+author: "Jessy Jiahui Niu"
+date: "10/26/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(ggmap)
+library(maptools)
+library(fields)
+library(sp)
+library(raster)
+library(maps)
+library(mapdata)
+library(rgdal)
+library(raster)
+library(gamm4)
+library(tidyverse)
+library(dplyr)
+library(devtools)
+library(dggridR)
+library(RColorBrewer)
+library(geosphere)
+library(mgcv)
+library(radiant.data)
+library(rnaturalearth)
+library(lubridate)
+```
+
+##exploring locations near Kaitlin's sites
+Lakeside Daisy Preserve:
+
+41.529231, -82.726625
+
+Kamama Preserve:
+
+38.878194, -83.405227 
+
+38.875208, -83.395677
+
+
+
+
+```{r}
+#If you have already completed the initial steps and have saved out the effort file, start here instead, with loading it.
+load("data/dat_effort.RData")
+```
+
+
+```{r}
+dat_effort <- dat_effort %>%
+  filter(lon >=-103)
+dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
+dat_effort$cell <- dgGEO_to_SEQNUM(dgg, dat_effort$lon, dat_effort$lat)$seqnum
+dat_effort$cell_lat <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lat_deg 
+dat_effort$cell_lon <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lon_deg 
+
+dat_effort <- dat_effort %>%
+  mutate(count_weighted = count.x/count.y)
+```
+
+
+```{r}
+#Location 1
+e_1 = 0.7
+
+loc_1 <- dat_effort %>%
+   filter(lon  >= -82.726625-e_1, 
+         lon <= -82.726625+ e_1,
+         lat <= 41.529231 + e_1,
+         lat >= 41.529231 - e_1)
+```
+
+```{r}
+#Location 2
+e_2 = 0.6
+
+loc_2 <- dat_effort %>%
+   filter(lon  >= -83.405227 -e_2, 
+         lon <= -83.405227 + e_2,
+         lat <= 38.878194 + e_2,
+         lat >= 38.878194 - e_2)
+```
+
+```{r}
+#Location 3
+e_3 = 0.6
+
+loc_3 <- dat_effort %>%
+   filter(lon  >= -83.395677 -e_3, 
+         lon <= -83.395677 + e_3,
+         lat <= 38.875208 + e_3,
+         lat >= 38.875208 - e_3)
+#turns out to be the same as location 2
+```
+
+```{r}
+#aggregate weighted count each year
+loc_1_year <- loc_1%>% 
+   group_by(YEAR) %>%                         # Specify group indicator
+  summarise_at(vars(count_weighted),              # Specify column
+               list(sum = sum)) 
+
+
+loc_2_year <- loc_2%>% 
+   group_by(YEAR) %>%                         # Specify group indicator
+  summarise_at(vars(count_weighted),              # Specify column
+               list(sum = sum)) 
+```
+
+
+```{r}
+loc_1_year %>%
+   ggplot(aes(x = YEAR, y = sum ))+
+   geom_point()
+
+loc_2_year %>%
+   ggplot(aes(x = YEAR, y = sum ))+
+   geom_point()
+```
+
+```{r}
+library(lubridate)
+DATE <- seq(from =ymd("2008-01-01"),to= ymd("2019-12-31"), by="days")
+set.seed(123)
+values <- sample(seq(from = 20, to = 50, by = 5), size = length(DATE), replace = TRUE)
+df2 <- data_frame(DATE, values)
+df2 <- df2 %>% mutate(week = isoweek(DATE))
+
+loc_1$DAY <- as.numeric( loc_1$DAY)
+loc_1$YEAR <- as.numeric( loc_1$YEAR)
+
+loc_2$DAY <- as.numeric( loc_2$DAY)
+loc_2$YEAR <- as.numeric( loc_2$YEAR)
+ 
+  loc_1_week <- loc_1%>%
+     mutate(DAYm1 = DAY-1,
+         origin = paste0(YEAR, "-01-01"),
+         DATE = as.Date(DAYm1, origin=origin), 
+         MONTH = month(DATE)) %>%
+  arrange(DATE) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
+  select(-DAYm1, -origin)
+  
+  loc_2_week <- loc_2%>%
+     mutate(DAYm1 = DAY-1,
+         origin = paste0(YEAR, "-01-01"),
+         DATE = as.Date(DAYm1, origin=origin), 
+         MONTH = month(DATE)) %>%
+  arrange(DATE) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
+  select(-DAYm1, -origin)
+
+```
+
+```{r}
+loc_1_merged<- merge(loc_1_week, df2, by = "DATE")
+loc_2_merged<- merge(loc_2_week, df2, by = "DATE")
+```
+
+
+```{r}
+#aggregate weighted count each week in each year
+loc_1_merged <- loc_1_merged%>% 
+   group_by(YEAR, week) %>%                         # Specify group indicator
+  summarise_at(vars(count_weighted),              # Specify column
+               list(sum = sum)) 
+
+
+loc_2_merged <- loc_2_merged%>% 
+   group_by(YEAR, week) %>%                         # Specify group indicator
+  summarise_at(vars(count_weighted),              # Specify column
+               list(sum = sum)) 
+```
+
+
+```{r}
+loc_1_merged$X=row.names(loc_1_merged)
+loc_1_merged %>%
+   ggplot(aes( x = X, y = sum ))+
+   geom_point()
+
+loc_2_merged$X=row.names(loc_2_merged)
+loc_2_merged %>%
+   ggplot(aes( x = X, y = sum ))+
+   geom_point()
+```
+
