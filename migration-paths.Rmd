@@ -8,7 +8,6 @@ output: html_document
 ##Code for cedar waxwing project, modified from eBird migration project (Supp et al. 2015)
 (c) 2020, Niu and Supp
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(devtools)
