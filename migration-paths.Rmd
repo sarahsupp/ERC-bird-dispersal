@@ -12,24 +12,26 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(ggmap)
-library(maptools)
+#library(maptools) #FIXME: Linux install issues
 library(fields)
 library(sp)
 library(raster)
 library(maps)
 library(mapdata)
 library(rgdal)
-library(raster)
-library(gamm4)
-library(tidyverse)
+#library(gamm4) #FIXME: Linux install issues
+#library(tidyverse) #FIXME: Linux install issues
 library(dplyr)
-#library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
+library(ggplot2)
+#library(SDMTools) #FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
+#library(devtools) #Use `install.packages('devtools')` if need be
+#install_github('r-barnes/dggridR')
 library(dggridR)
-library(geojsonio)
+#library(geojsonio)
 library(RColorBrewer)
 library(geosphere)
-library(mgcv)
-library(radiant.data)
+#library(mgcv)  #FIXME: Linux install issues
+# library(radiant.data)  #FIXME: Linux install issues
 #load("data/Bombycilla_cedrorum.RData")
 #load("data/effort.Rdata")
 #load("data/locs.Rdata")
