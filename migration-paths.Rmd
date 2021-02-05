@@ -7,6 +7,9 @@ output: html_document
 
 ##Code for cedar waxwing project, modified from eBird migration project (Supp et al. 2015)
 (c) 2020, Niu and Supp
+supps@denison.edu
+Denison University
+Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2022)
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
