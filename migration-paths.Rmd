@@ -15,7 +15,7 @@ Birds evaluated include:
 * Cedar Waxwing (CEWA) _Bombycilla cedrorum_
 * Robin (ROBI) _Turdus migratorius_
 * Wood Thrush (WOTH) _Hylocichla mustelina_
-* Yellow-rumped Warbler (YEWA) _Cetophaga coronata_
+* Yellow-rumped Warbler (YEWA) _setophaga coronata_
 * Blue Jay (BLJA) _Cyanocitta cristata_
 
 ```{r setup, include=FALSE} 
@@ -53,20 +53,25 @@ You need to bring in:
 2. a file with the total eBirder "effort" (eft.c)
 3. a file with all the center locations for the POLYFID grid cells (locs)
 ```{r}
-load("data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named previously
-load("data/effort_2020-08.Rdata") # will come in as eft.c, FAL named previously
-load("data/locs_2020-08.Rdata") # will come in as loc, FAL named previously
-
-#merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
-dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
-
-#now merge with the third data file for effort dat_effort = merge(dat_merged,
-eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
-dat_effort$DAY <- as.numeric(dat_effort$DAY) save(dat_effort, file =
-"data/dat_effort.RData")
+# load("data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named previously
+# load("data/Cyanocitta_cristata.RData")
+# load("data/Hylocichla_mustelina.RData")
+# load("data/Turdus_migratorius.Rdata")
+# load("data/Setophaga_coronata.Rdata")
+# load("data/effort2020.Rdata") # will come in as eft.c, FAL named previously
+# load("data/locs_2020.Rdata") # will come in as loc, FAL named previously
+# 
+# #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
+# dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
+# 
+# #now merge with the third data file for effort 
+# dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
+# dat_effort$DAY <- as.numeric(dat_effort$DAY) 
+# save(dat_effort, file = "data/dat_effort_ROBI.RData")
 ```
 
-If you have already completed the initial steps and have saved out the effort file, start here instead, with loading it.
+**If you have already completed the initial steps** and have saved out the effort file, start here instead, with loading it.
+Each species has it's own merged data file, and needs to be dealt with separately (for now) to get the results.
 ```{r}
 load("data/dat_effort.RData")
 ```
