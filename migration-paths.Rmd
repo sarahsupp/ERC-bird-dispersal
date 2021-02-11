@@ -9,10 +9,18 @@ output: html_document
 (c) 2020, Niu and Supp
 supps@denison.edu
 Denison University
-Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2022)
+Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2)
 
-```{r setup, include=FALSE}
+Birds evaluated include: 
+* Cedar Waxwing (CEWA) _Bombycilla cedrorum_
+* Robin (ROBI) _Turdus migratorius_
+* Wood Thrush (WOTH) _Hylocichla mustelina_
+* Yellow-rumped Warbler (YEWA) _Cetophaga coronata_
+* Blue Jay (BLJA) _Cyanocitta cristata_
+
+```{r setup, include=FALSE} 
 knitr::opts_chunk$set(echo = TRUE)
+
 library(devtools)
 #devtools::install_github("dkahle/ggmap")
 library(ggmap)
@@ -40,18 +48,22 @@ library(rnaturalearthhires)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
+You need to bring in: 
+1. a file with the bird observations (ebrd2.c)
+2. a file with the total eBirder "effort" (eft.c)
+3. a file with all the center locations for the POLYFID grid cells (locs)
 ```{r}
-#load("data/Bombycilla_cedrorum.RData")
-#load("data/effort.Rdata")
-#load("data/locs.Rdata")
+load("data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named previously
+load("data/effort_2020-08.Rdata") # will come in as eft.c, FAL named previously
+load("data/locs_2020-08.Rdata") # will come in as loc, FAL named previously
 
-# #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
-# dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
-# 
-# #now merge with the third data file for effort
-# dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
-# dat_effort$DAY <- as.numeric(dat_effort$DAY)
-#save(dat_effort, file = "data/dat_effort.RData")
+#merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
+dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
+
+#now merge with the third data file for effort dat_effort = merge(dat_merged,
+eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
+dat_effort$DAY <- as.numeric(dat_effort$DAY) save(dat_effort, file =
+"data/dat_effort.RData")
 ```
 
 If you have already completed the initial steps and have saved out the effort file, start here instead, with loading it.
@@ -230,7 +242,8 @@ p <- ggplot() +
   geom_path(data=uw_grid,      aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
   xlim(-102,-52) +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient2(low="blue", high="red",midpoint = 10000 ) +
+  scale_fill_gradient(low="yellow", high="red") +
+#  scale_fill_gradient2(low="blue", high="red",midpoint = 10000 ) +
   labs(title="Cedar Waxwing locations") + 
   theme_bw() + 
   theme(axis.title.x=element_blank(),
@@ -343,6 +356,10 @@ return(df)
 
 #estimate the maximim migration speed for each year
 max_speed <- EstimateMaxSpeed(dailylocs)
+
+mean(max_speed$MAX_SPEED)
+sd(max_speed$MAX_SPEED)
+median(max_speed$MAX_SPEED)
 
 #plot the results estimating yearly maximum migration speed (km/day)
 ggplot(max_speed, aes(YEAR, MAX_SPEED)) + geom_line() + 
