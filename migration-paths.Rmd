@@ -34,6 +34,7 @@ library(rgdal)
 library(mgcv)
 library(gamm4) 
 library(tidyverse) 
+library(ggpubr)
 #devtools::install_github('r-barnes/dggridR', vignette=TRUE)
 library(dggridR)
 library(RColorBrewer)
@@ -53,7 +54,7 @@ You need to bring in:
 2. a file with the total eBirder "effort" (eft.c)
 3. a file with all the center locations for the POLYFID grid cells (locs)
 ```{r}
-# load("data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named previously
+ load("data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named previously
 # load("data/Cyanocitta_cristata.RData")
 # load("data/Hylocichla_mustelina.RData")
 # load("data/Turdus_migratorius.Rdata")
@@ -62,24 +63,28 @@ You need to bring in:
 # load("data/locs_2020.Rdata") # will come in as loc, FAL named previously
 # 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
-# dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
-# 
-# #now merge with the third data file for effort 
-# dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
-# dat_effort$DAY <- as.numeric(dat_effort$DAY) 
-# save(dat_effort, file = "data/dat_effort_ROBI.RData")
+#  dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
+# # 
+# # #now merge with the third data file for effort 
+#  dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY"))
+#  dat_effort$DAY <- as.numeric(dat_effort$DAY) 
+#  save(dat_effort, file = "data/dat_effort_CEWA.RData")
 ```
 
 **If you have already completed the initial steps** and have saved out the effort file, start here instead, with loading it.
 Each species has it's own merged data file, and needs to be dealt with separately (for now) to get the results.
 ```{r}
-load("data/dat_effort.RData")
+load("data/dat_effort_ROBI.RData")
 ```
 
 [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
 ```{r}
 dat_effort <- dat_effort %>%
   filter(lon >=-103)
+
+num_obs <- nrow(dat_effort)
+
+paste0("The total number of observations is ", num_obs, ".")
 ```
 
 
@@ -102,7 +107,7 @@ group_by(YEAR, DAY) %>%
 ```
 
 ## Add more detail to dates in the weighted mean location dataframe
-A DATE and MONTH formatted column to mean_daily_locs dataframe.
+A DATE and MONTH formatted column to mean_daily_locs dataframe. TODO
 An ID column is also added, which is an integer of each of the dates in order, 1-4383.
 **It is important to note when converting to Dates that for this data type only (why!?!) R uses a 0 based index. This means Day 1 is 0. So to convert our "day of year" integers to a Year-Month-Day format, we need to use DAY-1 and YEAR.**
 ```{r}
@@ -125,24 +130,33 @@ counts <- dat_effort %>%
   group_by(YEAR) %>%
   tally()
 
-ggplot(counts, aes(YEAR, n)) + geom_bar(stat="identity") + 
-  theme_bw() + ylab("Number of binned observations") + xlab("Year")
+num_bins <- ggplot(counts, aes(YEAR, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number of binned observations") + xlab("Year") +
+  theme(axis.text.x = element_text(angle = 90))
 
 #checking how many unique grid cells logged an observation in each year (relatively flat)
 nPOLYFID <- dat_effort %>%
   group_by(YEAR) %>%
   summarise(n=n_distinct(POLYFID))
 
-ggplot(nPOLYFID, aes(YEAR, n)) + geom_bar(stat="identity") + 
-  theme_bw() + ylab("Number of unique grid cells") + xlab("Year")
+num_gridcells <- ggplot(nPOLYFID, aes(YEAR, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number of unique grid cells") + xlab("Year") +
+  theme(axis.text.x = element_text(angle = 90))
 
 #checking how many days per year have at least 1 observation (ALL of them)
 nDAYSofyear <- dat_effort %>%
   group_by(YEAR) %>%
   summarise(n=n_distinct(DAY))
 
-ggplot(nDAYSofyear, aes(YEAR, n)) + geom_bar(stat="identity") + 
-  theme_bw() + ylab("Number of unique days per year") + xlab("Year")
+num_days <- ggplot(nDAYSofyear, aes(YEAR, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number of unique days per year") + xlab("Year") +
+  theme(axis.text.x = element_text(angle = 90))
+
+ggarrange(num_bins, num_gridcells, num_days,
+          labels=c("A", "B", "C"),
+          ncol=3, nrow=1)
+
+ggsave(filename = "figs/YEWA_obs.png", height = 3, width=8)
 ```
 
 
@@ -364,7 +378,7 @@ max_speed <- EstimateMaxSpeed(dailylocs)
 
 mean(max_speed$MAX_SPEED)
 sd(max_speed$MAX_SPEED)
-median(max_speed$MAX_SPEED)
+med <- median(max_speed$MAX_SPEED)
 
 #plot the results estimating yearly maximum migration speed (km/day)
 ggplot(max_speed, aes(YEAR, MAX_SPEED)) + geom_line() + 
@@ -372,9 +386,13 @@ ggplot(max_speed, aes(YEAR, MAX_SPEED)) + geom_line() +
   theme(text = element_text(size=20))
 
 #suggest using points instead of lines, because we're not really plotting something continuous with an expected trend here, where speed in one year depends on speed in the previous year (depends on weather/climate?)
-ggplot(max_speed, aes(as.factor(YEAR), MAX_SPEED)) + geom_point() + 
+ggplot(max_speed, aes(as.factor(YEAR), MAX_SPEED)) + geom_point() +
+  geom_hline(yintercept = med, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
-  theme(text = element_text(size=20), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+  theme(text = element_text(size=20), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  annotate(geom="text", x= 3, y= 50, label=paste0("median = ", round(med,2), " km/day"))
+
+#ggsave(filename = "figs/WOTH_MedMaxMigrationSpeed.png")
 ```
 
 
@@ -392,11 +410,11 @@ Est3MigrationDates = function(dat){
   dat <- dat %>%
   filter(DAY != 1)
   year <- c(2008:2019)
-  df <- data.frame(YEAR =0)
-  for (i in year){
+  df <- data.frame(YEAR=0, SPRING = 0, MAXLAT = 0, FALL = 0)
+  for (i in 1:length(year)){
    dat_subset <- 
        dat %>%
-       filter(YEAR == i)
+       filter(YEAR == year[i])
     #GAM model on predicted latitude of centroids by julian date
     #gam1 = gam(wtmean_lat ~ s(DAY, k = 40), data = dat, gamma = 1.5) 
     #xpred = data.frame(DAY = c(1:max(dat$DAY)))
@@ -405,11 +423,15 @@ Est3MigrationDates = function(dat){
     ## cutoff based on 2 SE for spring and fall combined, following La Sorte et al. 2013 methods
     # Spring migration should be between 11 Jan and 9 July
     # Fall migration should be between 8 August and 21 Dec
-    spring_threshold = min(dat_subset$lat_se[c(1:120)]*2.56 + dat_subset$lat[c(1:120)])
-    fall_threshold = min(dat_subset$lat_se[c(280:364)]*2.56 + dat_subset$lat[c(280:364)])
+    #NOTE: These dates are seeking Jan 1-May 31 for Spring migration begin
+    #                 AND          Aug 1-Dec 30 for Fall migration end 
+   # CHANGED FROM PREVIOUS CODE FOR HUMMINGBIRD PROJECT
+   # ALSO ADDED NA.RM=TRUE ARGUMENT, DOES THIS HAVE ANY DOWNSIDES?
+    spring_threshold = min(dat_subset$lat_se[c(1:151)]*2.56 + dat_subset$lat[c(1:151)], na.rm=TRUE)
+    fall_threshold = min(dat_subset$lat_se[c(213:364)]*2.56 + dat_subset$lat[c(213:364)], na.rm=TRUE)
     #FIXME: after removing DAY=1, there are years with 364 days and with 365 days.If we ignore the last day of the leap years, will this influence fall threshold?
-    spring_index = 11:190
-    fall_index = 220:355
+    spring_index = 11:190 # between 11 Jan and 9 July
+    fall_index = 220:355 # between 8 August and 21 Dec
     spring_max = spring_index[which.max(dat_subset$lat[spring_index])]
     fall_max = fall_index[which.max(dat_subset$lat[fall_index])]
     
@@ -435,17 +457,42 @@ Est3MigrationDates = function(dat){
     
     max_lat =   dat_subset$DAY[which.max(dat_subset$lat[dat_subset$DAY])]
     
-    dates = data.frame(YEAR = i, SPRING = spring_begin, MAXLAT = max_lat, FALL = fall_end)
+    dates = data.frame(YEAR = year[i], SPRING = spring_begin, MAXLAT = max_lat, FALL = fall_end)
     
     df <- data.frame(bind_rows(df, dates))
   }
   df = df[-1,]
 return(df)
-    
 }
 
 dates <- Est3MigrationDates(dailylocs) 
 
+begin_winter <- median(dates$FALL)
+end_winter <- median(dates$SPRING)
+
+paste0("The beginning of winter is on average day ", begin_winter, " and the end of winter is on average day ", end_winter, ".")
+
+begin <- ggplot(dates, aes(YEAR, FALL)) + 
+  geom_point() + 
+  geom_smooth(method="lm") +
+  geom_hline(yintercept = begin_winter, linetype="dashed", col="hotpink") +
+  theme_bw() + xlab("Year") + ylab("Winter begin date") + 
+  theme(text = element_text(size=20), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  annotate(geom="text", x= 2012, y= 340, label=paste0("median doy = ", round(begin_winter,2)))
+
+end <- ggplot(dates, aes(YEAR, SPRING)) + 
+  geom_point() + 
+  geom_smooth(method="lm") +
+  geom_hline(yintercept = end_winter, linetype="dashed", col="hotpink") +
+  theme_bw() + xlab("Year") + ylab("Winter end date") + 
+  theme(text = element_text(size=20), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  annotate(geom="text", x= 2012, y= 55, label=paste0("median doy = ", round(end_winter,2)))
+
+ggarrange(begin, end,
+          labels=c("A", "B"),
+          ncol=2, nrow=1)
+
+ggsave(filename = "figs/WOTH_winterDates.png", height = 4, width=8)
 ```
 
 
