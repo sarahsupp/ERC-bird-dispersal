@@ -54,38 +54,21 @@ You need to bring in:
 1. a file with the bird observations (ebrd2.c)
 2. a file with the total eBirder "effort" (eft.c)
 3. a file with all the center locations for the POLYFID grid cells (locs)
-```{r}
-#TODO: Find a better way to automate this data prep part so it can automatically read the data, add species names, and prepare it
-# raw species data, queried by FAL
-# load("data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named previously
-# load("data/Cyanocitta_cristata.RData")
-# load("data/Hylocichla_mustelina.RData")
-# load("data/Turdus_migratorius.Rdata")
-# load("data/Setophaga_coronata.Rdata")
 
-# raw eBirder data, queried by FAL
- load("data/effort2020.Rdata") # will come in as eft.c, FAL named previously
- load("data/locs_2020.Rdata") # will come in as locs, FAL named previously
-# 
-# #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
-  dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
-# # 
-# # #now merge with the third data file for effort 
-  #where count.x is number of target species and count.y is total number of eBird records (including those without the target species)
-  dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY")) 
-  dat_effort$DAY <- as.numeric(dat_effort$DAY) 
-  dat_effort$species <- "Cyanocitta cristata"
-  save(dat_effort, file = "data/dat_effort_BLJA.RData")
-```
+*Please go to the file* called "process-raw-eBird-data.Rmd" to do this, if you don't already have the files named with the pattern dat_effort_****.RData".
 
 **If you have already completed the initial steps** and have saved out the effort file, start here instead, with loading it.
-Each species has it's own merged data file, and needs to be dealt with separately (for now) to get the results.
+Each species has it's own merged data file, and will be brought into one species data (spdata) file to work through the results.
 ```{r}
 files <- list.files(path = "data/", pattern = "dat_effort*")
 files <- paste0("data/", files)
-combined_files <- bind_rows(lapply(files, fread)) # FIXME
 
-#load("data/dat_effort_ROBI.RData")
+spdata <- data.frame(POLYFID=0, YEAR="0", DAY=0, count.x=0, lon=0, lat=0, count.y=0, species="none")
+for (i in files) {
+  dat <- readRDS(i)
+  spdata <- bind_rows(spdata, dat)
+}
+spdata <- spdata %>% filter(YEAR!="0")
 ```
 
 [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
