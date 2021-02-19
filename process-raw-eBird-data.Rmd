@@ -32,13 +32,13 @@ You need to bring in:
 Load the eBird effort and location files, from FAL (July 2020)
 ```{r}
 # raw eBirder data, queried by FAL
- load("data/effort2020.Rdata") # will come in as eft.c, FAL named previously
- load("data/locs_2020.Rdata") # will come in as locs, FAL named previously
+ load("data/raw_eBird_data/effort2020.Rdata") # will come in as eft.c, FAL named previously
+ load("data/raw_eBird_data/locs_2020.Rdata") # will come in as locs, FAL named previously
 ```
 
 For *cedar waxwing*
 ```{r}
-load("data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named previously
+load("data/raw_eBird_data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -48,12 +48,12 @@ load("data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named prev
   dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY")) 
   dat_effort$DAY <- as.numeric(dat_effort$DAY) 
   dat_effort$species <- "Bombycilla cedrorum"
-  save(dat_effort, file = "data/dat_effort_CEWA.RData")
+  saveRDS(dat_effort, file = "data/dat_effort_CEWA.rds")
 ```
 
 For *blue jay*
 ```{r}
-load("data/Cyanocitta_cristata.RData") # will come in as ebrd2.c, FAL named previously
+load("data/raw_eBird_data/Cyanocitta_cristata.RData") # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -63,12 +63,12 @@ load("data/Cyanocitta_cristata.RData") # will come in as ebrd2.c, FAL named prev
   dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY")) 
   dat_effort$DAY <- as.numeric(dat_effort$DAY) 
   dat_effort$species <- "Cyanocitta cristata"
-  save(dat_effort, file = "data/dat_effort_BLJA.RData")
+  saveRDS(dat_effort, file = "data/dat_effort_BLJA.rds")
 ```
 
 For *wood thrush*
 ```{r}
-load("data/Hylocichla_mustelina.RData") # will come in as ebrd2.c, FAL named previously
+load("data/raw_eBird_data/Hylocichla_mustelina.RData") # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -78,12 +78,12 @@ load("data/Hylocichla_mustelina.RData") # will come in as ebrd2.c, FAL named pre
   dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY")) 
   dat_effort$DAY <- as.numeric(dat_effort$DAY) 
   dat_effort$species <- "Hylocichla mustelina"
-  save(dat_effort, file = "data/dat_effort_WOTH.RData")
+  saveRDS(dat_effort, file = "data/dat_effort_WOTH.rds")
 ```
 
 For *robin*
 ```{r}
-load("data/Turdus_migratorius.Rdata") # will come in as ebrd2.c, FAL named previously
+load("data/raw_eBird_data/Turdus_migratorius.Rdata") # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -93,13 +93,13 @@ load("data/Turdus_migratorius.Rdata") # will come in as ebrd2.c, FAL named previ
   dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY")) 
   dat_effort$DAY <- as.numeric(dat_effort$DAY) 
   dat_effort$species <- "Turdus migratorius"
-  save(dat_effort, file = "data/dat_effort_ROBI.RData")
+  saveRDS(dat_effort, file = "data/dat_effort_ROBI.rds")
 ```
 
 
 For *yellow-rumped warbler*
 ```{r}
-load("data/Setophaga_coronata.Rdata") # will come in as ebrd2.c, FAL named previously
+load("data/raw_eBird_data/Setophaga_coronata.Rdata") # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -109,6 +109,6 @@ load("data/Setophaga_coronata.Rdata") # will come in as ebrd2.c, FAL named previ
   dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY")) 
   dat_effort$DAY <- as.numeric(dat_effort$DAY) 
   dat_effort$species <- "Setophaga coronata"
-  save(dat_effort, file = "data/dat_effort_YEWA.RData")
+  saveRDS(dat_effort, file = "data/dat_effort_YEWA.rds")
 ```
 
