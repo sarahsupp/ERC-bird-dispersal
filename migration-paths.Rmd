@@ -10,6 +10,7 @@ output: html_document
 supps@denison.edu
 Denison University
 Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2)
+modified fro previous code developed for Supp et al. 2015 hummingbird paper (Ecography)
 
 Birds evaluated include: 
 * Cedar Waxwing (CEWA) _Bombycilla cedrorum_
@@ -522,7 +523,7 @@ begin <- ggplot(dates, aes(YEAR, FALL)) +
   geom_smooth(method="lm") +
   #geom_hline(yintercept = begin_winter, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Winter begin date") + 
-  theme(text = element_text(size=20), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  theme(text = element_text(size=14), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
  # annotate(geom="text", x= 2012, y= 340, label=paste0("median doy = ", round(begin_winter,2)))
   facet_wrap(~species)
 
@@ -531,7 +532,7 @@ end <- ggplot(dates, aes(YEAR, SPRING)) +
   geom_smooth(method="lm") +
  # geom_hline(yintercept = end_winter, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Winter end date") + 
-  theme(text = element_text(size=20), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  theme(text = element_text(size=14), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
   #annotate(geom="text", x= 2012, y= 55, label=paste0("median doy = ", round(end_winter,2)))
   facet_wrap(~species)
 
@@ -539,7 +540,7 @@ ggarrange(begin, end,
           labels=c("A", "B"),
           ncol=2, nrow=1)
 
-ggsave(filename = "figs/WOTH_winterDates.png", height = 4, width=8)
+ggsave(filename = "figs/allspp_winterDates.png", height = 5, width=8)
 ```
 
 
