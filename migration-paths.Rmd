@@ -22,6 +22,7 @@ Birds evaluated include:
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(echo = TRUE)
 
+library(here)
 library(data.table)
 library(devtools)
 #devtools::install_github("dkahle/ggmap")
@@ -61,8 +62,7 @@ You need to bring in:
 **If you have already completed the initial steps** and have saved out the effort file, start here instead, with loading it.
 Each species has it's own merged data file, and will be brought into one species data (spdata) file to work through the results.
 ```{r}
-files <- list.files(path = "data/", pattern = "dat_effort*")
-files <- paste0("data/", files)
+files = list.files(path=here(), recursive=T, pattern=glob2rx("dat_effort*.rds"))
 
 spdata <- data.frame(POLYFID=0, YEAR="0", DAY=0, count.x=0, lon=0, lat=0, count.y=0, species="none")
 for (i in files) {
@@ -100,11 +100,19 @@ group_by(species, YEAR, DAY) %>%
             numcells = n(), 
             numobs = sum(count.x),
             wtmean_lon = weighted.mean(lon, count.x/count.y), 
-            wtmean_lat = weighted.mean(lat, count.x/count.y) 
-            #wtsd_lon <- weighted.sd(lon, count.x/count.y),
-            #wtsd_lon <- weighted.sd(lat, count.x/count.y) FIXME: add weighted standard deviation
+            wtmean_lat = weighted.mean(lat, count.x/count.y), 
+            wtsd_lon = weighted.sd(lon, count.x/count.y),
+            wtsd_lat = weighted.sd(lat, count.x/count.y) 
             ) %>%
   ungroup()
+
+#plot the weighted standard deviations by species, just to check
+ggplot(weighted_mean_locs, aes(wtsd_lon)) + geom_histogram() + facet_wrap(~species)
+ggplot(weighted_mean_locs, aes(wtsd_lat)) + geom_histogram() + facet_wrap(~species)
+
+#check if weighted sd differs by time of the year (expect to be higher during migration, lower during breeding)
+ggplot(weighted_mean_locs, aes(DAY, wtsd_lon)) + geom_point(alpha=0.10) + facet_wrap(~species)
+ggplot(weighted_mean_locs, aes(DAY, wtsd_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
 ```
 
 ## Add more detail to dates in the weighted mean location dataframe
@@ -272,7 +280,7 @@ p <- ggplot() +
             aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
   xlim(-102,-52) +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient(low="yellow", high="red") +
+  scale_fill_gradient(low="red", high="yellow") +
 #  scale_fill_gradient2(low="blue", high="red",midpoint = 10000 ) +
   labs(title="Bird locations") + 
   theme_bw() + 
@@ -330,13 +338,29 @@ ggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1, aes(col=species)) +
   # geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts with dates
   facet_wrap( ~ YEAR, ncol=3)+ xlab("Day of Year") + ylab("weighted mean latitude") +
   theme_bw()
+
+ggplot(dailylocs, aes(lon, lat, group=YEAR)) +
+  geom_point(aes(col=winter), alpha=0.25) + 
+  scale_colour_manual(values = c("grey50", "blue")) +
+  facet_wrap(~species)
+
+#FIXME: For relevance to ERC, we have some generic winter months, labeled in blue, but will need to also determine the lat-long of interest. For example, Hylocichla mustelina is definitely migrating during the winter, but much of this may be further south than the main area of interest, and not fully relevant during all of the winter time frame.
 ```
 
 
 ## Find the distances traveled between the mean locations. 
 This calculation uses Great Circle (ellipsoid) distance on the estimated daily locations from the GAM model predictions for latitude and longitude. Because of the way the distVicentyEllipsoid function works on the values, the rows *must* all be in chronological order.
 ```{r}
-#FIXME: THESE DISTANCES ARE MUCH TOO LARGE. SOMETHING MUST HAVE GONE WRONG WHEN I ADDED THE OTHER SPECIES.
+#identify dates with no location and assign all values to NA
+missdates <- dailylocs %>%
+  group_by(species, YEAR) %>%
+  #technically this leaves out DAY 366 in 2008, 2012, 2016, and 2020, but I don't think that matters?
+  summarize(missing = setdiff(1:365, DAY)) %>% 
+  mutate(DAY = missing, MONTH=NA, winter=NA, lon=NA, lat=NA, lon_se=NA, lat_se=NA) %>%
+  select(species, DAY, YEAR, MONTH, lon, lat, lon_se, lat_se)
+
+#append the missing/NA date values to the main dailylocs dataframe
+dailylocs <- bind_rows(dailylocs, missdates)
 
 #calculate sequential distances using geosphere::distVicentyEllipsoid, adds NA for the first record
 calc_distances <- function(lon, lat) {
@@ -348,32 +372,24 @@ calc_distances <- function(lon, lat) {
 dailylocs <- dailylocs %>%
   # ensures that everything is ordered chronologically by year and day of year
   arrange(species, YEAR, DAY) %>%
-  group_by(species) %>%
+  group_by(species, YEAR) %>%
   #calculate sequential distances, adds NA for the first record
   mutate(distance = calc_distances(lon, lat)) %>%
   #Remove Day 1 for all year, because due to our method of separating GAM by year, it will be a flawed value
   filter(DAY != 1)
-  
-# # ensures that everything is ordered chronologically by year and day of year
-# dailylocs <- dailylocs %>%
-#   arrange(YEAR,DAY)
-# 
-# # add column to original dataset
-# dailylocs$distance <- distances
-# 
-# #Remove Day 1 for all year, because we know, due to our method of separating GAM by year, it will be a flawed value
-# dailylocs <- dailylocs %>%
-#   filter(DAY != 1)
 
-#TODO: If placed after the dates are calculated, then the speeds used can be limited to the migration seasons using the filter below. Not sure we need to do that here, but I think this is how I got around the year-to-year day 1 being wrong things last time, plus, that project was really only focused on th e migration seasons alone.
+
+#TODO: If placed after the dates are calculated, then the speeds used can be limited to the migration seasons using the filter below. Not sure we need to do that here, but I think this is how I got around the year-to-year day 1 being wrong things last time, plus, that project was really only focused on the migration seasons alone.
 #  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
 
 #FIXME: 
 ggplot(dailylocs, aes(as.numeric(DAY), distance, group=YEAR)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
-  theme(text = element_text(size=20)) + 
+  theme(text = element_text(size=12)) + 
   facet_wrap(~species)#+  
   #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
+
+ggsave(filename = "figs/species_distances.png", height = 5, width=8)
 ```
 
 ## Estimate the maximum migration speed during migration 
@@ -420,7 +436,7 @@ speeds <- max_speed %>%
 #plot the results estimating yearly maximum migration speed (km/day)
 ggplot(max_speed, aes(YEAR, MAX_SPEED)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
-  theme(text = element_text(size=20))
+  theme(text = element_text(size=12))
 
 #suggest using points instead of lines, because we're not really plotting something continuous with an expected trend here, where speed in one year depends on speed in the previous year (depends on weather/climate?)
 ggplot(max_speed, aes(as.factor(YEAR), MAX_SPEED)) + geom_point() +
@@ -438,7 +454,6 @@ ggplot(max_speed, aes(as.factor(YEAR), MAX_SPEED)) + geom_point() +
 # estimate 3 migration dates, beginning of spring, peak latitude (summer), end of fall migration
 This will need some editing to work on each year separately. Ideally a resulting data frame with columns for year, begin_spring, peak_latitude, end_autumn
 
-Ask Dr. Supp if you have questions :)
 ```{r}
 # TODO: from old function Est3MigrationDates in migration-fxns.R
 
@@ -451,11 +466,12 @@ Est3MigrationDates = function(dat){
   species <- unique(dat$species)
   df <- data.frame(species="none", YEAR=0, SPRING = 0, MAXLAT = 0, FALL = 0)
   for (s in species) {
-    for (i in 1:length(year)){
+    for (y in year){
    dat_subset <- 
        dat %>%
-       filter(YEAR == year[i] & species == s)
-   print(paste0("species: ", s, " year: ", year[i]))
+       filter(YEAR == y & species == s) %>%
+     filter(!is.na(lon))
+   print(paste0("species: ", s, "; year: ", y))
     #GAM model on predicted latitude of centroids by julian date
     #gam1 = gam(wtmean_lat ~ s(DAY, k = 40), data = dat, gamma = 1.5) 
     #xpred = data.frame(DAY = c(1:max(dat$DAY)))
@@ -468,21 +484,24 @@ Est3MigrationDates = function(dat){
     #                 AND          Aug 1-Dec 30 for Fall migration end 
    # CHANGED FROM PREVIOUS CODE FOR HUMMINGBIRD PROJECT
    # ALSO ADDED NA.RM=TRUE ARGUMENT, DOES THIS HAVE ANY DOWNSIDES?
-    spring_threshold = min(dat_subset$lat_se[c(1:151)]*2.56 + dat_subset$lat[c(1:151)], na.rm=TRUE)
-    fall_threshold = min(dat_subset$lat_se[c(213:364)]*2.56 + dat_subset$lat[c(213:364)], na.rm=TRUE)
+   spring_threshold = min(filter(dat_subset, DAY %in% c(1:151))$lat_se*2.56 + filter(dat_subset, DAY %in% c(1:151))$lat, na.rm=TRUE)
+   fall_threshold = min(filter(dat_subset, DAY %in% c(213:364))$lat_se*2.56 + filter(dat_subset, DAY %in% c(213:364))$lat, na.rm=TRUE)
     #FIXME: after removing DAY=1, there are years with 364 days and with 365 days.If we ignore the last day of the leap years, will this influence fall threshold?
-    spring_index = 11:190 # between 11 Jan and 9 July
-    fall_index = 220:355 # between 8 August and 21 Dec
-    spring_max = spring_index[which.max(dat_subset$lat[spring_index])]
-    fall_max = fall_index[which.max(dat_subset$lat[fall_index])]
+ spring_index = intersect(c(11:190), dat_subset$DAY) # between 11 Jan and 9 July #FIXME: what should these dates be, they don't match
+    fall_index = intersect(c(220:355), dat_subset$DAY) # between 8 August and 21 Dec
+    spring_max = (dat_subset %>% filter(DAY %in% spring_index) %>% slice_max(lat))$DAY
+    fall_max =  (dat_subset %>% filter(DAY %in% fall_index) %>% slice_max(lat))$DAY
     
     #identify beginning of spring migration
     tst = 1000
     spring_index2 = spring_max
     while(tst > spring_threshold){
-      tst = dat_subset$lat[spring_index2]
-      if(spring_index2 == 1) break
-      spring_index2 = spring_index2 - 1
+      if(nrow(filter(dat_subset, DAY==spring_index2))>0) {
+        tst = filter(dat_subset, DAY %in% spring_index2)$lat
+        if(spring_index2 == 1) break
+        spring_index2 = spring_index2 - 1
+      }
+      else { spring_index2 = spring_index2 - 1 }
     }
     spring_begin = spring_index2 + 1
     
@@ -490,15 +509,20 @@ Est3MigrationDates = function(dat){
     tst <- 1000
     fall_index2 = fall_max
     while(tst > fall_threshold){
-      tst = dat_subset$lat[fall_index2]
-      if(fall_index2==364) break
-      fall_index2 <- fall_index2 + 1
+     # print(paste0("tst= ", tst, " fall_index2= ", fall_index2))
+      if(nrow(filter(dat_subset, DAY==fall_index2))>0) {
+        tst = filter(dat_subset, DAY==fall_index2)$lat
+        if(fall_index2 == 1) break
+        fall_index2 = fall_index2 + 1
+      }
+      else { fall_index2 = fall_index2 + 1 }
     }
     fall_end <- fall_index2 - 1
     
-    max_lat =   dat_subset$DAY[which.max(dat_subset$lat[dat_subset$DAY])]
+    # find center of the season, maximum latitute (e.g. population is no longer moving further north; breeding)
+    max_lat = dat_subset[dat_subset$lat == max(dat_subset$lat),]$DAY
     
-    dates = data.frame(species = s, YEAR = year[i], SPRING = spring_begin, MAXLAT = max_lat, FALL = fall_end)
+    dates = data.frame(species = s, YEAR = y, SPRING = spring_begin, MAXLAT = max_lat, FALL = fall_end)
     
     df <- data.frame(bind_rows(df, dates))
     }
@@ -507,7 +531,7 @@ Est3MigrationDates = function(dat){
 return(df)
 }
 
-#blue jays don't really migrate? remove them from this part of the analysis:
+#blue jays don't really migrate? Should I remove them from this part of the analysis:
 dailylocs_4spp <- dailylocs %>% filter(species != "Cyanocitta cristata")
 dates <- Est3MigrationDates(dailylocs_4spp) 
 
@@ -543,19 +567,24 @@ ggarrange(begin, end,
 ggsave(filename = "figs/allspp_winterDates.png", height = 5, width=8)
 ```
 
-
-
-#Add Season to dailylocs
-#Map based on GAM Model
-
+Now we might just want to look at bird occurrences during the winter months, and in the latitudes that ERC occur in: 
+Can use the winter column to grab all data October-March and the latitudes ~ 26-47 _Not that these choices are somewhat arbitrary, just to get a quick look now. Will need to get finer grained info from D. Ward and lab later...
 ```{r}
-qmplot(lon, lat, data = dailylocs, color = YEAR)
+ERCbirds <- dailylocs %>%
+  filter(lat - lat_se > 27 & lat + lat_se < 47 & winter=="winter")
+
+ggplot() + 
+  geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
+  geom_point(data=ERCbirds, aes(lon, lat), alpha=0.10, col="red") + 
+  xlim(-102,-52) + 
+  theme_bw() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) + 
+  facet_grid(MONTH~species)
 
 ```
-
-```{r}
-qmplot(lon, lat, data = dailylocs, color = DAY)
-
-```
-
 
