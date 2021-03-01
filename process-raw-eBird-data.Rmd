@@ -38,7 +38,7 @@ Load the eBird effort and location files, from FAL (July 2020)
 
 For *cedar waxwing*
 ```{r}
-load("data/raw_eBird_data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c, FAL named previously
+load(here("data/raw_eBird_data/Bombycilla_cedrorum.RData")) # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -53,7 +53,7 @@ load("data/raw_eBird_data/Bombycilla_cedrorum.RData") # will come in as ebrd2.c,
 
 For *blue jay*
 ```{r}
-load("data/raw_eBird_data/Cyanocitta_cristata.RData") # will come in as ebrd2.c, FAL named previously
+load(here("data/raw_eBird_data/Cyanocitta_cristata.RData")) # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -68,7 +68,7 @@ load("data/raw_eBird_data/Cyanocitta_cristata.RData") # will come in as ebrd2.c,
 
 For *wood thrush*
 ```{r}
-load("data/raw_eBird_data/Hylocichla_mustelina.RData") # will come in as ebrd2.c, FAL named previously
+load(here("data/raw_eBird_data/Hylocichla_mustelina.RData")) # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -83,7 +83,7 @@ load("data/raw_eBird_data/Hylocichla_mustelina.RData") # will come in as ebrd2.c
 
 For *robin*
 ```{r}
-load("data/raw_eBird_data/Turdus_migratorius.Rdata") # will come in as ebrd2.c, FAL named previously
+load(here("data/raw_eBird_data/Turdus_migratorius.Rdata")) # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -99,7 +99,7 @@ load("data/raw_eBird_data/Turdus_migratorius.Rdata") # will come in as ebrd2.c, 
 
 For *yellow-rumped warbler*
 ```{r}
-load("data/raw_eBird_data/Setophaga_coronata.Rdata") # will come in as ebrd2.c, FAL named previously
+load(here("data/raw_eBird_data/Setophaga_coronata.Rdata")) # will come in as ebrd2.c, FAL named previously
 
 # #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
