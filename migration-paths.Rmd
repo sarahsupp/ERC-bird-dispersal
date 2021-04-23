@@ -567,6 +567,16 @@ ggarrange(begin, end,
 ggsave(filename = "figs/allspp_winterDates.png", height = 5, width=8)
 ```
 
+Let's look at the linear trends of these dates for species, especially S. coronata.
+```{r}
+scoronata_spring <- dates %>%
+  filter(species=="Setophaga coronata")
+
+mod1 <- lm(SPRING ~ YEAR, data=scoronata_spring)
+summary(mod1)
+```
+
+
 Now we might just want to look at bird occurrences during the winter months, and in the latitudes that ERC occur in: 
 Can use the winter column to grab all data October-March and the latitudes ~ 26-47 _Not that these choices are somewhat arbitrary, just to get a quick look now. Will need to get finer grained info from D. Ward and lab later...
 ```{r}
@@ -587,4 +597,51 @@ ggplot() +
   facet_grid(MONTH~species)
 
 ```
+#Little's range and FIA importance value species distribution map for Eastern red cedar
+Try something with a shapefile
+Downloaded this one for eastern red cedar from https://www.fs.fed.us/nrs/atlas/littlefia/species_table.html  
+```{r}
+my_spdf <- readOGR( 
+  dsn=paste0(here(), "/data/shapefile/") , 
+  layer="litt68av",
+  verbose=FALSE
+)
+
+#explore the shapefile
+summary(my_spdf)
+length(my_spdf)
+head(my_spdf@data)
+
+# Basic plot of this shape file using Base R:
+par(mar=c(0,0,0,0))
+plot(my_spdf, col="darkolivegreen", bg="grey80", lwd=0.25, border=0 )
+
+# 'fortify' the data to get a dataframe format required by ggplot2
+require(broom)
+spdf_fortified <- tidy(my_spdf, region = "LITT68_ID")
+
+# reproject data
+spdf_WGS84 <- rgdal::spTransform(my_spdf,
+                                crs(state_prov))
+
+# get background map layers
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada"))
+us  <- map_data("usa")
+
+# Plot it using ggplot2, just a shape, no context. Seems to be missing projection ?? Can't add points or background map.
+ggplot() + 
+  geom_polygon(data = spdf_fortified, aes( x = long, y = lat, group = group), fill="#69b3a2", color="white", alpha=0.25) +
+  theme_void()
+
+#TODO: Can't plot the shapefile onto the map because it isn't the right projection
+#       sf should be abel to help this, maybe here? https://r-spatial.org/r/2018/10/25/ggplot2-sf-2.html 
+ggplot(data = world) +
+  geom_sf() + 
+  geom_point(data=dat_effort, aes(x=lon, y=lat), size=0.2) + 
+  coord_sf(xlim = c(-103, -48), ylim = c(24.5, 60), expand = FALSE) +
+ #geom_polygon(data = spdf_fortified, aes( x = long, y = lat, group = group), fill="#69b3a2", color="white", alpha=0.25) +
+  theme_void()
+  
+```
+
 
