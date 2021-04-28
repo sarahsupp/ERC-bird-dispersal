@@ -344,6 +344,11 @@ ggplot(dailylocs, aes(lon, lat, group=YEAR)) +
   scale_colour_manual(values = c("grey50", "blue")) +
   facet_wrap(~species)
 
+ggplot(dailylocs, aes(lon, lat, group=YEAR)) +
+  geom_point(aes(col=winter), alpha=0.25) + 
+  scale_colour_manual(values = c("grey50", "blue")) +
+  facet_grid(YEAR~species)
+
 #FIXME: For relevance to ERC, we have some generic winter months, labeled in blue, but will need to also determine the lat-long of interest. For example, Hylocichla mustelina is definitely migrating during the winter, but much of this may be further south than the main area of interest, and not fully relevant during all of the winter time frame.
 ```
 
@@ -578,14 +583,14 @@ summary(mod1)
 
 
 Now we might just want to look at bird occurrences during the winter months, and in the latitudes that ERC occur in: 
-Can use the winter column to grab all data October-March and the latitudes ~ 26-47 _Not that these choices are somewhat arbitrary, just to get a quick look now. Will need to get finer grained info from D. Ward and lab later...
+Can use the winter column to grab all data October-March and the latitudes ~ 26-47 --Note that these choices are somewhat arbitrary, just to get a quick look now. Will need to get finer grained info from D. Ward and lab later...
 ```{r}
 ERCbirds <- dailylocs %>%
   filter(lat - lat_se > 27 & lat + lat_se < 47 & winter=="winter")
 
 ggplot() + 
   geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
-  geom_point(data=ERCbirds, aes(lon, lat), alpha=0.10, col="red") + 
+  geom_point(data=ERCbirds, aes(lon, lat, col=species), size=.1) + 
   xlim(-102,-52) + 
   theme_bw() + 
   theme(axis.title.x=element_blank(),
@@ -594,9 +599,87 @@ ggplot() +
         axis.title.y=element_blank(),
         axis.text.y=element_blank(),
         axis.ticks.y=element_blank()) + 
-  facet_grid(MONTH~species)
+  facet_wrap(~MONTH)
 
 ```
+
+# look at the dat_effort file locations, not just the daily locs (which are summarized centroids only)
+```{r}
+winter_dat_effort <- dat_effort %>%
+  mutate(DAYm1 = DAY-1,
+         origin = paste0(YEAR, "-01-01"),
+         DATE = as.Date(DAYm1, origin=origin), 
+         MONTH = month(DATE)) %>%
+  mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
+  arrange(species,DATE) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
+  select(-DAYm1, -origin) %>%
+  filter(winter=="winter") %>%
+  filter(lat > 27 & lat < 47)
+
+
+  ggplot() + 
+  geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
+  geom_point(data=winter_dat_effort, aes(lon, lat, col=species), alpha=.2, size=.1) + 
+  xlim(-102,-52) + 
+  theme_bw() + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank()) + 
+  facet_grid(species~MONTH)
+
+```
+
+Now, try to summarize the number of unique species in each POLYFID on each day in each year for the winter ERC season (can be counted as nrow())
+```{r}
+sppR <- winter_dat_effort %>%
+  group_by(POLYFID, cell_lat, cell_lon, YEAR, MONTH, DAY) %>%
+  summarize(num_spp = n())
+
+# sppR <- dat_effort %>%
+#     mutate(DAYm1 = DAY-1,
+#          origin = paste0(YEAR, "-01-01"),
+#          DATE = as.Date(DAYm1, origin=origin), 
+#          MONTH = month(DATE)) %>%
+#   group_by(POLYFID, YEAR, MONTH, DAY) %>%
+#   summarize(num_spp = n())
+
+ggplot(sppR, aes(as.factor(num_spp), cell_lat)) + geom_boxplot() + 
+  facet_wrap(~YEAR)
+ggplot(sppR, aes(as.factor(num_spp), cell_lon)) + geom_boxplot() + 
+  facet_wrap(~YEAR)
+
+avg<- sppR %>%
+  group_by(YEAR, MONTH) %>%
+  summarize(mean = mean(num_spp), 
+            median = median(num_spp))
+
+avg2 <- sppR %>%
+  group_by(YEAR, MONTH, DAY) %>%
+  summarize(mean = mean(num_spp),
+            median = median(num_spp))
+
+ggplot(sppR, aes(DAY, num_spp)) + 
+  geom_boxplot() + 
+  facet_wrap(~MONTH)
+
+ggplot(avg, aes(YEAR, mean)) + geom_point() + facet_wrap(~MONTH)
+mod2 <- lm(mean~as.numeric(YEAR), data=avg)
+summary(mod2)
+
+ggplot(avg, aes(mean)) + geom_histogram(aes(fill=YEAR)) + facet_wrap(~MONTH)
+
+ggplot(avg, aes(YEAR, median)) + geom_point() + facet_wrap(~MONTH)
+
+ggplot(avg2, aes(DAY, mean)) + geom_point() + facet_grid(YEAR~MONTH, scale="free")
+
+```
+
+
 #Little's range and FIA importance value species distribution map for Eastern red cedar
 Try something with a shapefile
 Downloaded this one for eastern red cedar from https://www.fs.fed.us/nrs/atlas/littlefia/species_table.html  
