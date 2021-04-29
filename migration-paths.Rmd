@@ -31,6 +31,9 @@ library(maptools)
 library(fields)
 library(sp)
 library(raster)
+library(rgdal)
+library(rgeos)
+library(sf)
 library(maps)
 library(mapdata)
 library(rgdal)
@@ -677,6 +680,7 @@ ggplot(avg, aes(YEAR, median)) + geom_point() + facet_wrap(~MONTH)
 
 ggplot(avg2, aes(DAY, mean)) + geom_point() + facet_grid(YEAR~MONTH, scale="free")
 
+
 ```
 
 
@@ -684,8 +688,41 @@ ggplot(avg2, aes(DAY, mean)) + geom_point() + facet_grid(YEAR~MONTH, scale="free
 Try something with a shapefile
 Downloaded this one for eastern red cedar from https://www.fs.fed.us/nrs/atlas/littlefia/species_table.html  
 ```{r}
+#found some useful help here: https://www.earthdatascience.org/courses/earth-analytics/spatial-data-r/intro-to-coordinate-reference-systems/ 
+#may also be useful to read thorugh here: https://geocompr.robinlovelace.net/reproj-geo-data.html 
+
+# read shapefile
+ERC <- readOGR(dsn = paste0(here(), "/data/shapefile2/litt68av.shp"))
+# convert to dataframe
+ERC_df <- fortify(ERC)
+
+# plot map using ggplot
+ERCmap <- ggplot(ERC_df, aes(long,lat, group = group)) +
+  geom_polygon(fill="darkolivegreen") +
+  coord_equal() +
+  labs(x = "Longitude (Degrees)",
+       y = "Latitude (Degrees)",
+      title = "ERC Range Map",
+      subtitle = "D_Clarke_1866 Datum, Projection: Albers, Units: Degrees - Lat / Lon") + 
+  theme_void()
+ERCmap
+
+#TODO reprojection of the range data is needed, or transformation of all other data including points to Albers, or it won't work.
+# reproject data from Albers to WGS84 CRS
+ERC_WGS84 = sf::st_transform(ERC, crs = "+proj=wgs84") #FIXME
+ERC_WGS84 <- sp::spTransform(ERC,
+                                CRS("+proj=wgs84")) #FIXME
+
+# grab winter locations from the winter_dat_effort dataframe
+# add a point to the map
+mapLocations <- ERCmap +
+                geom_point(data = winter_dat_effort,
+                aes(x = lon, y = lat, group = NULL), colour = "orange",
+                      size = .5)
+mapLocations
+--------------------------------
 my_spdf <- readOGR( 
-  dsn=paste0(here(), "/data/shapefile/") , 
+  dsn=paste0(here(), "/data/shapefile2/") , 
   layer="litt68av",
   verbose=FALSE
 )
@@ -697,7 +734,7 @@ head(my_spdf@data)
 
 # Basic plot of this shape file using Base R:
 par(mar=c(0,0,0,0))
-plot(my_spdf, col="darkolivegreen", bg="grey80", lwd=0.25, border=0 )
+plot(my_spdf2, col="darkolivegreen", bg="grey80", lwd=0.25, border=0 )
 
 # 'fortify' the data to get a dataframe format required by ggplot2
 require(broom)
