@@ -692,7 +692,7 @@ Downloaded this one for eastern red cedar from https://www.fs.fed.us/nrs/atlas/l
 #may also be useful to read thorugh here: https://geocompr.robinlovelace.net/reproj-geo-data.html 
 
 # read shapefile
-ERC <- readOGR(dsn = paste0(here(), "/data/shapefile2/litt68av.shp"))
+ERC <- readOGR(dsn = paste0(here(), "/data/shapefile/litt68av.shp"))
 # convert to dataframe
 ERC_df <- fortify(ERC)
 
@@ -720,6 +720,9 @@ mapLocations <- ERCmap +
                 aes(x = lon, y = lat, group = NULL), colour = "orange",
                       size = .5)
 mapLocations
+
+
+
 --------------------------------
 my_spdf <- readOGR( 
   dsn=paste0(here(), "/data/shapefile2/") , 
