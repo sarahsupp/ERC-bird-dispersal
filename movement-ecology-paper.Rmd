@@ -1,0 +1,409 @@
+---
+title: "ME-paper-fig-example"
+author: "Sarah Supp"
+date: "4/30/2021"
+output: html_document
+---
+
+#code to make examples using eBird data for the Movement Ecology paper
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE)
+
+library(here)
+library(data.table)
+library(devtools)
+#devtools::install_github("dkahle/ggmap")
+library(ggmap)
+library(maptools)
+library(fields)
+library(sp)
+library(raster)
+library(rgdal)
+library(rgeos)
+library(sf)
+library(maps)
+library(mapdata)
+library(mgcv)
+library(gamm4) 
+library(tidyverse) 
+library(ggpubr)
+#devtools::install_github('r-barnes/dggridR', vignette=TRUE)
+library(dggridR)
+library(RColorBrewer)
+library(geosphere)
+library(radiant.data)
+library(rnaturalearth)
+#devtools::install_github("ropensci/rnaturalearthhires")
+library(rnaturalearthhires)
+#library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
+#devtools::install_github("r-spatial/sf") #C compiler error on mac
+#library(geojsonio)
+```
+
+#Making example fig for data processing from eBird
+
+Each species has it's own merged data file, and will be brought into one species data (spdata) file to work through the results. I'll make an example figure with Yellow-rumped Warbler in 2019
+```{r}
+files = list.files(path=here(), recursive=T, pattern=glob2rx("dat_effort*.rds"))
+
+#for Figure 2
+yewa <- readRDS(paste0(here(), "/data/dat_effort_YEWA.rds")) 
+yewa <- yewa %>% filter(YEAR==2019)
+
+#for Figure 3
+robi <- readRDS(paste0(here(), "/data/dat_effort_ROBI.rds"))
+robi <- robi %>% filter(lon >= -103)
+bchu <- readRDS("/home/sarah/Documents/GitHub/hb-mig-env/data/dat_effort_bchu.rds")
+bchu <- bchu %>% filter(lon <= -103)
+
+
+robi_bchu <- rbind(robi, bchu)
+robi_bchu <- filter(robi_bchu, YEAR != 2020) #2020 is incomplete, don't include
+```
+
+
+1. Filter to species: plot all the points (note that these are binned points, so they might look a little strange)
+```{r}
+dim(yewa)
+
+# get background map layers
+coastlines <- rnaturalearth::ne_coastline()
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"))
+us  <- map_data("usa")
+
+ggplot() + 
+  geom_polygon(data=coastlines, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
+  geom_point(data=yewa, aes(lon, lat), col="darkorchid4", alpha=.2, size=.1) + 
+ # xlim(-102,-52) + 
+  theme_bw() + 
+  theme_void()
+#  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+```
+
+2. count the points and check for enough and consistency
+```{r}
+n = nrow(yewa)
+
+#count total number of records across the years. (increasing strongly)
+counts <- yewa %>%
+  group_by(species, YEAR) %>%
+  tally()
+
+num_bins <- ggplot(counts, aes(YEAR, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number of binned observations") + xlab("Year") +
+  theme(axis.text.x = element_text(angle = 90)) + 
+  facet_wrap(~species, ncol=1)
+
+#checking how many unique grid cells logged an observation in each year (relatively flat)
+nPOLYFID <- yewa %>%
+  group_by(species, DAY) %>%
+  summarise(n=n_distinct(POLYFID))
+
+num_gridcells <- ggplot(nPOLYFID, aes(DAY, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number of unique grid cells") + xlab("Day of Year") +
+  theme(axis.text.x = element_text(angle = 90)) + 
+  facet_wrap(~species, ncol=1)
+
+#checking how many days per year have at least 1 observation (ALL of them)
+nDAYSofyear <- yewa %>%
+  group_by(species, DAY) %>%
+  summarise(n=n())
+
+num_days <- ggplot(nDAYSofyear, aes(DAY, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number of unique records per day") + xlab("Day of Year") +
+  theme(axis.text.x = element_text(angle = 90)) + 
+  facet_wrap(~species, ncol=1)
+
+ggarrange(num_bins, num_gridcells, num_days,
+          labels=c("A", "B", "C"),
+          ncol=3, nrow=1)
+
+# make a single plot for Fig 2.
+ggplot(nPOLYFID, aes(DAY, n)) + geom_bar(stat="identity") + 
+  theme_bw() + ylab("Number unique grid cells") + xlab("Day of Year") +
+  #theme(axis.text.x = element_text(angle = 90)) + 
+  theme(text = element_text(size = 20)) +
+  facet_wrap(~species, ncol=1)
+
+# make a single plot for Fig 2.
+ggplot(nPOLYFID, aes(DAY, n)) + geom_line() + 
+  theme_bw() + ylab("Number unique grid cells") + xlab("Day of Year") +
+  #theme(axis.text.x = element_text(angle = 90)) + 
+  theme(text = element_text(size = 20)) +
+  facet_wrap(~species, ncol=1)
+
+ggsave(filename=paste0(here(),"/figs/yewa_gridcells.png"), width=5, height=4)
+
+
+range(nPOLYFID$n, na.rm=TRUE)
+hist(nPOLYFID$n)
+
+```
+
+Weight occurrence records by effort and plot
+```{r}
+#weights all together
+weight_yewa <- yewa %>%
+    mutate(DAY = as.numeric(DAY),
+         YEAR = as.numeric(YEAR)) %>%
+group_by(species, YEAR, DAY) %>%
+  summarise(
+            numcells = n(), 
+            numobs = sum(count.x),
+            wtmean_lon = weighted.mean(lon, count.x/count.y), 
+            wtmean_lat = weighted.mean(lat, count.x/count.y), 
+            wtsd_lon = weighted.sd(lon, count.x/count.y),
+            wtsd_lat = weighted.sd(lat, count.x/count.y) 
+            ) %>%
+  ungroup()
+
+weight_yewa <- weight_yewa %>%
+  mutate(DAYm1 = DAY-1,
+         origin = paste0(YEAR, "-01-01"),
+         DATE = as.Date(DAYm1, origin=origin), 
+         MONTH = month(DATE)) %>%
+  mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
+  arrange(species,DATE) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
+  select(-DAYm1, -origin)
+
+## Calculates the count of observations within each cell, 
+#weighted by total eBirder effort on that day in a given cell. 
+#Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the #target species in a cell divided by the total number of eBirder records in a cell.
+
+dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
+yewa$cell <- dgGEO_to_SEQNUM(dgg, yewa$lon, yewa$lat)$seqnum
+yewa$cell_lat <- dgSEQNUM_to_GEO(dgg, yewa$cell)$lat_deg 
+yewa$cell_lon <- dgSEQNUM_to_GEO(dgg, yewa$cell)$lon_deg 
+
+yewa <- yewa %>%
+  mutate(count_weighted = count.x/count.y)
+
+spp_counts <- yewa %>%
+  group_by(species, cell) %>% 
+  summarise(sum_weighted_count=sum(count_weighted),
+            mean_weighted_count=mean(count_weighted),
+            sum_count=sum(count.x))
+
+#Get the grid cell boundaries for cells which had bird observations
+grid <- dgcellstogrid(dgg, spp_counts$cell, frame=TRUE, wrapcells=TRUE)
+
+#Update the grid cells' properties to include the number of observations in each cell
+grid <- merge(grid, spp_counts, by.x="cell", by.y="cell")
+
+ggplot() + 
+  geom_polygon(data=coastlines, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
+  #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), size=0.001)    +
+  geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color=NA) +
+#  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
+  scale_fill_gradient(low="gray90", high="darkorchid4") + 
+  #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
+  theme_void() + 
+  facet_wrap(~species)
+
+```
+Calculates weights separately by east vs west flyway
+
+```{r}
+#weights EASTERN flyway only
+weight_yewa_east <- yewa %>%
+  filter(lon>-103) %>%
+    mutate(DAY = as.numeric(DAY),
+         YEAR = as.numeric(YEAR)) %>%
+group_by(species, YEAR, DAY) %>%
+  summarise(
+            numcells = n(), 
+            numobs = sum(count.x),
+            wtmean_lon = weighted.mean(lon, count.x/count.y), 
+            wtmean_lat = weighted.mean(lat, count.x/count.y), 
+            wtsd_lon = weighted.sd(lon, count.x/count.y),
+            wtsd_lat = weighted.sd(lat, count.x/count.y) 
+            ) %>%
+  ungroup() %>%
+  mutate(DAYm1 = DAY-1,
+         origin = paste0(YEAR, "-01-01"),
+         DATE = as.Date(DAYm1, origin=origin), 
+         MONTH = month(DATE)) %>%
+  mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
+  arrange(species,DATE) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
+  select(-DAYm1, -origin)
+
+#weights WESTERN flyway only
+weight_yewa_west <- yewa %>%
+  filter(lon<=-103) %>%
+    mutate(DAY = as.numeric(DAY),
+         YEAR = as.numeric(YEAR)) %>%
+group_by(species, YEAR, DAY) %>%
+  summarise(
+            numcells = n(), 
+            numobs = sum(count.x),
+            wtmean_lon = weighted.mean(lon, count.x/count.y), 
+            wtmean_lat = weighted.mean(lat, count.x/count.y), 
+            wtsd_lon = weighted.sd(lon, count.x/count.y),
+            wtsd_lat = weighted.sd(lat, count.x/count.y) 
+            ) %>%
+  ungroup() %>%
+  mutate(DAYm1 = DAY-1,
+         origin = paste0(YEAR, "-01-01"),
+         DATE = as.Date(DAYm1, origin=origin), 
+         MONTH = month(DATE)) %>%
+  mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
+  arrange(species,DATE) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
+  select(-DAYm1, -origin)
+```
+
+
+*Creates a dataframe with daily location for each year and graphs results*
+```{r}
+Estimatedailylocs = function(dat) {
+  
+  x <- unique(dat$YEAR)
+  spp <- unique(dat$species)
+
+  df <- data.frame(species = "none", DAY = 0, YEAR =0, MONTH = 0, winter = "not", lon = 0, lat = 0, lon_se = 0, lat_se = 0)
+  
+  for (s in spp){
+    for (i in x) {
+      sub_weighted_mean_locs <- 
+        dat %>%
+        filter(YEAR == i & species == s)
+      
+      lon_gam = gam(wtmean_lon ~ s(DAY, k=20), data = sub_weighted_mean_locs, gamma = 1.5)
+      lat_gam = gam(wtmean_lat ~ s(DAY, k=20), data = sub_weighted_mean_locs, gamma = 1.5)
+      xpred = data.frame(DAY=sort(unique(sub_weighted_mean_locs$DAY)))
+      lonpred = predict(lon_gam, newdata = xpred, type="response", se.fit=T)
+      latpred = predict(lat_gam, newdata = xpred, type="response", se.fit=T)
+      
+      preds =  data.frame(species = s, DAY = xpred$DAY, YEAR = i, 
+                          MONTH = sub_weighted_mean_locs$MONTH, winter = sub_weighted_mean_locs$winter, 
+                          lon = lonpred$fit, lat = latpred$fit, lon_se = lonpred$se.fit, lat_se = latpred$se.fit)
+      df <- data.frame(bind_rows(df, preds))
+    }
+  }
+  df = df[-1,]
+  return(df)
+}
+
+#get daily centroid locations for all species in all years
+dailylocs_east <- Estimatedailylocs(weight_yewa_east)
+dailylocs_west <- Estimatedailylocs(weight_yewa_west)
+
+#name color scale
+cols <- c("1"="cadetblue", "2"="cadetblue", 
+          "3"="darkolivegreen2", "4"="darkolivegreen3", "5"="darkolivegreen4", "6"="darkolivegreen", 
+          "7"="darkorange1", "8"="darkorange2", "9"="darkorange3", "10"="darkorange4", 
+          "11"="cadetblue", "12"="cadetblue")
+
+ggplot() + 
+  geom_polygon(data=coastlines, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
+  geom_point(data=dailylocs_east, aes(lon, lat, group=YEAR, col=as.factor(MONTH)), alpha=0.25, size=1) +
+  geom_point(data=dailylocs_west, aes(lon, lat, group=YEAR, col=as.factor(MONTH)), alpha=0.25, size=1) +
+ # geom_point(aes(col=winter), alpha=0.25) + 
+  #scale_colour_viridis(discrete=TRUE) +
+  scale_colour_manual(values = cols) +
+  facet_wrap(~species) + 
+  theme_void()
+```
+
+Plot latitudinal change
+```{r}
+ggplot(dailylocs, aes(DAY, lat)) + 
+  geom_line(size=1) + #, aes(col=as.factor(MONTH))) + 
+  #scale_colour_manual(values = cols) +
+ # geom_line(data=dailylocs_west) + 
+ # geom_line(data=dailylocs_east) +
+  # geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts with dates
+ xlab("Day of Year") + ylab("weighted mean latitude") +
+  theme(element_text(size=20))+
+  theme_bw()
+```
+
+
+Make a map comparing winter and summer locations #FIXME
+```{r}
+ggplot() + 
+  geom_polygon(data=coastlines, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
+  #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), size=0.001)    +
+  geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color=NA) +
+#  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
+  scale_fill_gradient(low="gray90", high="darkorchid4") + 
+  #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
+  theme_void() + 
+  facet_wrap(~species)
+
+```
+
+
+For Figure 3:
+```{r}
+#count total number of records across the years. (increasing strongly)
+counts <- robi_bchu %>%
+  group_by(species, YEAR) %>%
+  summarise(polyfid_num=n_distinct(POLYFID),
+            total_num=sum(count.x), 
+            total_eft=sum(count.y), 
+            day_num=n_distinct(DAY), 
+            prop_check=total_num/total_eft)
+
+num_total <- ggplot(counts, aes(YEAR, total_num, group=species)) + 
+  geom_line(aes(col=species)) + 
+  geom_point(aes(col=species, shape=species))  +
+  scale_color_viridis(discrete=TRUE, option="turbo") +
+  xlab("Year") + 
+  ylab("Count of checklists") +
+  theme_bw() + 
+  theme(text = element_text(size = 12))  + 
+  scale_x_discrete(breaks=c("2008", "2010", "2012", "2014", "2016", "2018", "2020"))
+  
+num_checklists <- ggplot(counts, aes(YEAR, prop_check, group=species)) + 
+  geom_line(aes(col=species)) + 
+  geom_point(aes(col=species, shape=species))  +
+  scale_color_viridis(discrete=TRUE, option="turbo") +
+  xlab("Year") + 
+  ylab("Percent of checklists") +
+  theme_bw() + 
+  theme(text = element_text(size = 12))  + 
+  scale_x_discrete(breaks=c("2008", "2010", "2012", "2014", "2016", "2018", "2020"))
+
+num_gridcells <- ggplot(counts, aes(YEAR, polyfid_num, group=species)) + 
+  geom_line(aes(col=species)) + 
+  geom_point(aes(col=species, shape=species)) +
+  scale_color_viridis(discrete=TRUE, option="turbo") +
+  xlab("Year") +
+  ylab("Count of unique grid cells") + 
+  theme_bw() + 
+  theme(text = element_text(size=12))  + 
+  scale_x_discrete(breaks=c("2008", "2010", "2012", "2014", "2016", "2018", "2020"))
+
+num_daysofyear <- ggplot(counts, aes(YEAR, day_num, group=species)) + 
+  geom_line(aes(col=species)) +
+  geom_point(aes(col=species, shape=species)) +
+  scale_color_viridis(discrete=TRUE, option="turbo") +
+  xlab("Year") +
+  ylab("Count of days observed") + 
+  theme_bw() + 
+  theme(text = element_text(size=12))  + 
+  scale_x_discrete(breaks=c("2008", "2010", "2012", "2014", "2016", "2018", "2020"))
+
+ggarrange(num_total, num_checklists, num_gridcells, num_daysofyear,
+          labels=c("A", "B", "C", "D"),
+          ncol=2, nrow=2, 
+          legend="bottom",
+          common.legend=TRUE)
+
+ggsave(filename = "figs/ME_Fig3_species_obs.png", height = 6, width=7)
+```
+
