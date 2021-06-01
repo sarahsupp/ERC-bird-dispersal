@@ -57,9 +57,17 @@ robi <- robi %>% filter(lon >= -103)
 bchu <- readRDS("/home/sarah/Documents/GitHub/hb-mig-env/data/dat_effort_bchu.rds")
 bchu <- bchu %>% filter(lon <= -103)
 
+#load annas hb
+load(paste0(here(), "/data/FAL-data-update/ANHU-count-effort.RData"))
+anhu <- dat2 %>% select(POLYFID, YEAR=year, DAY=day, count.x, count.y) %>% mutate(species="Calypte anna")
 
 robi_bchu <- rbind(robi, bchu)
 robi_bchu <- filter(robi_bchu, YEAR != 2020) #2020 is incomplete, don't include
+
+robi_bchu <- robi_bchu %>% select(POLYFID, YEAR, DAY, count.x, count.y, species)
+robi_bchu_anhu <- rbind(robi_bchu, anhu)
+
+#
 ```
 
 
@@ -350,7 +358,7 @@ ggplot() +
 For Figure 3:
 ```{r}
 #count total number of records across the years. (increasing strongly)
-counts <- robi_bchu %>%
+counts <- robi_bchu_anhu %>%
   group_by(species, YEAR) %>%
   summarise(polyfid_num=n_distinct(POLYFID),
             total_num=sum(count.x), 
@@ -362,8 +370,10 @@ num_total <- ggplot(counts, aes(YEAR, total_num, group=species)) +
   geom_line(aes(col=species)) + 
   geom_point(aes(col=species, shape=species))  +
   scale_color_viridis(discrete=TRUE, option="turbo") +
+  scale_y_log10() +
+  annotation_logticks (sides="l") + 
   xlab("Year") + 
-  ylab("Count of checklists") +
+  ylab("log10(Count of checklists)") +
   theme_bw() + 
   theme(text = element_text(size = 12))  + 
   scale_x_discrete(breaks=c("2008", "2010", "2012", "2014", "2016", "2018", "2020"))
@@ -382,6 +392,7 @@ num_gridcells <- ggplot(counts, aes(YEAR, polyfid_num, group=species)) +
   geom_line(aes(col=species)) + 
   geom_point(aes(col=species, shape=species)) +
   scale_color_viridis(discrete=TRUE, option="turbo") +
+#  scale_y_log10() +
   xlab("Year") +
   ylab("Count of unique grid cells") + 
   theme_bw() + 
@@ -404,6 +415,6 @@ ggarrange(num_total, num_checklists, num_gridcells, num_daysofyear,
           legend="bottom",
           common.legend=TRUE)
 
-ggsave(filename = "figs/ME_Fig3_species_obs.png", height = 6, width=7)
+ggsave(filename = "figs/ME_Fig3_3species_obs.png", height = 6, width=7)
 ```
 
