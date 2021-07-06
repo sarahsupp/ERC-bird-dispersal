@@ -364,7 +364,8 @@ counts <- robi_bchu_anhu %>%
             total_num=sum(count.x), 
             total_eft=sum(count.y), 
             day_num=n_distinct(DAY), 
-            prop_check=total_num/total_eft)
+            prop_check=total_num/total_eft) %>% 
+  filter(species %in% c("Archilochus alexandri", "Calypte anna"))
 
 num_total <- ggplot(counts, aes(YEAR, total_num, group=species)) + 
   geom_line(aes(col=species)) + 
@@ -415,6 +416,6 @@ ggarrange(num_total, num_checklists, num_gridcells, num_daysofyear,
           legend="bottom",
           common.legend=TRUE)
 
-ggsave(filename = "figs/ME_Fig3_3species_obs.png", height = 6, width=7)
+ggsave(filename = "figs/ME_Fig3_2hbspecies_obs.png", height = 6, width=7)
 ```
 

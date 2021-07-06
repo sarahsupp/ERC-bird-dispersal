@@ -85,10 +85,38 @@ num_obs <- nrow(dat_effort)
 paste0("The total number of observations for all species is ", num_obs, ".")
 
 num_spobs <- dat_effort %>%
+  filter(YEAR!=2020) %>%
   group_by(species) %>%
-  summarise(n())
+  summarise(nrow=n(),
+            total=sum(count.x))
 
 num_spobs
+
+dat_effort %>%
+  filter(YEAR!=2020) %>%
+  group_by(species, YEAR) %>%
+  summarise(nrow=n(),
+            total=sum(count.x)) %>%
+  ggplot(aes(as.numeric(YEAR), total, group=species)) + 
+  geom_point(aes(shape=species)) + 
+  geom_line() + 
+  scale_y_log10() + 
+  scale_x_continuous(breaks=seq(2008, 2020, 3)) +
+  #  scale_x_discrete(limits=c("2008", "2012", "2016", "2019")) +
+  xlab("Year") +
+  ylab("checklist count") +
+  theme(legend.position=("none")) +
+  facet_wrap(~species, ncol=1) + 
+    # set transparency
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA)
+        ) 
+
+# Figure for ESA 2021 poster
+ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
 ```
 
 
@@ -176,7 +204,7 @@ ggsave(filename = "figs/species_obs.png", height = 11, width=8)
 ```
 
 
-Initial plot of bird average locations for cedar waxwing species and latitude by day across years *for 2020 NSF report*
+Initial plot of bird average locations for all species and latitude by day across years *for 2020 NSF report*
 ```{r}
 # ggplot(weighted_mean_locs, aes(wtmean_lon, wtmean_lat)) +
 #   geom_point(alpha=0.25) + geom_line(alpha=0.25) +
@@ -430,7 +458,7 @@ EstimateMaxSpeed = function(dat) {
 return(df)
 }
 
-#estimate the maximim migration speed for each year
+#estimate the maximum migration speed for each year
 max_speed <- EstimateMaxSpeed(dailylocs)
 
 speeds <- max_speed %>%
@@ -442,15 +470,20 @@ speeds <- max_speed %>%
   )
 
 #plot the results estimating yearly maximum migration speed (km/day)
-ggplot(max_speed, aes(YEAR, MAX_SPEED)) + geom_line(aes(col=species)) + 
+ggplot(max_speed %>% filter(species!="Cyanocitta cristata"), aes(YEAR, MAX_SPEED)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
-  theme(text = element_text(size=12))
+  theme(text = element_text(size=12),
+        legend.position="bottom") + 
+  scale_x_continuous(breaks=seq(2008, 2019, 3))
 
 #suggest using points instead of lines, because we're not really plotting something continuous with an expected trend here, where speed in one year depends on speed in the previous year (depends on weather/climate?)
-ggplot(max_speed, aes(as.factor(YEAR), MAX_SPEED)) + geom_point() +
+ggplot(max_speed, aes(YEAR, MAX_SPEED)) + geom_point() +
   #geom_hline(yintercept = med, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
-  theme(text = element_text(size=20), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  theme(text = element_text(size=20), 
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        legend.position="bottom") + 
+  scale_x_continuous(breaks=seq(2008, 2019, 3)) +
  # annotate(geom="text", x= 3, y= 50, label=paste0("median = ", round(med,2), " km/day")) + 
   facet_wrap(~species)
 
@@ -463,7 +496,7 @@ ggplot(max_speed, aes(as.factor(YEAR), MAX_SPEED)) + geom_point() +
 This will need some editing to work on each year separately. Ideally a resulting data frame with columns for year, begin_spring, peak_latitude, end_autumn
 
 ```{r}
-# TODO: from old function Est3MigrationDates in migration-fxns.R
+# modified from old function Est3MigrationDates in migration-fxns.R
 
 Est3MigrationDates = function(dat){
   #takes in predicted centroids for migration path, and estimates the beginning of spring migration,
@@ -556,6 +589,7 @@ begin <- ggplot(dates, aes(YEAR, FALL)) +
   #geom_hline(yintercept = begin_winter, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Winter begin date") + 
   theme(text = element_text(size=14), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  scale_x_continuous(breaks=seq(2008, 2019, 3)) +
  # annotate(geom="text", x= 2012, y= 340, label=paste0("median doy = ", round(begin_winter,2)))
   facet_wrap(~species)
 
@@ -564,7 +598,8 @@ end <- ggplot(dates, aes(YEAR, SPRING)) +
   geom_smooth(method="lm") +
  # geom_hline(yintercept = end_winter, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Winter end date") + 
-  theme(text = element_text(size=14), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  theme(text = element_text(size=14), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +  
+  scale_x_continuous(breaks=seq(2008, 2019, 3)) +
   #annotate(geom="text", x= 2012, y= 55, label=paste0("median doy = ", round(end_winter,2)))
   facet_wrap(~species)
 
@@ -640,7 +675,7 @@ winter_dat_effort <- dat_effort %>%
 Now, try to summarize the number of unique species in each POLYFID on each day in each year for the winter ERC season (can be counted as nrow())
 ```{r}
 sppR <- winter_dat_effort %>%
-  group_by(POLYFID, cell_lat, cell_lon, YEAR, MONTH, DAY) %>%
+  group_by(cell, cell_lat, cell_lon, YEAR, MONTH, DAY) %>%
   summarize(num_spp = n())
 
 # sppR <- dat_effort %>%
@@ -683,6 +718,45 @@ ggplot(avg2, aes(DAY, mean)) + geom_point() + facet_grid(YEAR~MONTH, scale="free
 
 ```
 
+Calculate the number of species in a hex cell for each month (as opposed to day). Save as a table and then plot it on the grid cell map, using viridis color scale.
+```{r}
+sppR_mo <- sppR %>%
+  group_by(cell, cell_lat, cell_lon, YEAR, MONTH) %>%
+  summarise(Smed=median(num_spp), 
+            Smax=max(num_spp),
+            Smin=min(num_spp))
+
+#Get the grid cell boundaries for cells which had bird observations
+grid <- dgcellstogrid(dgg, sppR_mo$cell, frame=TRUE, wrapcells=TRUE)
+
+#Update the grid cells' properties to include the number of observations in each cell
+grid <- merge(grid, sppR_mo, by.x="cell", by.y="cell")
+#zoom to just eastern USA
+grid <- grid %>%
+  filter(long >= -103,
+         lat >= 25)
+#Get polygons for the spatial range and make a map of bird observations
+countries <- map_data("usa") 
+
+grid2019 <- grid %>% filter(YEAR ==2019)
+
+#plot just 2019, median values for the month
+ggplot() + 
+  #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  geom_polygon(data=grid2019, aes(x=long, y=lat, group=cell, fill=Smed), alpha=1)    +
+  geom_path   (data=grid2019, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+#  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
+  #scale_fill_gradient(low="gray90", high="black") + 
+  scale_fill_viridis() +
+  #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
+  theme_void() + 
+  facet_wrap(~MONTH)
+
+ggsave("figs/winter2019.png", bg="transparent", height=7, width=10)
+
+```
+
+
 
 #Little's range and FIA importance value species distribution map for Eastern red cedar
 Try something with a shapefile
@@ -706,6 +780,9 @@ ERCmap <- ggplot(ERC_df, aes(long,lat, group = group)) +
       subtitle = "D_Clarke_1866 Datum, Projection: Albers, Units: Degrees - Lat / Lon") + 
   theme_void()
 ERCmap
+
+# Figure for ESA 2021 poster
+ggsave("ERC_range.png", ERCmap, bg="transparent")
 
 #TODO reprojection of the range data is needed, or transformation of all other data including points to Albers, or it won't work.
 # reproject data from Albers to WGS84 CRS
