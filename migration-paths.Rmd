@@ -738,7 +738,7 @@ grid <- grid %>%
 #Get polygons for the spatial range and make a map of bird observations
 countries <- map_data("usa") 
 
-grid2019 <- grid %>% filter(YEAR ==2019)
+grid2019 <- grid %>% filter(YEAR ==2010)
 
 #plot just 2019, median values for the month
 ggplot() + 
@@ -752,7 +752,7 @@ ggplot() +
   theme_void() + 
   facet_wrap(~MONTH)
 
-ggsave("figs/winter2019.png", bg="transparent", height=7, width=10)
+ggsave("figs/winter2019.png", bg="transparent", height=7, width=11)
 
 ```
 
