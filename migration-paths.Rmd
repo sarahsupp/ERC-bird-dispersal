@@ -756,26 +756,32 @@ ggsave("figs/winter2019.png", bg="transparent", height=7, width=11)
 
 ```
 
-Aarrgggh rewrite the code to fix what I lost when R froze. 
+Calculate the slopes of species richness change across years, within cells. Plot the results to see if there is a trend of higher species disperser load through time. Need to think and check with FAL for ideas to see if we need to account for overall effort better (currently using as pres-only data, without weighted checks)
 ```{r}
 # look at the structure of sppR_mo
 
-list unique cells, 
-list unique months
-empty df with cell, mo, n, slope, pVal -- maybe also retain lat and long
+cells <- unique(sppR_mo$cell)
+months <- c(10, 11, 12, 1, 2, 3)
+df <- data.frame(cell=0, month=0, n=0, slope=0, pVal=0, sig=NA, cell_lat=0, cell_lon=0)
 
-for c in cell
-dat
-for m in months
-dat 2
-if nrow(dat2) >=3
-mod=lm(Smed~as.numeric(YEAR))
-n=
-  slope=
-  pVal=
-  sig=ifelse(pVal < 0.05, "sig", "NS")
-  
-  df = rbind(df, c(c, m, n, slope, pVal, sig))
+for (c in cells){
+  dat <- sppR_mo %>% filter(cell == c)
+  for (m in months){
+    dat2 <- dat %>% filter(MONTH == m)
+    if (nrow(dat2) >= 3) {
+      mod <- lm(Smed~as.numeric(YEAR), data=dat2)
+      n = nrow(dat2)
+      slope = coef(mod)[[2]]
+      pVal = glance(mod)$p.value[[1]]
+      sig = ifelse(pVal<0.05, "sig", "NS")
+      cell_lat=dat2$cell_lat[1]
+      cell_lon=dat2$cell_lon[1]
+      
+      df <- rbind(df, c(c, m, n, slope, pVal, sig, cell_lat, cell_lon))
+    }
+  }
+}
+
   
 # adding factor names and levels to month, ordered by winter season, not calendar year
 df$monthname <- month(df$month, label=TRUE)
