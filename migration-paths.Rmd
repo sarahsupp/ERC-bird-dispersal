@@ -802,23 +802,42 @@ ggplot(df, aes(slope)) +
 # ggplot boxplot by month for all significant slopes, included a wilcoxon.test sig for oct vs nov, jan, feb
 # wanted to save this as transparent for ESA poster
 ggplot(df %>% filter(sig=="sig"), aes(monthname, slope)) + 
-  geom_boxplot(fill="black", col="gray40", notch=TRUE) +
-  geom_jitter(col="darkturquoise", alpha=0.5) +
-  geom_hline(yintercept=0, linetype="dashed", col="gray40") +
+  geom_boxplot(fill="black", col="black", notch=TRUE) +
+  geom_jitter(col="cyan3", alpha=0.5) +
+  geom_hline(yintercept=0, linetype="dashed", col="black") +
+  xlab("") +
+  ylab("slope") +
     theme(
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
         panel.background = element_rect(fill = "transparent",colour = NA),
-        plot.background = element_rect(fill = "transparent",colour = NA)
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        axis.text.y = element_text(colour="black", size=14),
+        axis.title.y = element_text(colour="black", size=14)
         ) 
   #add significance, only difs were oct-nov, oct-jan, oct-feb
   # add text labels for mean slopes?
 
 # Figure for ESA 2021 poster
-ggsave("figs/Smed_slopes_month.png", bg="transparent", height=5, width=11)
+ggsave("figs/Smed_slopes_month.png", bg="transparent", height=3, width=11)
+
+#average effect size, mean of the slopes
+df %>% 
+  filter(sig=="sig") %>%
+#  group_by(monthname) %>%
+  summarize(meanslope = mean(slope),
+            medianslope = median(slope))
 
 
+#plot by latitude? any signal here?
+ggplot(df %>% filter(sig=="sig"), aes(cell_lat, slope)) + 
+  geom_point(alpha=0.10) + 
+  geom_hline(yintercept=0, linetype="dashed") +
+  geom_smooth(method="lm") + 
+  facet_wrap(~monthname)
 
+# Figure for ESA 2021 poster
+ggsave("figs/sig_slopes_month_lat.png", bg="transparent", height=4, width=6)
 
 # ggplot boxplot by month for all slopes, shaded jitter points by sig
 
