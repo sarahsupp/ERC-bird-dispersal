@@ -762,7 +762,7 @@ Calculate the slopes of species richness change across years, within cells. Plot
 
 cells <- unique(sppR_mo$cell)
 months <- c(10, 11, 12, 1, 2, 3)
-df <- data.frame(cell=0, month=0, n=0, slope=0, pVal=0, sig=NA, cell_lat=0, cell_lon=0)
+df <- data.frame(cell=0, month=0, n=0, slope=0, pVal=0, cell_lat=0, cell_lon=0)
 
 for (c in cells){
   dat <- sppR_mo %>% filter(cell == c)
@@ -773,27 +773,34 @@ for (c in cells){
       n = nrow(dat2)
       slope = coef(mod)[[2]]
       pVal = glance(mod)$p.value[[1]]
-      sig = ifelse(pVal<0.05, "sig", "NS")
-      cell_lat=dat2$cell_lat[1]
-      cell_lon=dat2$cell_lon[1]
+      cell_lat = dat2$cell_lat[1]
+      cell_lon = dat2$cell_lon[1]
       
-      df <- rbind(df, c(c, m, n, slope, pVal, sig, cell_lat, cell_lon))
+      df <- rbind(df, c(c, m, n, slope, pVal, cell_lat, cell_lon))
     }
   }
 }
-
+#remove the zero placeholder row
+df <- df %>% filter(n!=0)
   
 # adding factor names and levels to month, ordered by winter season, not calendar year
-df$monthname <- month(df$month, label=TRUE)
+df$monthname <- month(as.numeric(df$month), label=TRUE)
 df$monthname <- factor(df$monthname, levels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar"))
-  
-df <- df %>% filter(!is.na(sig)) %>%
-  filter(m!=0)
+
+# add column for significance
+df$sig <- ifelse(df$pVal < 0.05, "sig", "NS")
   
 #ggplot histogram, layered by identity for sig and NS
+ggplot(df, aes(slope)) + 
+  geom_histogram(aes(col=sig), position="identity")
 
 # ggplot boxplot by month for all significant slopes, included a wilcoxon.test sig for oct vs nov, jan, feb
 # wanted to save this as transparent for ESA poster
+ggplot(df %>% filter(sig=="sig"), aes(monthname, slope)) + 
+  geom_boxplot() +
+  geom_jitter() + 
+  theme_transparent
+
 
 # ggplot boxplot by month for all slopes, shaded jitter points by sig
 
