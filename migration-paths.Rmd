@@ -780,8 +780,10 @@ for (c in cells){
     }
   }
 }
-#remove the zero placeholder row
-df <- df %>% filter(n!=0)
+#remove the zero placeholder row and the NA values
+df <- df %>% 
+  filter(n!=0) %>%
+  filter(!is.na(sig))
   
 # adding factor names and levels to month, ordered by winter season, not calendar year
 df$monthname <- month(as.numeric(df$month), label=TRUE)
@@ -792,14 +794,30 @@ df$sig <- ifelse(df$pVal < 0.05, "sig", "NS")
   
 #ggplot histogram, layered by identity for sig and NS
 ggplot(df, aes(slope)) + 
-  geom_histogram(aes(col=sig), position="identity")
+  geom_histogram(aes(fill=sig), position="identity", alpha=0.5) +
+  scale_fill_manual(values = c("gray", "darkturquoise")) + 
+  geom_vline(xintercept=0, linetype="dashed", col="gray50") +
+  theme_bw()
 
 # ggplot boxplot by month for all significant slopes, included a wilcoxon.test sig for oct vs nov, jan, feb
 # wanted to save this as transparent for ESA poster
 ggplot(df %>% filter(sig=="sig"), aes(monthname, slope)) + 
-  geom_boxplot() +
-  geom_jitter() + 
-  theme_transparent
+  geom_boxplot(fill="black", col="gray40", notch=TRUE) +
+  geom_jitter(col="darkturquoise", alpha=0.5) +
+  geom_hline(yintercept=0, linetype="dashed", col="gray40") +
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA)
+        ) 
+  #add significance, only difs were oct-nov, oct-jan, oct-feb
+  # add text labels for mean slopes?
+
+# Figure for ESA 2021 poster
+ggsave("figs/Smed_slopes_month.png", bg="transparent", height=5, width=11)
+
+
 
 
 # ggplot boxplot by month for all slopes, shaded jitter points by sig
