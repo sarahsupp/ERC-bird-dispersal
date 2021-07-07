@@ -756,6 +756,45 @@ ggsave("figs/winter2019.png", bg="transparent", height=7, width=11)
 
 ```
 
+Aarrgggh rewrite the code to fix what I lost when R froze. 
+```{r}
+# look at the structure of sppR_mo
+
+list unique cells, 
+list unique months
+empty df with cell, mo, n, slope, pVal -- maybe also retain lat and long
+
+for c in cell
+dat
+for m in months
+dat 2
+if nrow(dat2) >=3
+mod=lm(Smed~as.numeric(YEAR))
+n=
+  slope=
+  pVal=
+  sig=ifelse(pVal < 0.05, "sig", "NS")
+  
+  df = rbind(df, c(c, m, n, slope, pVal, sig))
+  
+# adding factor names and levels to month, ordered by winter season, not calendar year
+df$monthname <- month(df$month, label=TRUE)
+df$monthname <- factor(df$monthname, levels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar"))
+  
+df <- df %>% filter(!is.na(sig)) %>%
+  filter(m!=0)
+  
+#ggplot histogram, layered by identity for sig and NS
+
+# ggplot boxplot by month for all significant slopes, included a wilcoxon.test sig for oct vs nov, jan, feb
+# wanted to save this as transparent for ESA poster
+
+# ggplot boxplot by month for all slopes, shaded jitter points by sig
+
+#some basic t.tests to show that all slopes (sig and sig+NS) were significantly different from Zero, and significantly positive (very few with lower richness through time) -- correlate to higher potential disperser load over the past decade -- could imply an increasing role for dispersers, but need to discuss with Frank what else we'd need to check to ensure that this isn't just due to increasing eBird effort (In retrospect I may not have yet controlled well for this, or need to use the weighted measures instead of presence only directly?)
+
+```
+
 
 
 #Little's range and FIA importance value species distribution map for Eastern red cedar
