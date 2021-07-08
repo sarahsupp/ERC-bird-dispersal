@@ -27,6 +27,8 @@ library(data.table)
 library(devtools)
 #devtools::install_github("dkahle/ggmap")
 library(ggmap)
+library(ggpubr)
+library(lubridate)
 library(maptools)
 library(fields)
 library(sp)
@@ -799,14 +801,15 @@ ggplot(df, aes(slope)) +
   geom_vline(xintercept=0, linetype="dashed", col="gray50") +
   theme_bw()
 
-# ggplot boxplot by month for all significant slopes, included a wilcoxon.test sig for oct vs nov, jan, feb
-# wanted to save this as transparent for ESA poster
+# ggplot boxplot by month for all significant slopes, commented code shows month comparisons, not currently included in figure
 ggplot(df %>% filter(sig=="sig"), aes(monthname, slope)) + 
   geom_boxplot(fill="black", col="black", notch=TRUE) +
   geom_jitter(col="cyan3", alpha=0.5) +
   geom_hline(yintercept=0, linetype="dashed", col="black") +
   xlab("") +
   ylab("slope") +
+#  stat_compare_means(method="wilcox.test", comparisons = list(c("Oct", "Nov"), c("Oct", "Jan"), c("Oct", "Feb"))) +
+#  stat_compare_means(label = "p.signif", method = "t.test", ref.group = 1, hide.ns=TRUE) +
     theme(
         panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
@@ -828,7 +831,6 @@ df %>%
   summarize(meanslope = mean(slope),
             medianslope = median(slope))
 
-
 #plot by latitude? any signal here?
 ggplot(df %>% filter(sig=="sig"), aes(cell_lat, slope)) + 
   geom_point(alpha=0.10) + 
@@ -840,10 +842,61 @@ ggplot(df %>% filter(sig=="sig"), aes(cell_lat, slope)) +
 ggsave("figs/sig_slopes_month_lat.png", bg="transparent", height=4, width=6)
 
 # ggplot boxplot by month for all slopes, shaded jitter points by sig
+ggplot(df, aes(monthname, slope)) + 
+  geom_boxplot(fill="black", col="black", notch=TRUE) +
+  geom_jitter(aes(col=sig), alpha=0.5) +
+  scale_colour_manual(values=c("gray", "cyan3")) +
+  geom_hline(yintercept=0, linetype="dashed", col="black") +
+  xlab("") +
+  ylab("slope") +
+    theme(
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "transparent",colour = NA),
+        plot.background = element_rect(fill = "transparent",colour = NA),
+        axis.text.y = element_text(colour="black", size=14),
+        axis.title.y = element_text(colour="black", size=14)
+        ) 
 
 #some basic t.tests to show that all slopes (sig and sig+NS) were significantly different from Zero, and significantly positive (very few with lower richness through time) -- correlate to higher potential disperser load over the past decade -- could imply an increasing role for dispersers, but need to discuss with Frank what else we'd need to check to ensure that this isn't just due to increasing eBird effort (In retrospect I may not have yet controlled well for this, or need to use the weighted measures instead of presence only directly?)
 
 ```
+
+Let's plot the map using the significant slopes, and all others shaded in grey
+```{r}
+#Get the grid cell boundaries for cells which had bird observations
+grid <- dgcellstogrid(dgg, df$cell, frame=TRUE, wrapcells=TRUE)
+
+#Update the grid cells' properties to include the number of observations in each cell
+grid <- merge(grid, df, by.x="cell", by.y="cell")
+#zoom to just eastern USA
+grid <- grid %>%
+  filter(long >= -103,
+         lat >= 25)
+#Get polygons for the spatial range and make a map of bird observations
+countries <- map_data("usa") 
+
+gridsig <- grid %>% filter(sig == "sig")
+gridNS <- grid %>% filter(sig == "NS")
+
+#plot significant values by viridis shades, nonsignificant values as grey
+ggplot() + 
+ # geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  geom_polygon(data=gridsig, aes(x=long, y=lat, group=cell, fill=slope))    +
+  geom_path   (data=gridsig, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+#  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
+  #scale_fill_gradient(low="gray90", high="black") + 
+  # scale_fill_viridis() +
+  scale_fill_gradient2(low="navyblue", high="firebrick3", midpoint = 0) +
+  geom_polygon(data=gridNS, aes(x=long, y=lat, group=cell), fill="grey") +
+  #geom_path   (data=gridNS, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+  theme_void() + 
+  facet_wrap(~monthname, nrow=1) + 
+  theme(legend.position = "left")
+
+ggsave("figs/slope_Smed_change.png", bg="transparent", height=3.5, width=16)
+```
+
 
 
 
