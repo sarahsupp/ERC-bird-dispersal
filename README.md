@@ -1,6 +1,8 @@
+
+[![NSF-0000000](https://img.shields.io/badge/NSF-1915913-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1915913)
 # ERC-bird-dispersal
 Evaluate abundance and distribution of potential birds dispersing Eastern Red Cedar seeds.
-Project is currently under development.
+Project is currently under development (2020).
 
 **Authors:** Sarah Supp, Jessy Niu, Kairuo Yan (Denison University)
 
@@ -10,7 +12,10 @@ Project is currently under development.
 *working from migration-pathways.Rmd
 1. merge locs.Rdata with Bombycilla_cedorum.Rdata
 2. weight Bombycilla_cedorum counts by effort.Rdata
-3. Create migration path for 2008-2019, separately by year
+3. Create migration path for 2008-2019, separately by year, using gam
+4. Estimate begin and end dates for migratory season
+5. Estimated fasted "speed" of migration (km/day)
+6. Repeat for list of species known to disperse eastern redcedar (ERC) cones
 
 
 Files:
@@ -29,3 +34,4 @@ Data:
 * Bombycilla_cedorum.Rdata - Cedar Waxwing counts by hexagonal polygon grid
 * effort.Rdata - Total eBirder count of activity by hexagonal polygon grid
 * locs.Rdata - latitude and longitude locations of hexagonal polygon grid cells
+* dat_effort.Rdata - merged datafile, created using the three files above in the migration-paths.Rmd file.
