@@ -4,7 +4,7 @@
 Evaluate abundance and distribution of potential birds dispersing Eastern Red Cedar seeds.
 Project is currently under development (2020).
 
-**Authors:** Sarah Supp, Jessy Niu (Denison University)
+**Authors:** Sarah Supp, Jessy Niu (Denison University), Kairuo Yan
 
 **Email:** supps@denison.edu
 
@@ -35,3 +35,7 @@ Data:
 * effort.Rdata - Total eBirder count of activity by hexagonal polygon grid
 * locs.Rdata - latitude and longitude locations of hexagonal polygon grid cells
 * dat_effort.Rdata - merged datafile, created using the three files above in the migration-paths.Rmd file.
+
+
+
+
