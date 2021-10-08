@@ -1,0 +1,149 @@
+---
+title: "ERC-range"
+author: "Sarah Supp"
+date: "10/8/2021"
+output: html_document
+---
+
+##Code for cedar waxwing project, modified from eBird migration project (Supp et al. 2015)
+(c) 2021, Yan and Supp
+supps@denison.edu
+Denison University
+Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2)
+
+This document evaluates aspects of the *Eastern red cedar (Juniperus virginiana)* range.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(here)
+library(data.table)
+library(devtools)
+#devtools::install_github("dkahle/ggmap")
+library(ggmap)
+library(lubridate)
+library(maptools)
+library(fields)
+library(sp)
+library(raster)
+library(rgdal)
+library(rgeos)
+library(sf)
+library(maps)
+library(mapdata)
+library(rgdal)
+library(tidyverse) 
+library(ggpubr)
+#devtools::install_github('r-barnes/dggridR', vignette=TRUE)
+library(dggridR)
+library(RColorBrewer)
+library(geosphere)
+library(radiant.data)
+library(rnaturalearth)
+#devtools::install_github("ropensci/rnaturalearthhires")
+library(rnaturalearthhires)
+#library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
+#devtools::install_github("r-spatial/sf") #C compiler error on mac
+#library(geojsonio)
+```
+
+
+
+#Little's range and FIA importance value species distribution map for Eastern red cedar
+Try something with a shapefile
+Downloaded this one for eastern red cedar from https://www.fs.fed.us/nrs/atlas/littlefia/species_table.html  
+```{r}
+#found some useful help here: https://www.earthdatascience.org/courses/earth-analytics/spatial-data-r/intro-to-coordinate-reference-systems/ 
+#may also be useful to read thorugh here: https://geocompr.robinlovelace.net/reproj-geo-data.html 
+
+# read shapefile
+ERC <- readOGR(dsn = paste0(here(), "/data/shapefile/litt68av.shp"))
+```
+
+
+```{r}
+# convert to dataframe
+ERC_df <- fortify(ERC)
+
+# plot map using ggplot
+ERCmap <- ggplot(ERC_df, aes(long,lat, group = group)) +
+  geom_polygon(fill="darkolivegreen", col="black") +
+  coord_equal() +
+  labs(x = "Longitude (Degrees)",
+       y = "Latitude (Degrees)",
+      title = "ERC Range Map",
+      subtitle = "D_Clarke_1866 Datum, Projection: Albers, Units: Degrees - Lat / Lon") + 
+  theme_void()
+ERCmap
+
+# Figure for ESA 2021 poster
+ggsave("ERC_range.png", ERCmap, bg="transparent")
+```
+
+
+TODO: FIXME: Need to figure out how to make this work so that it can be plotted onto a map of North America, and together with the eBird lat-long locations and icosahedron (hegaxon) pixels.
+```{r}
+#TODO reprojection of the range data is needed, or transformation of all other data including points to Albers, or it won't work.
+# reproject data from Albers to WGS84 CRS
+ERC_WGS84 = sf::st_transform(ERC, crs = "+proj=wgs84") #FIXME
+ERC_WGS84 <- sp::spTransform(ERC,
+                                CRS("+proj=wgs84")) #FIXME
+```
+
+FIXME: None of this works yet?
+```{r}
+# grab winter locations from the winter_dat_effort dataframe
+# add a point to the map
+mapLocations <- ERCmap +
+                geom_point(data = winter_dat_effort,
+                aes(x = lon, y = lat, group = NULL), colour = "orange",
+                      size = .5)
+mapLocations
+
+
+
+--------------------------------
+my_spdf <- readOGR( 
+  dsn=paste0(here(), "/data/shapefile2/") , 
+  layer="litt68av",
+  verbose=FALSE
+)
+
+#explore the shapefile
+summary(my_spdf)
+length(my_spdf)
+head(my_spdf@data)
+
+# Basic plot of this shape file using Base R:
+par(mar=c(0,0,0,0))
+plot(my_spdf2, col="darkolivegreen", bg="grey80", lwd=0.25, border=0 )
+
+# 'fortify' the data to get a dataframe format required by ggplot2
+require(broom)
+spdf_fortified <- tidy(my_spdf, region = "LITT68_ID")
+
+# reproject data
+spdf_WGS84 <- rgdal::spTransform(my_spdf,
+                                crs(state_prov))
+
+# get background map layers
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada"))
+us  <- map_data("usa")
+
+# Plot it using ggplot2, just a shape, no context. Seems to be missing projection ?? Can't add points or background map.
+ggplot() + 
+  geom_polygon(data = spdf_fortified, aes( x = long, y = lat, group = group), fill="#69b3a2", color="white", alpha=0.25) +
+  theme_void()
+
+#TODO: Can't plot the shapefile onto the map because it isn't the right projection
+#       sf should be abel to help this, maybe here? https://r-spatial.org/r/2018/10/25/ggplot2-sf-2.html 
+ggplot(data = world) +
+  geom_sf() + 
+  geom_point(data=dat_effort, aes(x=lon, y=lat), size=0.2) + 
+  coord_sf(xlim = c(-103, -48), ylim = c(24.5, 60), expand = FALSE) +
+ #geom_polygon(data = spdf_fortified, aes( x = long, y = lat, group = group), fill="#69b3a2", color="white", alpha=0.25) +
+  theme_void()
+  
+```
+
+
