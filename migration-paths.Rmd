@@ -285,7 +285,7 @@ ggplot() +
 ```
 
 
-## Create a map of Bombycilla counts (all years, all dates)
+## Create a map of species counts (all years, all dates)
 across eastern North America
 
 ```{r}
@@ -674,6 +674,10 @@ winter_dat_effort <- dat_effort %>%
   facet_grid(species~MONTH)
 
 ```
+
+
+#--------------------------------------------------
+#Start spatial analysis... 
 
 Now, try to summarize the number of unique species in each POLYFID on each day in each year for the winter ERC season (can be counted as nrow())
 ```{r}
