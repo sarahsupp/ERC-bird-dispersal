@@ -5,6 +5,7 @@ Evaluate abundance and distribution of potential birds dispersing Eastern Red Ce
 Project is currently under development (2020).
 
 **Authors:** Sarah Supp, Jessy Niu, Kairuo Yan (Denison University)
+
 **Email:** supps@denison.edu
 
 **TODO**
