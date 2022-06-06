@@ -6,11 +6,11 @@ output: html_document
 ---
 
 ##Code for cedar waxwing project, modified from eBird migration project (Supp et al. 2015)
-(c) 2020, Niu and Supp
+(c) 2022, Niu and Supp and Lee
 supps@denison.edu
 Denison University
 Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2)
-modified fro previous code developed for Supp et al. 2015 hummingbird paper (Ecography)
+modified from previous code developed for Supp et al. 2015 hummingbird paper (Ecography)
 
 Birds evaluated include: 
 * Cedar Waxwing (CEWA) _Bombycilla cedrorum_
