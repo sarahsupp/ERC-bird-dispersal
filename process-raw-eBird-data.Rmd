@@ -21,6 +21,7 @@ Birds evaluated include:
 
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(echo = TRUE)
+library(here)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
