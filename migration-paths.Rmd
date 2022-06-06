@@ -30,9 +30,9 @@ library(ggplot2)
 library(ggmap)
 library(ggpubr)
 library(lubridate)
+library(sp)
 library(maptools)
 library(fields)
-library(sp)
 library(raster)
 library(rgdal)
 library(rgeos)
@@ -52,8 +52,10 @@ library(radiant.data)
 library(rnaturalearth)
 devtools::install_github("ropensci/rnaturalearthhires")
 library(rnaturalearthhires)
-#library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
-#devtools::install_github("r-spatial/sf") #C compiler error on mac
+#install.packages('remotes')
+#remotes::install_version('SDMTools','1.1-221')
+library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
+devtools::install_github("r-spatial/sf") #C compiler error on mac
 #library(geojsonio)
 ```
 
