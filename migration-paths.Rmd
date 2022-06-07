@@ -42,9 +42,8 @@ library(mapdata)
 library(rgdal)
 library(mgcv)
 library(gamm4) 
-library(tidyverse) 
 library(ggpubr)
-devtools::install_github('r-barnes/dggridR', vignette=TRUE)
+#devtools::install_github('r-barnes/dggridR', vignette=TRUE)
 library(dggridR)
 library(RColorBrewer)
 library(geosphere)
@@ -57,6 +56,8 @@ library(rnaturalearthhires)
 library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
 devtools::install_github("r-spatial/sf") #C compiler error on mac
 #library(geojsonio)
+library(dplyr)
+library(tidyverse)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
@@ -165,7 +166,7 @@ weighted_mean_locs <- weighted_mean_locs %>%
   arrange(species,DATE) %>%
   ungroup() %>%
   mutate(ID = row_number()) %>%
-  select(-DAYm1, -origin)
+  dplyr::select(-DAYm1, -origin)
 ```
 
 
