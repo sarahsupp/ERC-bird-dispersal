@@ -297,6 +297,8 @@ across eastern North America
 #       (from the .csv files), or to use the .Rdata files to plot the polygon center, maybe with 
 #       point sized or colored by magnitude of the count.
 
+#FIXME:dgcellstogrid not working 
+
 #all_states <- map_data("state")
 state_prov <- rnaturalearth::ne_states(c("united states of america", "canada"))
 #states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tennessee', 'indiana', 
@@ -400,7 +402,7 @@ missdates <- dailylocs %>%
   #technically this leaves out DAY 366 in 2008, 2012, 2016, and 2020, but I don't think that matters?
   summarize(missing = setdiff(1:365, DAY)) %>% 
   mutate(DAY = missing, MONTH=NA, winter=NA, lon=NA, lat=NA, lon_se=NA, lat_se=NA) %>%
-  select(species, DAY, YEAR, MONTH, lon, lat, lon_se, lat_se)
+  dplyr::select(species, DAY, YEAR, MONTH, lon, lat, lon_se, lat_se)
 
 #append the missing/NA date values to the main dailylocs dataframe
 dailylocs <- bind_rows(dailylocs, missdates)
@@ -659,7 +661,7 @@ winter_dat_effort <- dat_effort %>%
   arrange(species,DATE) %>%
   ungroup() %>%
   mutate(ID = row_number()) %>%
-  select(-DAYm1, -origin) %>%
+  dplyr::select(-DAYm1, -origin) %>%
   filter(winter=="winter") %>%
   filter(lat > 27 & lat < 47)
 
@@ -792,9 +794,11 @@ for (c in cells){
   }
 }
 #remove the zero placeholder row and the NA values
+#FIXME: are we dropping all the rows that has NA values? does sig = pValue? 
 df <- df %>% 
   filter(n!=0) %>%
-  filter(!is.na(sig))
+  #filter(!is.na(sig))
+  #drop_na(df)
   
 # adding factor names and levels to month, ordered by winter season, not calendar year
 df$monthname <- month(as.numeric(df$month), label=TRUE)
