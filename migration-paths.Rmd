@@ -265,6 +265,7 @@ across eastern North America
 
 ```{r}
 #Get the grid cell boundaries for cells which had bird observations
+#FIXME: I cannot figure out how to resolve this(Error message: Error in dgcellstogrid(dgg, spp_counts$cell, frame = TRUE, wrapcells = TRUE) : unused arguments (frame = TRUE, wrapcells = TRUE))
 grid <- dgcellstogrid(dgg, spp_counts$cell, frame=TRUE, wrapcells=TRUE)
 
 #Update the grid cells' properties to include the number of observations in each cell
