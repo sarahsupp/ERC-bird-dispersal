@@ -122,6 +122,7 @@ dat_effort %>%
         ) 
 
 # Figure for ESA 2021 poster
+#FIXME: Error in grDevices::dev.off() : QuartzBitmap_Output - unable to open file 'figs/checklist_counts.png'
 ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
 ```
 
@@ -974,7 +975,7 @@ plot(my_spdf2, col="darkolivegreen", bg="grey80", lwd=0.25, border=0 )
 
 # 'fortify' the data to get a dataframe format required by ggplot2
 require(broom)
-spdf_fortified <- tidy(my_spdf, region = "LITT68_ID")
+spdf_formytified <- tidy(my_spdf, region = "LITT68_ID")
 
 # reproject data
 spdf_WGS84 <- rgdal::spTransform(my_spdf,
