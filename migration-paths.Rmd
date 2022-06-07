@@ -956,6 +956,7 @@ mapLocations
 
 
 --------------------------------
+#FIXME: Error in ogrInfo(dsn = dsn, layer = layer, encoding = encoding, use_iconv = use_iconv,  : Cannot open data source
 my_spdf <- readOGR( 
   dsn=paste0(here(), "/data/shapefile2/") , 
   layer="litt68av",
