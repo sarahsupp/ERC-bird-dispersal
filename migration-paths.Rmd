@@ -25,7 +25,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(here)
 library(data.table)
 library(devtools)
-#devtools::install_github("dkahle/ggmap")
+devtools::install_github("dkahle/ggmap")
 library(ggplot2)
 library(ggmap)
 library(ggpubr)
@@ -43,7 +43,7 @@ library(rgdal)
 library(mgcv)
 library(gamm4) 
 library(ggpubr)
-#devtools::install_github('r-barnes/dggridR', vignette=TRUE)
+#devtools::install_github('r-barnes/dggridR', vignette=TRUE, force = TRUE)
 library(dggridR)
 library(RColorBrewer)
 library(geosphere)
@@ -55,7 +55,7 @@ library(rnaturalearthhires)
 #remotes::install_version('SDMTools','1.1-221')
 library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
 #devtools::install_github("r-spatial/sf") #C compiler error on mac
-#library(geojsonio)
+library(geojsonio)
 library(dplyr)
 library(tidyverse)
 ```
@@ -266,10 +266,16 @@ across eastern North America
 
 ```{r}
 #Get the grid cell boundaries for cells which had bird observations
-#FIXME: I cannot figure out how to resolve this(Error message: Error in dgcellstogrid(dgg, spp_counts$cell, frame = TRUE, wrapcells = TRUE) : unused arguments (frame = TRUE, wrapcells = TRUE))
+#FIXME: dgcellstogrid and merging is not working 
 
-#grid <- dgcellstogrid(dgg, spp_counts$cell, frame=TRUE, wrapcells=TRUE) ->not working 
-grid <- dgcellstogrid(dgg, spp_counts$cell) #-> working.. IS this correct?
+#grid <-  dggridR::dgcellstogrid(dgg, spp_counts$cell, frame=TRUE, wrapcells=TRUE) #->not working 
+grid <- dgcellstogrid(dgg, spp_counts$cell) #-> working.. IS this correct?s
+
+#changing dgg into dataframe 
+#dgg2<-as.data.frame(dgg)
+#grid2 <-  dggridR::dgcellstogrid(dgg2, spp_counts$cell) #->not working 
+#grid3 <- merge(grid2, spp_counts) -> gives 3801168 obs. of 7 variables
+#grid33 <- base::merge(grid2, spp_counts, by = c("cell")) -> give 1008 obs. of 2 variables 
 
 #Update the grid cells' properties to include the number of observations in each cell
 grid <- merge(grid, spp_counts, by.x="cell", by.y="cell")
@@ -377,7 +383,7 @@ Estimatedailylocs = function(dat) {
 #get daily centroid locations for all species in all years
 dailylocs <- Estimatedailylocs(weighted_mean_locs)
 
-ggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1, aes(col=species)) + 
+mggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1, aes(col=species)) + 
   # geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts with dates
   facet_wrap( ~ YEAR, ncol=3)+ xlab("Day of Year") + ylab("weighted mean latitude") +
   theme_bw()
@@ -745,8 +751,10 @@ sppR_mo <- sppR %>%
 #Get the grid cell boundaries for cells which had bird observations
 grid <- dgcellstogrid(dgg, sppR_mo$cell, frame=TRUE, wrapcells=TRUE)
 
+
 #Update the grid cells' properties to include the number of observations in each cell
 grid <- merge(grid, sppR_mo, by.x="cell", by.y="cell")
+
 #zoom to just eastern USA
 grid <- grid %>%
   filter(long >= -103,
