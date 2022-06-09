@@ -18,6 +18,16 @@ Birds evaluated include:
 * Wood Thrush (WOTH) _Hylocichla mustelina_
 * Yellow-rumped Warbler (YEWA) _setophaga coronata_
 * Blue Jay (BLJA) _Cyanocitta cristata_
+* European Starling (EUST) _Sturnus vulgaris_
+* Eastern Bluebird (EABL) _Sialia sialis_
+* Northern Mockingbird (NOMO) _Mimus polyglottos_
+* Downy Woodpecker (DOWO) _Picoides pubescens_
+* Eastern Meadowlark (EAME) _Sturnella magna_
+* White-breasted Nuthatch (WHNU) _Sitta carolinensis_
+* Purple Finch (PUFI) _Haemorhous purpureus_
+* Northern Cardinal (NOCA) _Cardinalis cardinalis_
+* Dark-eyed Junco (DAJU) _Junco hyemalis_
+* American Crow (AMCR) _Corvus brachyrhynchos_
 
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(echo = TRUE)
@@ -71,14 +81,15 @@ You need to bring in:
 **If you have already completed the initial steps** and have saved out the effort file, start here instead, with loading it.
 Each species has it's own merged data file, and will be brought into one species data (spdata) file to work through the results.
 ```{r}
-files = list.files(path=here(), recursive=T, pattern=glob2rx("dat_effort*.rds"))
+# files = list.files(path=here(), recursive=T, pattern=glob2rx("dat_effort*.rds"))
+files = list.files(path=here("data/effort-merged_data/"), pattern=glob2rx("dat_effort*.rds"))
 
-spdata <- data.frame(POLYFID=0, YEAR="0", DAY=0, count.x=0, lon=0, lat=0, count.y=0, species="none")
+spdata <- data.frame(POLYFID=0, year=0, day=0, count=0, x=0, y=0, effort=0, species="none")
 for (i in files) {
-  dat <- readRDS(i)
+  dat <- readRDS(paste0(here("data/effort-merged_data/"),(i)))
   spdata <- bind_rows(spdata, dat)
 }
-spdata <- spdata %>% filter(YEAR!="0")
+spdata <- spdata %>% filter(year!="0")
 ```
 
 [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
