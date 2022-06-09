@@ -21,7 +21,7 @@ Birds evaluated include:
 * European Starling (EUST) _Sturnus vulgaris_
 * Eastern Bluebird (EABL) _Sialia sialis_
 * Northern Mockingbird (NOMO) _Mimus polyglottos_
-* Downy Woodpecker (DOWO) _Picoides pubescens_
+* Downy Woodpecker (DOWO) _Dryobates pubescens_
 * Eastern Meadowlark (EAME) _Sturnella magna_
 * White-breasted Nuthatch (WHNU) _Sitta carolinensis_
 * Purple Finch (PUFI) _Haemorhous purpureus_
