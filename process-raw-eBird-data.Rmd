@@ -33,21 +33,53 @@ You need to bring in:
 Load the eBird effort and location files, from FAL (July 2020)
 ```{r}
 # raw eBirder data, queried by FAL
- load("data/raw_eBird_data/effort2020.Rdata") # will come in as eft.c, FAL named previously
- load("data/raw_eBird_data/locs_2020.Rdata") # will come in as locs, FAL named previously
+ load("data/raw_eBird_data_2022/effort-count_2022.Rdata") 
+ # (2020) will load as eft.c, FAL named previously
+ # (2022) will load as dat, FAL named previously
+
+ load("data/raw_eBird_data_2022/locs_2022.Rdata") 
+ # (2020 & 2022) will load as locs, FAL named previously
 ```
 
-For *cedar waxwing*
+This code chunk will identify all 15 species files, bring them in one by one, and loop through the merge and write process so that we don't have to repeat all the code.
 ```{r}
-load(here("data/raw_eBird_data/Bombycilla_cedrorum.RData")) # will come in as ebrd2.c, FAL named previously
+spfiles = list.files(path=here("data/raw_eBird_data_2022/species/"), pattern=glob2rx("*.RData"))
 
-# #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
-  dat_merged = merge(ebrd2.c, locs, by.x = "POLYFID", by.y = "POLYFID")
+for (i in spfiles) {
+  # These RData files have one object and it is named "dat2" 
+  load(paste0(here("data/raw_eBird_data_2022/species/"),(i)))
+  
+  #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
+  dat_merged = merge(dat2, locs, by.x = "POLYFID", by.y = "POLYFID")
   
   #now merge with the third data file for effort 
   #where count.x is number of target species and count.y is total number of eBird records (including those without the target species)
-  dat_effort = merge(dat_merged, eft.c, by.x = c("POLYFID", "YEAR", "DAY"), by.y = c("POLYFID","YEAR",  "DAY")) 
-  dat_effort$DAY <- as.numeric(dat_effort$DAY) 
+  dat_effort = merge(dat_merged, dat, by.x = c("POLYFID", "year", "day"), by.y = c("POLYFID","year",  "day")) 
+  
+  # make sure day is numeric
+  dat_effort$day <- as.numeric(dat_effort$day) 
+  # grab species name from the filename and add it as a column
+  spname <- sub("\\.[[:alnum:]]+$", "", i)
+  dat_effort$species <- spname
+  # save file, also adding the species name, into a new folder with the species + effort merged datasets
+  saveRDS(dat_effort, file = paste0("data/effort-merged_data/dat_effort_", spname, ".rds"))
+}
+```
+
+
+For *cedar waxwing*
+```{r}
+load(here("data/raw_eBird_data_2022/species/Bombycilla_cedrorum.RData")) 
+# (2020) will load as ebrd2.c, FAL named previously
+# (2022) will load as dat2, FAL named in previous query
+
+# #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
+  dat_merged = merge(dat2, locs, by.x = "POLYFID", by.y = "POLYFID")
+  
+  #now merge with the third data file for effort 
+  #where count.x is number of target species and count.y is total number of eBird records (including those without the target species)
+  dat_effort = merge(dat_merged, dat, by.x = c("POLYFID", "year", "day"), by.y = c("POLYFID","year",  "day")) 
+  dat_effort$day <- as.numeric(dat_effort$day) 
   dat_effort$species <- "Bombycilla cedrorum"
   saveRDS(dat_effort, file = "data/dat_effort_CEWA.rds")
 ```
