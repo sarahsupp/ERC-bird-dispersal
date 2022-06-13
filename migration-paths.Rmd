@@ -94,12 +94,18 @@ spdata <- spdata %>% filter(year!="0")
 
 [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
 ```{r}
+#dat_effort is giving me an error because there is no column name lon
+#dat_effort <- spdata %>%
+  #dplyr::filter(lon >=-103)
+
+# x = longitude 
 dat_effort <- spdata %>%
-  filter(lon >=-103)
+  dplyr::filter(x >= -103)
 
 num_obs <- nrow(dat_effort)
 
 paste0("The total number of observations for all species is ", num_obs, ".")
+
 
 num_spobs <- dat_effort %>%
   filter(YEAR!=2020) %>%
@@ -154,6 +160,13 @@ group_by(species, YEAR, DAY) %>%
             wtsd_lat = weighted.sd(lat, count.x/count.y) 
             ) %>%
   ungroup()
+
+#rename column
+#old column name = YEAR, DAY
+#new column name = year, day
+
+#names(weighted_mean_locs)[names(weighted_mean_locs) == 'YEAR'] <- 'year'
+#names(weighted_mean_locs)[names(weighted_mean_locs) == 'DAY'] <- 'day'
 
 #plot the weighted standard deviations by species, just to check
 ggplot(weighted_mean_locs, aes(wtsd_lon)) + geom_histogram() + facet_wrap(~species)
