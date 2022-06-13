@@ -94,6 +94,8 @@ spdata <- spdata %>% filter(year!="0")
 
 [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
 ```{r}
+#TODO/FIXME: After running "process-raw-eBrid-data" and re-run the *spdata*, the names of the variables (columns names) are changed. For example, in num_spobs function, count.x is not found in dat_effort. YEAR and DAYS have to be change into lower case letter. 
+
 #dat_effort is giving me an error because there is no column name lon
 #dat_effort <- spdata %>%
   #dplyr::filter(lon >=-103)
@@ -108,7 +110,7 @@ paste0("The total number of observations for all species is ", num_obs, ".")
 
 
 num_spobs <- dat_effort %>%
-  filter(YEAR!=2020) %>%
+  filter(year!=2020) %>%
   group_by(species) %>%
   summarise(nrow=n(),
             total=sum(count.x))
@@ -116,11 +118,11 @@ num_spobs <- dat_effort %>%
 num_spobs
 
 dat_effort %>%
-  filter(YEAR!=2020) %>%
-  group_by(species, YEAR) %>%
+  filter(year!=2020) %>%
+  group_by(species, year) %>%
   summarise(nrow=n(),
             total=sum(count.x)) %>%
-  ggplot(aes(as.numeric(YEAR), total, group=species)) + 
+  ggplot(aes(as.numeric(year), total, group=species)) + 
   geom_point(aes(shape=species)) + 
   geom_line() + 
   scale_y_log10() + 
@@ -139,7 +141,9 @@ dat_effort %>%
         ) 
 
 # Figure for ESA 2021 poster
-#FIXME: Error in grDevices::dev.off() : QuartzBitmap_Output - unable to open file 'figs/checklist_counts.png'
+
+#FIXME: ggasve is not working (error message:Error in grDevices::dev.off() : QuartzBitmap_Output - unable to open file 'figs/checklist_counts.png')
+
 ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
 ```
 
