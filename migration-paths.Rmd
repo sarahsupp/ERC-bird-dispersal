@@ -49,7 +49,6 @@ library(rgeos)
 library(sf)
 library(maps)
 library(mapdata)
-library(rgdal)
 library(mgcv)
 library(gamm4) 
 library(ggpubr)
@@ -61,13 +60,14 @@ library(radiant.data)
 library(rnaturalearth)
 #devtools::install_github("ropensci/rnaturalearthhires")
 library(rnaturalearthhires)
-i#nstall.packages('remotes')
+#install.packages('remotes')
 #remotes::install_version('SDMTools','1.1-221')
 library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
 #devtools::install_github("r-spatial/sf") #C compiler error on mac
 library(geojsonio)
 library(dplyr)
 library(tidyverse)
+library(nvctr)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
@@ -115,7 +115,7 @@ num_spobs <- dat_effort %>%
   filter(year!=2020) %>%
   group_by(species) %>%
   summarise(nrow=n(),
-            total=sum(count.x))
+            total=sum(count))
 
 num_spobs
 
@@ -123,7 +123,7 @@ dat_effort %>%
   filter(year!=2020) %>%
   group_by(species, year) %>%
   summarise(nrow=n(),
-            total=sum(count.x)) %>%
+            total=sum(count)) %>%
   ggplot(aes(as.numeric(year), total, group=species)) + 
   geom_point(aes(shape=species)) + 
   geom_line() + 
@@ -153,69 +153,173 @@ ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
 ---->## Weight mean locations 
 Weight species counts by eBirder effort counts for each cell
 ```{r} 
-#FIXME: count.x is just x? count.x = count 
+#ordering issues 
 
-#z = radius not altitude 
+copy <- data.frame(dat_effort)
 
+copy <- copy[c(order(copy$year, copy$day)),]
+  
+df <- data.frame(copy)
+
+df$freq <- df$count/df$effort
+
+#creating a columns for newx, newy, newz with NA values to store values of 3 vectors
 df$newx <- NA
 df$newy <- NA
 df$newz <- NA
 
+
+
+#converting x and y to newx, newy, newz(radius)
 for (i in 1:nrow(df)){
   df[i,"newx"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[1]
   df[i,"newy"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[2]
   df[i,"newz"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[3]
 }
 
+#creating a dataframe for average location (calculating weighted means for newx, newy, newz)
+# weighted_mean_locs <- matrix(NA, nrow = 5490, ncol = 4)
+# colnames(weighted_mean_locs) <- c("year",'day','meanx','meany')
 
-weighted_mean_locs <- df %>%
-     mutate(day = as.numeric(day),
-            year = as.numeric(year), 
-            freq = count/effort
-            ) #%>%
-   #group_by(species, year, day) # group by working?????? not sure..need to be checked... help..once we run the group_by and summarise, it only shows the species, numcells, numobs
-#   %>%
-#    summarise(numcells = n(),
-#              numobs = sum(count)) %>%
-# ungroup()
+species_list <- unique(df$species)
+year_list <- unique(df$year)
+day_list <- unique(df$day)
 
-
-
-
-
-
-weighted_mean_locs$long <- NA
-weighted_mean_locs$lat <- NA
-
-
-for(i in 1:nrow(weighted_mean_locs)){
-    
-  cnt <- c(weighted.mean(weighted_mean_locs$newx, weighted_mean_locs$freq),
-           weighted.mean(weighted_mean_locs$newy, weighted_mean_locs$freq),
-           weighted.mean(weighted_mean_locs$newz, weighted_mean_locs$freq))
+weighted_mean_locs <- NULL
+for (i in 1:length(species_list)){
   
-    
-  cnt <- deg(n_E2lat_lon(cnt)) #degree func
+  species_df <- df[df$species==species_list[i],]
   
-  weighted_mean_locs[c(i),"long"] <- cnt[2]
-  weighted_mean_locs[c(i),"lat"] <- cnt[1]
+  for (j in 1:length(year_list)){
+  
+    year_df <- species_df[species_df$year==year_list[j],]
+  
+    for(k in 1:length(unique(year_df$day))){
+    
+        day_list <- sort(unique(year_df$day))
+  
+        day_df <- year_df[year_df$day==day_list[k],]
+
+        mean_cal <- c(weighted.mean(day_df$newx, day_df$freq),
+                      weighted.mean(day_df$newy, day_df$freq),
+                      weighted.mean(day_df$newz, day_df$freq))
+
+
+        mean_cal <- deg(n_E2lat_lon(mean_cal)) #degree func
+        
+        weighted_mean_locs <- rbind(weighted_mean_locs, data.frame(day=day_list[k], 
+                                     meanx=mean_cal[2], 
+                                     meany=mean_cal[1],
+                                     year=year_list[j],
+                                     species=species_list[i]))
+
+        # weighted_mean_locs[c(366*(j-1)+k),"meanx"] <- mean_cal[2]
+        # weighted_mean_locs[c(366*(j-1)+k),"meany"] <- mean_cal[1]
+        # weighted_mean_locs[c(366*(j-1)+k),"day"] <- k
+        # weighted_mean_locs[c(366*(j-1)+k),"year"] <- year_list[j]
+    }
   }
+}  
 
-
-# put this in for loop 
+# weighted_mean_locs <- matrix(NA, nrow = 76860, ncol = 5)
+# colnames(weighted_mean_locs) <- c('species','year','day','meanx','meany')
 # 
-# wtmean_lon = deg(n_E2lat_lon((c(
-#               weighted.mean(newx, freq), 
-#               weighted.mean(newy, freq),
-#               weighted.mean(newx, freq),
-#             ))))[2]
+# species_list <- sort(unique(df$species))
+# year_list <- sort(unique(df$year))
+# day_list <- sort(unique(df$day))
 # 
-# wtmean_lat = deg(n_E2lat_lon((c(
-#               weighted.mean(newx, freq), 
-#               weighted.mean(newy, freq),
-#               weighted.mean(newx, freq),
-#             ))))[1]
+# for (i in 1:length(species_list)){
+#   
+#   species_df <- df[df$species==species_list[i],]
+#   
+#   for (j in 1:length(year_list)){
+#   
+#     year_df <- species_df[species_df$year==year_list[j],]
+#   
+#       for(k in 1:length(day_list)){
+#   
+#         day_df <- year_df[year_df$day==day_list[k],]
+# 
+#         mean_cal <- c(weighted.mean(day_df$newx, day_df$freq),
+#                       weighted.mean(day_df$newy, day_df$freq),
+#                       weighted.mean(day_df$newz, day_df$freq))
+# 
+# 
+#         mean_cal <- deg(n_E2lat_lon(mean_cal)) #degree func
+# 
+#         weighted_mean_locs[c(k),"meanx"] <- mean_cal[2]
+#         weighted_mean_locs[c(k),"meany"] <- mean_cal[1]
+#         weighted_mean_locs[c(k),"species"] <- species_list[i]
+#         weighted_mean_locs[c(k),"year"] <- year_list[j]
+#         weighted_mean_locs[c(k),"day"] <- day_list[k]
+#       }
+#   }
+# }  
 
+
+
+
+# summaries part goes here
+
+
+# weighted_mean_locs <- df %>%
+#      mutate(day = as.numeric(day),
+#             year = as.numeric(year),
+#             ) %>%
+#    group_by(species, year, day) %>%
+#    summarise(numcells = n(),
+#               numobs = sum(count)) %>%
+#  ungroup()
+
+
+
+
+
+#weighted_mean_locs <- df %>% select("species", "year", "day")
+
+
+
+
+
+
+
+# weighted_mean[c(i),"meanx"] <- weighted_mean[2]
+#   weighted_mean[c(i),"meany"] <- weighted_mean[1]
+# weighted_mean_locs <- df %>%
+#     mutate(day = as.numeric(day),
+#          year = as.numeric(year)) %>%
+# group_by(species, year, day) %>%
+#   summarise(
+#             numcells = n(),
+#             numobs = sum(count),
+#             wtmean_lon = weighted.mean(lon, count.x/count.y),
+#             wtmean_lat = weighted.mean(lat, count.x/count.y),
+#             
+#             ) %>%
+#   ungroup()
+#------------------------------#
+
+
+
+# spp <- unique(dat_effort$species)
+# days <- unique(dat_effort$day)
+# years <-- unique(dat_effort$year)
+
+#numcells = n()-> #ployfid 
+
+
+# weighted_mean_locs <- df %>%
+#      mutate(day = as.numeric(day),
+#             year = as.numeric(year),
+#             ) %>%
+#    group_by(species, year, day) %>%
+#    summarise(numcells = n(),
+#               numobs = sum(count)) %>%
+#  ungroup()
+
+
+
+#Dr.supp old code
 # weighted_mean_locs <- dat_effort %>%
 #     mutate(day = as.numeric(day),
 #          year = as.numeric(year)) %>%
