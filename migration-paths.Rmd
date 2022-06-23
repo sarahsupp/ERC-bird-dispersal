@@ -213,8 +213,8 @@ for (i in 1:length(species_list)){
         mean_cal <- deg(n_E2lat_lon(mean_cal)) #degree func
         
         weighted_mean_locs <- rbind(weighted_mean_locs, data.frame(day=day_list[k], 
-                                     meanx=mean_cal[2], 
-                                     meany=mean_cal[1],
+                                     weighted_lon=mean_cal[2], 
+                                     weighted_lat=mean_cal[1],
                                      year=year_list[j],
                                      species=species_list[i]))
     }
@@ -229,8 +229,15 @@ weighted_mean_locs <- cbind(weighted_mean_locs, sample[c("numcells", "numobs")])
 
 weighted_mean_locs <- weighted_mean_locs[,c(5,4,1,2,3,6,7)]
   
+#plot the weighted standard deviations by species, just to check
+ggplot(weighted_mean_locs, aes(weighted_lon)) + geom_histogram() + facet_wrap(~species)
+ggplot(weighted_mean_locs, aes(weighted_lat)) + geom_histogram() + facet_wrap(~species)
 
+#check if weighted sd differs by time of the year (expect to be higher during migration, lower during breeding)
+ggplot(weighted_mean_locs, aes(day, weighted_lon)) + geom_point(alpha=0.10) + facet_wrap(~species)
+ggplot(weighted_mean_locs, aes(day, weighted_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
 
+#------------------------------------------------------------------------------#
 
 # weighted_mean_locs <- matrix(NA, nrow = 76860, ncol = 5)
 # colnames(weighted_mean_locs) <- c('species','year','day','meanx','meany')
@@ -269,19 +276,6 @@ weighted_mean_locs <- weighted_mean_locs[,c(5,4,1,2,3,6,7)]
 
 
 
-
-# summaries part goes here
-
-
-weighted_mean_locs <- df %>%
-     mutate(day = as.numeric(day),
-            year = as.numeric(year),
-            ) %>%
-   group_by(species, year, day) %>%
-   summarise(numcells = n(),
-              numobs = sum(count)) %>%
- ungroup()
-
 # spp <- unique(dat_effort$species)
 # days <- unique(dat_effort$day)
 # years <-- unique(dat_effort$year)
@@ -316,13 +310,13 @@ weighted_mean_locs <- df %>%
 #   ungroup()
 
 
-#plot the weighted standard deviations by species, just to check
-ggplot(weighted_mean_locs, aes(wtsd_lon)) + geom_histogram() + facet_wrap(~species)
-ggplot(weighted_mean_locs, aes(wtsd_lat)) + geom_histogram() + facet_wrap(~species)
-
-#check if weighted sd differs by time of the year (expect to be higher during migration, lower during breeding)
-ggplot(weighted_mean_locs, aes(DAY, wtsd_lon)) + geom_point(alpha=0.10) + facet_wrap(~species)
-ggplot(weighted_mean_locs, aes(DAY, wtsd_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
+# #plot the weighted standard deviations by species, just to check
+# ggplot(weighted_mean_locs, aes(wtsd_lon)) + geom_histogram() + facet_wrap(~species)
+# ggplot(weighted_mean_locs, aes(wtsd_lat)) + geom_histogram() + facet_wrap(~species)
+# 
+# #check if weighted sd differs by time of the year (expect to be higher during migration, lower during breeding)
+# ggplot(weighted_mean_locs, aes(DAY, wtsd_lon)) + geom_point(alpha=0.10) + facet_wrap(~species)
+# ggplot(weighted_mean_locs, aes(DAY, wtsd_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
 ```
 
 ## Add more detail to dates in the weighted mean location dataframe
