@@ -325,8 +325,8 @@ An ID column is also added, which is an integer of each of the dates in order, 1
 **It is important to note when converting to Dates that for this data type only (why!?!) R uses a 0 based index. This means Day 1 is 0. So to convert our "day of year" integers to a Year-Month-Day format, we need to use DAY-1 and YEAR.**
 ```{r}
 weighted_mean_locs <- weighted_mean_locs %>%
-  mutate(DAYm1 = DAY-1,
-         origin = paste0(YEAR, "-01-01"),
+  mutate(DAYm1 = day-1,
+         origin = paste0(year, "-01-01"),
          DATE = as.Date(DAYm1, origin=origin), 
          MONTH = month(DATE)) %>%
   mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
