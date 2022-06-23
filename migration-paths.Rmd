@@ -161,6 +161,8 @@ copy <- copy[c(order(copy$year, copy$day)),]
   
 df <- data.frame(copy)
 
+df <-df[c(1:50000),]
+
 df$freq <- df$count/df$effort
 
 #creating a columns for newx, newy, newz with NA values to store values of 3 vectors
@@ -170,21 +172,24 @@ df$newz <- NA
 
 
 
-#converting x and y to newx, newy, newz(radius)
+#For each species of a given year and day, converting x and y to newx, newy, newz(radius)
 for (i in 1:nrow(df)){
   df[i,"newx"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[1]
   df[i,"newy"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[2]
   df[i,"newz"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[3]
 }
 
-#creating a dataframe for average location (calculating weighted means for newx, newy, newz)
-# weighted_mean_locs <- matrix(NA, nrow = 5490, ncol = 4)
-# colnames(weighted_mean_locs) <- c("year",'day','meanx','meany')
+#Dr. Lavin`s code 
+# df_w_weights <- df %>% mutate(weightedx=newx * freq, weightedy=newy * freq, weightedz=newz * freq)
+# df_summary <- df_w_weights %>% group_by(year, day, species) %>% summarise(weighted_lat=mean(weightedy), weighted_lng=mean(weightedx), numobs=sum(count), numcells=n())
 
+
+#putting species, year, and days into list in order to see the unique varaibles of each
 species_list <- unique(df$species)
 year_list <- unique(df$year)
 day_list <- unique(df$day)
 
+#For each species of a given year and day, converting newx, newy, newz back into decimal meanx and meany
 weighted_mean_locs <- NULL
 for (i in 1:length(species_list)){
   
@@ -212,14 +217,20 @@ for (i in 1:length(species_list)){
                                      meany=mean_cal[1],
                                      year=year_list[j],
                                      species=species_list[i]))
-
-        # weighted_mean_locs[c(366*(j-1)+k),"meanx"] <- mean_cal[2]
-        # weighted_mean_locs[c(366*(j-1)+k),"meany"] <- mean_cal[1]
-        # weighted_mean_locs[c(366*(j-1)+k),"day"] <- k
-        # weighted_mean_locs[c(366*(j-1)+k),"year"] <- year_list[j]
     }
   }
 }  
+
+
+
+sample <- df %>% group_by(species, year, day) %>% summarise(numcells = n(), numobs = sum(count))
+
+weighted_mean_locs <- cbind(weighted_mean_locs, sample[c("numcells", "numobs")])
+
+weighted_mean_locs <- weighted_mean_locs[,c(5,4,1,2,3,6,7)]
+  
+
+
 
 # weighted_mean_locs <- matrix(NA, nrow = 76860, ncol = 5)
 # colnames(weighted_mean_locs) <- c('species','year','day','meanx','meany')
@@ -262,44 +273,14 @@ for (i in 1:length(species_list)){
 # summaries part goes here
 
 
-# weighted_mean_locs <- df %>%
-#      mutate(day = as.numeric(day),
-#             year = as.numeric(year),
-#             ) %>%
-#    group_by(species, year, day) %>%
-#    summarise(numcells = n(),
-#               numobs = sum(count)) %>%
-#  ungroup()
-
-
-
-
-
-#weighted_mean_locs <- df %>% select("species", "year", "day")
-
-
-
-
-
-
-
-# weighted_mean[c(i),"meanx"] <- weighted_mean[2]
-#   weighted_mean[c(i),"meany"] <- weighted_mean[1]
-# weighted_mean_locs <- df %>%
-#     mutate(day = as.numeric(day),
-#          year = as.numeric(year)) %>%
-# group_by(species, year, day) %>%
-#   summarise(
-#             numcells = n(),
-#             numobs = sum(count),
-#             wtmean_lon = weighted.mean(lon, count.x/count.y),
-#             wtmean_lat = weighted.mean(lat, count.x/count.y),
-#             
-#             ) %>%
-#   ungroup()
-#------------------------------#
-
-
+weighted_mean_locs <- df %>%
+     mutate(day = as.numeric(day),
+            year = as.numeric(year),
+            ) %>%
+   group_by(species, year, day) %>%
+   summarise(numcells = n(),
+              numobs = sum(count)) %>%
+ ungroup()
 
 # spp <- unique(dat_effort$species)
 # days <- unique(dat_effort$day)
