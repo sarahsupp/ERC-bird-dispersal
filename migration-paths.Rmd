@@ -68,6 +68,7 @@ library(geojsonio)
 library(dplyr)
 library(tidyverse)
 library(nvctr)
+library(gapminder)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
@@ -161,7 +162,7 @@ copy <- copy[c(order(copy$year, copy$day)),]
   
 df <- data.frame(copy)
 
-df <-df[c(1:50000),]
+#df <-df[c(1:50000),]
 
 df$freq <- df$count/df$effort
 
@@ -171,13 +172,22 @@ df$newy <- NA
 df$newz <- NA
 
 
-
+#takes about 20 hours to run it
 #For each species of a given year and day, converting x and y to newx, newy, newz(radius)
 for (i in 1:nrow(df)){
   df[i,"newx"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[1]
   df[i,"newy"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[2]
   df[i,"newz"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[3]
 }
+
+#saving converted nvector data frame 
+save(df, file = "df_nvector")
+
+# Save a single object to a file
+saveRDS(df, "df_nvector.rds")
+
+# Restore it under a different name
+#df <- readRDS("df_nvector.rds")
 
 #Dr. Lavin`s code 
 # df_w_weights <- df %>% mutate(weightedx=newx * freq, weightedy=newy * freq, weightedz=newz * freq)
@@ -237,60 +247,6 @@ ggplot(weighted_mean_locs, aes(weighted_lat)) + geom_histogram() + facet_wrap(~s
 ggplot(weighted_mean_locs, aes(day, weighted_lon)) + geom_point(alpha=0.10) + facet_wrap(~species)
 ggplot(weighted_mean_locs, aes(day, weighted_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
 
-#------------------------------------------------------------------------------#
-
-# weighted_mean_locs <- matrix(NA, nrow = 76860, ncol = 5)
-# colnames(weighted_mean_locs) <- c('species','year','day','meanx','meany')
-# 
-# species_list <- sort(unique(df$species))
-# year_list <- sort(unique(df$year))
-# day_list <- sort(unique(df$day))
-# 
-# for (i in 1:length(species_list)){
-#   
-#   species_df <- df[df$species==species_list[i],]
-#   
-#   for (j in 1:length(year_list)){
-#   
-#     year_df <- species_df[species_df$year==year_list[j],]
-#   
-#       for(k in 1:length(day_list)){
-#   
-#         day_df <- year_df[year_df$day==day_list[k],]
-# 
-#         mean_cal <- c(weighted.mean(day_df$newx, day_df$freq),
-#                       weighted.mean(day_df$newy, day_df$freq),
-#                       weighted.mean(day_df$newz, day_df$freq))
-# 
-# 
-#         mean_cal <- deg(n_E2lat_lon(mean_cal)) #degree func
-# 
-#         weighted_mean_locs[c(k),"meanx"] <- mean_cal[2]
-#         weighted_mean_locs[c(k),"meany"] <- mean_cal[1]
-#         weighted_mean_locs[c(k),"species"] <- species_list[i]
-#         weighted_mean_locs[c(k),"year"] <- year_list[j]
-#         weighted_mean_locs[c(k),"day"] <- day_list[k]
-#       }
-#   }
-# }  
-
-
-
-# spp <- unique(dat_effort$species)
-# days <- unique(dat_effort$day)
-# years <-- unique(dat_effort$year)
-
-#numcells = n()-> #ployfid 
-
-
-# weighted_mean_locs <- df %>%
-#      mutate(day = as.numeric(day),
-#             year = as.numeric(year),
-#             ) %>%
-#    group_by(species, year, day) %>%
-#    summarise(numcells = n(),
-#               numobs = sum(count)) %>%
-#  ungroup()
 
 
 
@@ -319,6 +275,8 @@ ggplot(weighted_mean_locs, aes(day, weighted_lat)) + geom_point(alpha=0.10) + fa
 # ggplot(weighted_mean_locs, aes(DAY, wtsd_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
 ```
 
+Cardinalis_cardinalis, Corvus_brachyrhynchos, Cyanocitta_crista, Drybates_pubescens, Mimus_polyglottos, Sialia_sialis, Sitta_carolinensis, Sitta_carolinensis, Stumus_vulgaris, are non-migratory bird species. 
+
 ## Add more detail to dates in the weighted mean location dataframe
 A DATE and MONTH formatted column to mean_daily_locs dataframe. TODO
 An ID column is also added, which is an integer of each of the dates in order, 1-4383.
@@ -327,10 +285,10 @@ An ID column is also added, which is an integer of each of the dates in order, 1
 weighted_mean_locs <- weighted_mean_locs %>%
   mutate(DAYm1 = day-1,
          origin = paste0(year, "-01-01"),
-         DATE = as.Date(DAYm1, origin=origin), 
-         MONTH = month(DATE)) %>%
-  mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
-  arrange(species,DATE) %>%
+         date = as.Date(DAYm1, origin=origin), 
+         month = month(date)) %>%
+  mutate(winter = ifelse(month %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
+  arrange(species,date) %>%
   ungroup() %>%
   mutate(ID = row_number()) %>%
   dplyr::select(-DAYm1, -origin)
@@ -340,31 +298,31 @@ weighted_mean_locs <- weighted_mean_locs %>%
 Count number of records by year *for 2020 NSF report*
 ```{r}
 #count total number of records across the years. (increasing strongly)
-counts <- dat_effort %>%
-  group_by(species, YEAR) %>%
+counts <- df %>%
+  group_by(species, year) %>%
   tally()
 
-num_bins <- ggplot(counts, aes(YEAR, n)) + geom_bar(stat="identity") + 
+num_bins <- ggplot(counts, aes(year, n)) + geom_bar(stat="identity") + 
   theme_bw() + ylab("Number of binned observations") + xlab("Year") +
   theme(axis.text.x = element_text(angle = 90)) + 
   facet_wrap(~species, ncol=1)
 
 #checking how many unique grid cells logged an observation in each year (relatively flat)
-nPOLYFID <- dat_effort %>%
-  group_by(species, YEAR) %>%
+nPOLYFID <- df %>%
+  group_by(species, year) %>%
   summarise(n=n_distinct(POLYFID))
 
-num_gridcells <- ggplot(nPOLYFID, aes(YEAR, n)) + geom_bar(stat="identity") + 
+num_gridcells <- ggplot(nPOLYFID, aes(year, n)) + geom_bar(stat="identity") + 
   theme_bw() + ylab("Number of unique grid cells") + xlab("Year") +
   theme(axis.text.x = element_text(angle = 90)) + 
   facet_wrap(~species, ncol=1)
 
 #checking how many days per year have at least 1 observation (ALL of them)
-nDAYSofyear <- dat_effort %>%
-  group_by(species, YEAR) %>%
-  summarise(n=n_distinct(DAY))
+nDAYSofyear <- df %>%
+  group_by(species, year) %>%
+  summarise(n=n_distinct(day))
 
-num_days <- ggplot(nDAYSofyear, aes(YEAR, n)) + geom_bar(stat="identity") + 
+num_days <- ggplot(nDAYSofyear, aes(year, n)) + geom_bar(stat="identity") + 
   theme_bw() + ylab("Number of unique days per year") + xlab("Year") +
   theme(axis.text.x = element_text(angle = 90)) + 
   facet_wrap(~species, ncol=1)
@@ -373,7 +331,7 @@ ggarrange(num_bins, num_gridcells, num_days,
           labels=c("A", "B", "C"),
           ncol=3, nrow=1)
 
-ggsave(filename = "figs/species_obs.png", height = 11, width=8)
+#ggsave(filename = "figs/species_obs.png", height = 11, width=8)
 ```
 
 
@@ -383,12 +341,12 @@ Initial plot of bird average locations for all species and latitude by day acros
 #   geom_point(alpha=0.25) + geom_line(alpha=0.25) +
 #   facet_wrap(~YEAR)
 
-ggplot(weighted_mean_locs, aes(DAY, wtmean_lat, group=YEAR)) +
+ggplot(weighted_mean_locs, aes(day, weighted_lon, group=year)) +
   geom_point(alpha=0.25, aes(col=winter)) + geom_line(alpha=0.25) +
-  facet_wrap(~YEAR)
+  facet_wrap(~year)
 
-ggplot(weighted_mean_locs, aes(as.numeric(DAY), wtmean_lat, group=YEAR)) +
-  stat_smooth(aes(col=as.numeric(YEAR))) + ylab("Weighted mean latitude") +
+ggplot(weighted_mean_locs, aes(as.numeric(day), weighted_lat, group=year)) +
+  stat_smooth(aes(col=as.numeric(year))) + ylab("Weighted mean latitude") +
   xlab("Day of the year") + 
   scale_x_continuous(breaks = seq(1, 366, by = 60)) +
   facet_wrap(~species)
@@ -399,21 +357,18 @@ ggplot(weighted_mean_locs, aes(as.numeric(DAY), wtmean_lat, group=YEAR)) +
 weighted by total eBirder effort on that day in a given cell. 
 Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the target species in a cell divided by the total number of eBirder records in a cell.
 ```{r}
+#using original data(dat_effort=df)
 dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
-dat_effort$cell <- dgGEO_to_SEQNUM(dgg, dat_effort$lon, dat_effort$lat)$seqnum
-dat_effort$cell_lat <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lat_deg 
-dat_effort$cell_lon <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)$lon_deg 
-
-dat_effort <- dat_effort %>%
-  mutate(count_weighted = count.x/count.y)
-
+df$cell <- dgGEO_to_SEQNUM(dgg, df$x, df$y)$seqnum
+df$cell_lat <- dgSEQNUM_to_GEO(dgg, df$cell)$lat_deg 
+df$cell_lon <- dgSEQNUM_to_GEO(dgg, df$cell)$lon_deg 
 
 #cellcenters   <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)
-spp_counts <- dat_effort %>%
+spp_counts <- df %>%
   group_by(species, cell) %>% 
   summarise(sum_weighted_count=sum(count_weighted),
             mean_weighted_count=mean(count_weighted),
-            sum_count=sum(count.x))
+            sum_count=sum(count))
 # 
 # ggplot(spp_counts, aes(x=sum_weighted_count)) +
 #   geom_histogram(binwidth=10)
