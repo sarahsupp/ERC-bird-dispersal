@@ -366,8 +366,8 @@ df$cell_lon <- dgSEQNUM_to_GEO(dgg, df$cell)$lon_deg
 #cellcenters   <- dgSEQNUM_to_GEO(dgg, dat_effort$cell)
 spp_counts <- df %>%
   group_by(species, cell) %>% 
-  summarise(sum_weighted_count=sum(count_weighted),
-            mean_weighted_count=mean(count_weighted),
+  summarise(sum_weighted_count=sum(freq),
+            mean_weighted_count=mean(freq),
             sum_count=sum(count))
 # 
 # ggplot(spp_counts, aes(x=sum_weighted_count)) +
@@ -399,6 +399,7 @@ grid <- dgcellstogrid(dgg, spp_counts$cell) #-> working.. IS this correct?s
 #grid33 <- base::merge(grid2, spp_counts, by = c("cell")) -> give 1008 obs. of 2 variables 
 
 #Update the grid cells' properties to include the number of observations in each cell
+grid <- merge(grid, spp_counts, by="cell")
 grid <- merge(grid, spp_counts, by.x="cell", by.y="cell")
 #zoom to just eastern USA
 grid <- grid %>%
