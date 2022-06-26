@@ -385,6 +385,7 @@ ggplot(spp_counts, aes(x=mean_weighted_count)) +
 ## Create a map of eBird effort (all years, all dates)
 across eastern North America
 
+FIXME: dgcellstogrid not working (frame=TRUE, wrapcells=TRUE). Without (frame=TRUE, wrapcells=TRUE), grid does not has cell column 
 ```{r}
 #Get the grid cell boundaries for cells which had bird observations
 #FIXME: dgcellstogrid and merging is not working 
@@ -423,6 +424,8 @@ ggplot() +
 ## Create a map of species counts (all years, all dates)
 across eastern North America
 
+
+FIXME: dgcellstogrid not working (frame=TRUE, wrapcells=TRUE). 
 ```{r}
 #TODO: Make how you prefer, but feel free to plot the data as the actual locations of the birds 
 #       (from the .csv files), or to use the .Rdata files to plot the polygon center, maybe with 
@@ -435,9 +438,10 @@ state_prov <- rnaturalearth::ne_states(c("united states of america", "canada"))
 #states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tennessee', 'indiana', 
 #                                           'illinois', 'iowa', 'nebraska','south dakota', 'north dakota',
 #                                           'minnesota', 'wisconsin', 'missouri', 'kansas'))
-uw_spp_counts <- dat_effort %>%
+uw_spp_counts <- df %>%
   group_by(species, cell) %>% 
-  summarise(count_new_uw=sum(count.x))
+  summarise(count_new_uw=sum(count))
+
 
 uw_grid <- dgcellstogrid(dgg, uw_spp_counts$cell, frame=TRUE, wrapcells=TRUE)
 uw_grid <- merge(grid, uw_spp_counts, by.x=c("cell", "species"), by.y=c("cell", "species")) 
@@ -474,51 +478,51 @@ In the GAM, we can use the weighted mean locations (latitude and longitude) that
 *Creates a dataframe with daily location for each year and graphs results*
 ```{r}
 Estimatedailylocs = function(dat) {
-  
-  x <- c(2008:2019)
+
+  x <- c(2008:2022)
   spp <- unique(dat$species)
 
-  df <- data.frame(species = "none", DAY = 0, YEAR =0, MONTH = 0, winter = "not", lon = 0, lat = 0, lon_se = 0, lat_se = 0)
-  
+  df_dailylocs <- data.frame(species = "none", day = 0, year =0, month = 0, winter = "not", lon = 0, lat = 0, lon_se = 0, lat_se = 0)
+
   for (s in spp){
     for (i in x) {
-      sub_weighted_mean_locs <- 
+      sub_weighted_mean_locs <-
         dat %>%
-        filter(YEAR == i & species == s)
-      
-      lon_gam = gam(wtmean_lon ~ s(DAY, k=20), data = sub_weighted_mean_locs, gamma = 1.5)
-      lat_gam = gam(wtmean_lat ~ s(DAY, k=20), data = sub_weighted_mean_locs, gamma = 1.5)
-      xpred = data.frame(DAY=sort(unique(sub_weighted_mean_locs$DAY)))
+        filter(year == i & species == s)
+
+      lon_gam = gam(weighted_lon ~ s(day, k=20), data = sub_weighted_mean_locs, gamma = 1.5)
+      lat_gam = gam(weighted_lat ~ s(day, k=20), data = sub_weighted_mean_locs, gamma = 1.5)
+      xpred = data.frame(day=sort(unique(sub_weighted_mean_locs$day)))
       lonpred = predict(lon_gam, newdata = xpred, type="response", se.fit=T)
       latpred = predict(lat_gam, newdata = xpred, type="response", se.fit=T)
-      
-      preds =  data.frame(species = s, DAY = xpred$DAY, YEAR = i, 
-                          MONTH = sub_weighted_mean_locs$MONTH, winter = sub_weighted_mean_locs$winter, 
+
+      preds =  data.frame(species = s, day = xpred$day, year = i,
+                          month = sub_weighted_mean_locs$month, winter = sub_weighted_mean_locs$winter,
                           lon = lonpred$fit, lat = latpred$fit, lon_se = lonpred$se.fit, lat_se = latpred$se.fit)
-      df <- data.frame(bind_rows(df, preds))
+      df_dailylocs <- data.frame(bind_rows(df_dailylocs, preds))
     }
   }
-  df = df[-1,]
-  return(df)
+  df_dailylocs = df_dailylocs[-1,]
+  return(df_dailylocs)
 }
 
 #get daily centroid locations for all species in all years
 dailylocs <- Estimatedailylocs(weighted_mean_locs)
 
-mggplot(dailylocs, aes(DAY, lat)) + geom_line(size=1, aes(col=species)) + 
+ggplot(dailylocs, aes(day, lat)) + geom_line(size=1, aes(col=species)) +
   # geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts with dates
-  facet_wrap( ~ YEAR, ncol=3)+ xlab("Day of Year") + ylab("weighted mean latitude") +
+  facet_wrap( ~ year, ncol=3)+ xlab("Day of Year") + ylab("weighted mean latitude") +
   theme_bw()
 
-ggplot(dailylocs, aes(lon, lat, group=YEAR)) +
-  geom_point(aes(col=winter), alpha=0.25) + 
+ggplot(dailylocs, aes(lon, lat, group=year)) +
+  geom_point(aes(col=winter), alpha=0.25) +
   scale_colour_manual(values = c("grey50", "blue")) +
   facet_wrap(~species)
 
-ggplot(dailylocs, aes(lon, lat, group=YEAR)) +
-  geom_point(aes(col=winter), alpha=0.25) + 
+ggplot(dailylocs, aes(lon, lat, group=year)) +
+  geom_point(aes(col=winter), alpha=0.25) +
   scale_colour_manual(values = c("grey50", "blue")) +
-  facet_grid(YEAR~species)
+  facet_grid(year~species)
 
 #FIXME: For relevance to ERC, we have some generic winter months, labeled in blue, but will need to also determine the lat-long of interest. For example, Hylocichla mustelina is definitely migrating during the winter, but much of this may be further south than the main area of interest, and not fully relevant during all of the winter time frame.
 ```
