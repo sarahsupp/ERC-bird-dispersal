@@ -511,6 +511,7 @@ dailylocs <- Estimatedailylocs(weighted_mean_locs)
 
 ggplot(dailylocs, aes(day, lat)) + geom_line(size=1, aes(col=species)) +
   # geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts with dates
+  geom_vline(xintercept=c(91, 275), col="gray30") +
   facet_wrap( ~ year, ncol=3)+ xlab("Day of Year") + ylab("weighted mean latitude") +
   theme_bw()
 
@@ -533,11 +534,11 @@ This calculation uses Great Circle (ellipsoid) distance on the estimated daily l
 ```{r}
 #identify dates with no location and assign all values to NA
 missdates <- dailylocs %>%
-  group_by(species, YEAR) %>%
+  group_by(species, year) %>%
   #technically this leaves out DAY 366 in 2008, 2012, 2016, and 2020, but I don't think that matters?
-  summarize(missing = setdiff(1:365, DAY)) %>% 
-  mutate(DAY = missing, MONTH=NA, winter=NA, lon=NA, lat=NA, lon_se=NA, lat_se=NA) %>%
-  dplyr::select(species, DAY, YEAR, MONTH, lon, lat, lon_se, lat_se)
+  summarize(missing = setdiff(1:365, day)) %>% 
+  mutate(day = missing, month=NA, winter=NA, lon=NA, lat=NA, lon_se=NA, lat_se=NA) %>%
+  dplyr::select(species, day, year, month, lon, lat, lon_se, lat_se)
 
 #append the missing/NA date values to the main dailylocs dataframe
 dailylocs <- bind_rows(dailylocs, missdates)
@@ -551,19 +552,19 @@ calc_distances <- function(lon, lat) {
 
 dailylocs <- dailylocs %>%
   # ensures that everything is ordered chronologically by year and day of year
-  arrange(species, YEAR, DAY) %>%
-  group_by(species, YEAR) %>%
+  arrange(species, year, day) %>%
+  group_by(species, year) %>%
   #calculate sequential distances, adds NA for the first record
   mutate(distance = calc_distances(lon, lat)) %>%
   #Remove Day 1 for all year, because due to our method of separating GAM by year, it will be a flawed value
-  filter(DAY != 1)
+  filter(day != 1)
 
 
 #TODO: If placed after the dates are calculated, then the speeds used can be limited to the migration seasons using the filter below. Not sure we need to do that here, but I think this is how I got around the year-to-year day 1 being wrong things last time, plus, that project was really only focused on the migration seasons alone.
 #  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
 
 #FIXME: 
-ggplot(dailylocs, aes(as.numeric(DAY), distance, group=YEAR)) + geom_line(aes(col=species)) + 
+ggplot(dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
   theme(text = element_text(size=12)) + 
   facet_wrap(~species)#+  
@@ -580,26 +581,26 @@ Use the median of the top 5 migration speeds for each year separately, as the es
 # function to estimate the maximum speed of migration (km/day)
 EstimateMaxSpeed = function(dat) {
   dat <- dat %>%
-  filter(DAY != 1)
-  years <- c(2008:2019)
+  filter(day != 1)
+  years <- c(2008:2022)
   species <- unique(dat$species)
-  df <- data.frame(species = "none", YEAR = 0, MAX_SPEED = 0)
+  df_maxspeed <- data.frame(species = "none", year = 0, max_speed = 0)
   for (s in species){
     for (i in years){
    sub_dailylocs <- 
        dailylocs %>%
-       filter(YEAR == i & species == s)
+       filter(year == i & species == s)
   
     median <- median(tail(sort(sub_dailylocs$distance),5))
   
-    max_speed <-  data.frame(species = s, YEAR = i, MAX_SPEED = median)
+    maximum_speed <-  data.frame(species = s, year = i, max_speed = median)
   
-    df <- data.frame(bind_rows(df, max_speed))
+    df_maxspeed <- data.frame(bind_rows(df_maxspeed, maximum_speed))
   
     }
   }
-  df = df[-1,]
-return(df)
+  df_maxspeed = df_maxspeed[-1,]
+return(df_maxspeed)
 }
 
 #estimate the maximum migration speed for each year
@@ -608,26 +609,26 @@ max_speed <- EstimateMaxSpeed(dailylocs)
 speeds <- max_speed %>%
   group_by(species) %>%
   summarise(
-    mean = mean(MAX_SPEED),
-    sd = sd(MAX_SPEED),
-    median = median(MAX_SPEED)
+    mean = mean(max_speed),
+    sd = sd(max_speed),
+    median = median(max_speed)
   )
 
 #plot the results estimating yearly maximum migration speed (km/day)
-ggplot(max_speed %>% filter(species!="Cyanocitta cristata"), aes(YEAR, MAX_SPEED)) + geom_line(aes(col=species)) + 
+ggplot(max_speed %>% filter(species!="Cyanocitta cristata"), aes(year, max_speed)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
   theme(text = element_text(size=12),
         legend.position="bottom") + 
-  scale_x_continuous(breaks=seq(2008, 2019, 3))
+  scale_x_continuous(breaks=seq(2008, 2020, 3))
 
 #suggest using points instead of lines, because we're not really plotting something continuous with an expected trend here, where speed in one year depends on speed in the previous year (depends on weather/climate?)
-ggplot(max_speed, aes(YEAR, MAX_SPEED)) + geom_point() +
+ggplot(max_speed, aes(year, max_speed)) + geom_point() +
   #geom_hline(yintercept = med, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
-  theme(text = element_text(size=20), 
+  theme(text = element_text(size=10), 
         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         legend.position="bottom") + 
-  scale_x_continuous(breaks=seq(2008, 2019, 3)) +
+  scale_x_continuous(breaks=seq(2008, 2020, 3)) +
  # annotate(geom="text", x= 3, y= 50, label=paste0("median = ", round(med,2), " km/day")) + 
   facet_wrap(~species)
 
