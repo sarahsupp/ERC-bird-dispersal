@@ -356,6 +356,7 @@ ggplot(weighted_mean_locs, aes(as.numeric(day), weighted_lat, group=year)) +
 ## Calculates the count of observations within each cell, 
 weighted by total eBirder effort on that day in a given cell. 
 Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the target species in a cell divided by the total number of eBirder records in a cell.
+-use raw data 
 ```{r}
 #using original data(dat_effort=df)
 dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
@@ -391,7 +392,7 @@ FIXME: dgcellstogrid not working (frame=TRUE, wrapcells=TRUE). Without (frame=TR
 #FIXME: dgcellstogrid and merging is not working 
 
 #grid <-  dggridR::dgcellstogrid(dgg, spp_counts$cell, frame=TRUE, wrapcells=TRUE) #->not working 
-grid <- dgcellstogrid(dgg, spp_counts$cell) #-> working.. IS this correct?s
+grid <- dggridR::dgcellstogrid(dgg, spp_counts$cell) #-> working.. IS this correct?s
 
 #changing dgg into dataframe 
 #dgg2<-as.data.frame(dgg)
@@ -400,8 +401,10 @@ grid <- dgcellstogrid(dgg, spp_counts$cell) #-> working.. IS this correct?s
 #grid33 <- base::merge(grid2, spp_counts, by = c("cell")) -> give 1008 obs. of 2 variables 
 
 #Update the grid cells' properties to include the number of observations in each cell
-grid <- merge(grid, spp_counts, by="cell")
-grid <- merge(grid, spp_counts, by.x="cell", by.y="cell")
+grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
+# grid <- merge(grid, spp_counts, by="cell")
+# grid <- merge(grid, spp_counts, by.x="cell", by.y="cell")
+
 #zoom to just eastern USA
 grid <- grid %>%
   filter(long >= -103,
@@ -409,15 +412,31 @@ grid <- grid %>%
 #Get polygons for the spatial range and make a map of bird observations
 countries <- map_data("usa") 
 
+
 ggplot() + 
-  #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), alpha=0.4)    +
-  geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
-#  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient(low="gray90", high="black") + 
-  #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
+  geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  geom_sf(data = grid, aes(fill = sum_count), color = alpha("white", 0.4 )) +
+  scale_fill_gradient(low="gray90", high="black") +
   theme_bw() + 
   facet_wrap(~species)
+# 
+#   #geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), alpha=0.4)    +
+#   geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+# #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
+#   scale_fill_gradient(low="gray90", high="black") + 
+#   #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
+#   theme_bw() + 
+#   facet_wrap(~species)
+
+# ggplot() + 
+#   #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+#   geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), alpha=0.4)    +
+#   geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
+# #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
+#   scale_fill_gradient(low="gray90", high="black") + 
+#   #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
+#   theme_bw() + 
+#   facet_wrap(~species)
 ```
 
 
@@ -567,11 +586,15 @@ dailylocs <- dailylocs %>%
 ggplot(dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
   theme(text = element_text(size=12)) + 
-  facet_wrap(~species)#+  
+  facet_wrap(~species)+  
+  geom_vline(xintercept = median(day), col = "indianred", linetype = "dashed")
   #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
 
-ggsave(filename = "figs/species_distances.png", height = 5, width=8)
+#ggsave(filename = "figs/species_distances.png", height = 5, width=8)
 ```
+julian day_> check the month(convert the days)-> ~100~200 spring (highest peak)
+first peak spring 
+second peak winter 
 
 ## Estimate the maximum migration speed during migration 
 First, remove all values for Day = 1. Because each GAM was calculated separately by year, distance between Dec 31 and Jan 1 will not be valid. 
@@ -645,11 +668,18 @@ ggplot(max_speed, aes(year, max_speed)) + geom_point() +
 
 #ggsave(filename = "figs/WOTH_MedMaxMigrationSpeed.png")
 ```
-
+make fig file in my github and change the name into more general 
 
 
 # estimate 3 migration dates, beginning of spring, peak latitude (summer), end of fall migration
 This will need some editing to work on each year separately. Ideally a resulting data frame with columns for year, begin_spring, peak_latitude, end_autumn
+
+winter and non-winter are for eastern read cedar tree (cone season)
+day %in% c(1:151))-> refering julian day
+
+These are spring index and fall index 
+Spring migration should be between 11 Jan and 9 July
+Fall migration should be between 8 August and 21 Dec
 
 ```{r}
 # modified from old function Est3MigrationDates in migration-fxns.R
@@ -670,9 +700,9 @@ Est3MigrationDates = function(dat){
         filter(!is.na(lon))
     print(paste0("species: ", s, "; year: ", y))
     #GAM model on predicted latitude of centroids by julian date
-    #gam1 = gam(wtmean_lat ~ s(DAY, k = 40), data = dat, gamma = 1.5) 
-    #xpred = data.frame(DAY = c(1:max(dat$DAY)))
-    #dpred = predict(gam1, newdata=xpred, type="response", se.fit=TRUE)
+    gam1 = gam(wtmean_lat ~ s(DAY, k = 40), data = dat, gamma = 1.5)
+    xpred = data.frame(DAY = c(1:max(dat$DAY)))
+    dpred = predict(gam1, newdata=xpred, type="response", se.fit=TRUE)
     
     ## cutoff based on 2 SE for spring and fall combined, following La Sorte et al. 2013 methods
     # Spring migration should be between 11 Jan and 9 July
@@ -682,30 +712,14 @@ Est3MigrationDates = function(dat){
    # CHANGED FROM PREVIOUS CODE FOR HUMMINGBIRD PROJECT
    # ALSO ADDED NA.RM=TRUE ARGUMENT, DOES THIS HAVE ANY DOWNSIDES?
     
-    a<- which(dat$winter == 'non-winter')
+   
 
-    first_non_winter=a[1]
-
-    #first_non_winter #row number = 1
-
-    b<- last_non_winter=nrow(dat)
     
-    #last_non_winter #row number = last row number
-
-    c<- first_winter = 1
-    #first_winter
-    d<- last_winter = first_non_winter - 1
-    #last_winter
-    
-    
-    spring_threshold = min(filter(dat_subset, day %in% c(a:b))$lat_se*2.56 + filter(dat_subset, day %in% c(a:b))$lat, na.rm=TRUE)
-    fall_threshold = min(filter(dat_subset, day %in% c(c:d))$lat_se*2.56 + filter(dat_subset, day %in% c(c:d))$lat, na.rm=TRUE)
-    
-    # spring_threshold = min(filter(dat_subset, day %in% c(1:151))$lat_se*2.56 + filter(dat_subset, day %in% c(1:151))$lat, na.rm=TRUE)
-    # fall_threshold = min(filter(dat_subset, day %in% c(213:364))$lat_se*2.56 + filter(dat_subset, day %in% c(213:364))$lat, na.rm=TRUE)
+    spring_threshold = min(filter(dat_subset, day %in% c(1:120))$lat_se*2.56 + filter(dat_subset, day %in% c(1:120))$lat, na.rm=TRUE) # 1:120 Jan 1 ~ April 30
+    fall_threshold = min(filter(dat_subset, day %in% c(244:364))$lat_se*2.56 + filter(dat_subset, day %in% c(244:364))$lat, na.rm=TRUE) # Oct7 ~ Sep 1 244:364
     #FIXME: after removing DAY=1, there are years with 364 days and with 365 days.If we ignore the last day of the leap years, will this influence fall threshold?
-    spring_index = intersect(c(11:190), dat_subset$day) # between 11 Jan and 9 July #FIXME: what should these dates be, they don't match
-    #FIXME: what is index?
+    spring_index = intersect(c(11:190), dat_subset$day) # between 11 Jan and 9 July #FIXME: what should these dates be, they don't match #190: july 9, index: finding exact date of the migration date
+    #TODO: double check index dates 
     fall_index = intersect(c(220:355), dat_subset$day) # between 8 August and 21 Dec
     spring_max = (dat_subset %>% filter(day %in% spring_index) %>% slice_max(lat))$day
     fall_max =  (dat_subset %>% filter(day %in% fall_index) %>% slice_max(lat))$day
@@ -750,6 +764,7 @@ return(df_dates)
 }
 
 #blue jays don't really migrate? Should I remove them from this part of the analysis:
+#filter out non-migratory species 
 dailylocs_4spp <- dailylocs %>% filter(species != "Cyanocitta cristata")
 dates <- Est3MigrationDates(dailylocs_4spp) 
 
@@ -823,7 +838,7 @@ ggplot() +
 winter_dat_effort <- df %>%
   mutate(DAYm1 = day-1,
          origin = paste0(year, "-01-01"),
-         date = as.Date(DAYm1, origin=origin), 
+         date = as.Date(DAYm1, origin=origin),
          month = month(date)) %>%
   mutate(winter = ifelse(month %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
   arrange(species,date) %>%
@@ -832,6 +847,20 @@ winter_dat_effort <- df %>%
   dplyr::select(-DAYm1, -origin) %>%
   filter(winter=="winter") %>%
   filter(y > 27 & x < 47)
+
+# winter_dat_effort_new <- dailylocs %>%
+#   mutate(DAYm1 = day-1,
+#          origin = paste0(year, "-01-01"),
+#          date = as.Date(DAYm1, origin=origin), 
+#          month = month(date)) %>%
+#   mutate(winter = ifelse(month %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
+#   arrange(species,date) %>%
+#   ungroup() %>%
+#   mutate(ID = row_number()) %>%
+#   dplyr::select(-DAYm1, -origin) %>%
+#   filter(winter=="winter") %>%
+#   filter(lat > 27 & lon < 47)
+
 
 
   ggplot() + 
@@ -868,33 +897,33 @@ sppR <- winter_dat_effort %>%
 #   summarize(num_spp = n())
 
 ggplot(sppR, aes(as.factor(num_spp), cell_lat)) + geom_boxplot() + 
-  facet_wrap(~YEAR)
+  facet_wrap(~year)
 ggplot(sppR, aes(as.factor(num_spp), cell_lon)) + geom_boxplot() + 
-  facet_wrap(~YEAR)
+  facet_wrap(~year)
 
 avg<- sppR %>%
-  group_by(YEAR, MONTH) %>%
+  group_by(year, month) %>%
   summarize(mean = mean(num_spp), 
             median = median(num_spp))
 
 avg2 <- sppR %>%
-  group_by(YEAR, MONTH, DAY) %>%
+  group_by(year, month, day) %>%
   summarize(mean = mean(num_spp),
             median = median(num_spp))
 
-ggplot(sppR, aes(DAY, num_spp)) + 
+ggplot(sppR, aes(day, num_spp)) + 
   geom_boxplot() + 
-  facet_wrap(~MONTH)
+  facet_wrap(~month)
 
-ggplot(avg, aes(YEAR, mean)) + geom_point() + facet_wrap(~MONTH)
-mod2 <- lm(mean~as.numeric(YEAR), data=avg)
+ggplot(avg, aes(year, mean)) + geom_point() + facet_wrap(~month)
+mod2 <- lm(mean~as.numeric(year), data=avg)
 summary(mod2)
 
-ggplot(avg, aes(mean)) + geom_histogram(aes(fill=YEAR)) + facet_wrap(~MONTH)
+ggplot(avg, aes(mean)) + geom_histogram(aes(fill=year)) + facet_wrap(~month)
 
-ggplot(avg, aes(YEAR, median)) + geom_point() + facet_wrap(~MONTH)
+ggplot(avg, aes(year, median)) + geom_point() + facet_wrap(~month)
 
-ggplot(avg2, aes(DAY, mean)) + geom_point() + facet_grid(YEAR~MONTH, scale="free")
+ggplot(avg2, aes(day, mean)) + geom_point() + facet_grid(year~month, scale="free")
 
 
 ```
@@ -902,14 +931,14 @@ ggplot(avg2, aes(DAY, mean)) + geom_point() + facet_grid(YEAR~MONTH, scale="free
 Calculate the number of species in a hex cell for each month (as opposed to day). Save as a table and then plot it on the grid cell map, using viridis color scale.
 ```{r}
 sppR_mo <- sppR %>%
-  group_by(cell, cell_lat, cell_lon, YEAR, MONTH) %>%
+  group_by(cell, cell_lat, cell_lon, year, month) %>%
   summarise(Smed=median(num_spp), 
             Smax=max(num_spp),
             Smin=min(num_spp))
 
 #Get the grid cell boundaries for cells which had bird observations
 grid <- dgcellstogrid(dgg, sppR_mo$cell, frame=TRUE, wrapcells=TRUE)
-
+#grid <- dgcellstogrid(dgg, sppR_mo$cell)
 
 #Update the grid cells' properties to include the number of observations in each cell
 grid <- merge(grid, sppR_mo, by.x="cell", by.y="cell")
@@ -921,7 +950,7 @@ grid <- grid %>%
 #Get polygons for the spatial range and make a map of bird observations
 countries <- map_data("usa") 
 
-grid2019 <- grid %>% filter(YEAR ==2010)
+grid2019 <- grid %>% filter(YEAR ==20222)
 
 #plot just 2019, median values for the month
 ggplot() + 
@@ -945,47 +974,47 @@ Calculate the slopes of species richness change across years, within cells. Plot
 
 cells <- unique(sppR_mo$cell)
 months <- c(10, 11, 12, 1, 2, 3)
-df <- data.frame(cell=0, month=0, n=0, slope=0, pVal=0, cell_lat=0, cell_lon=0)
+df_sppR <- data.frame(cell=0, month=0, n=0, slope=0, pVal=0, cell_lat=0, cell_lon=0)
 
 for (c in cells){
   dat <- sppR_mo %>% filter(cell == c)
   for (m in months){
-    dat2 <- dat %>% filter(MONTH == m)
+    dat2 <- dat %>% filter(month == m)
     if (nrow(dat2) >= 3) {
-      mod <- lm(Smed~as.numeric(YEAR), data=dat2)
+      mod <- lm(Smed~as.numeric(year), data=dat2)
       n = nrow(dat2)
       slope = coef(mod)[[2]]
       pVal = glance(mod)$p.value[[1]]
       cell_lat = dat2$cell_lat[1]
       cell_lon = dat2$cell_lon[1]
       
-      df <- rbind(df, c(c, m, n, slope, pVal, cell_lat, cell_lon))
+      df_sppR <- rbind(df_sppR, c(c, m, n, slope, pVal, cell_lat, cell_lon))
     }
   }
 }
 #remove the zero placeholder row and the NA values
 #FIXME: are we dropping all the rows that has NA values? does sig = pValue? 
-df <- df %>% 
+df_sppR <- df_sppR %>% 
   filter(n!=0) %>%
-  #filter(!is.na(sig))
-  #drop_na(df)
+  #filter(!is.na(sig)) 
+na.omit(df_sppR )
   
 # adding factor names and levels to month, ordered by winter season, not calendar year
-df$monthname <- month(as.numeric(df$month), label=TRUE)
-df$monthname <- factor(df$monthname, levels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar"))
+df_sppR$monthname <- month(as.numeric(df_sppR$month), label=TRUE)
+df_sppR$monthname <- factor(df_sppR$monthname, levels=c("Oct", "Nov", "Dec", "Jan", "Feb", "Mar"))
 
 # add column for significance
-df$sig <- ifelse(df$pVal < 0.05, "sig", "NS")
+df_sppR$sig <- ifelse(df_sppR$pVal < 0.05, "sig", "NS")
   
 #ggplot histogram, layered by identity for sig and NS
-ggplot(df, aes(slope)) + 
+ggplot(df_sppR, aes(slope)) + 
   geom_histogram(aes(fill=sig), position="identity", alpha=0.5) +
   scale_fill_manual(values = c("gray", "darkturquoise")) + 
   geom_vline(xintercept=0, linetype="dashed", col="gray50") +
   theme_bw()
 
 # ggplot boxplot by month for all significant slopes, commented code shows month comparisons, not currently included in figure
-ggplot(df %>% filter(sig=="sig"), aes(monthname, slope)) + 
+ggplot(df_sppR %>% filter(sig=="sig"), aes(monthname, slope)) + 
   geom_boxplot(fill="black", col="black", notch=TRUE) +
   geom_jitter(col="cyan3", alpha=0.5) +
   geom_hline(yintercept=0, linetype="dashed", col="black") +
@@ -1005,27 +1034,27 @@ ggplot(df %>% filter(sig=="sig"), aes(monthname, slope)) +
   # add text labels for mean slopes?
 
 # Figure for ESA 2021 poster
-ggsave("figs/Smed_slopes_month.png", bg="transparent", height=3, width=11)
+#ggsave("figs/Smed_slopes_month.png", bg="transparent", height=3, width=11)
 
 #average effect size, mean of the slopes
-df %>% 
+df_sppR %>% 
   filter(sig=="sig") %>%
 #  group_by(monthname) %>%
   summarize(meanslope = mean(slope),
             medianslope = median(slope))
 
 #plot by latitude? any signal here?
-ggplot(df %>% filter(sig=="sig"), aes(cell_lat, slope)) + 
+ggplot(df_sppR %>% filter(sig=="sig"), aes(cell_lat, slope)) + 
   geom_point(alpha=0.10) + 
   geom_hline(yintercept=0, linetype="dashed") +
   geom_smooth(method="lm") + 
   facet_wrap(~monthname)
 
 # Figure for ESA 2021 poster
-ggsave("figs/sig_slopes_month_lat.png", bg="transparent", height=4, width=6)
+#ggsave("figs/sig_slopes_month_lat.png", bg="transparent", height=4, width=6)
 
 # ggplot boxplot by month for all slopes, shaded jitter points by sig
-ggplot(df, aes(monthname, slope)) + 
+ggplot(df_sppR, aes(monthname, slope)) + 
   geom_boxplot(fill="black", col="black", notch=TRUE) +
   geom_jitter(aes(col=sig), alpha=0.5) +
   scale_colour_manual(values=c("gray", "cyan3")) +
