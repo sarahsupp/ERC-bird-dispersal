@@ -94,15 +94,9 @@ spdata <- spdata %>% filter(year!="0")
 ```
 
 [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
+
+Note: After running "process-raw-eBrid-data" and re-run the *spdata*, the names of the variables (columns names) are changed. For example, in num_spobs function, count.x is not found in dat_effort. YEAR and DAYS have to be change into lower case letter. 
 ```{r}
-#TODO/FIXME: After running "process-raw-eBrid-data" and re-run the *spdata*, the names of the variables (columns names) are changed. For example, in num_spobs function, count.x is not found in dat_effort. YEAR and DAYS have to be change into lower case letter. 
-
-#FIXME: Do we need num_spobs? 
-
-#dat_effort is giving me an error because there is no column name lon
-#dat_effort <- spdata %>%
-  #dplyr::filter(lon >=-103)
-
 # x = longitude 
 dat_effort <- spdata %>%
   dplyr::filter(x >= -103)
@@ -113,7 +107,7 @@ paste0("The total number of observations for all species is ", num_obs, ".")
 
 
 num_spobs <- dat_effort %>%
-  filter(year!=2020) %>%
+  filter(year!=2022) %>%
   group_by(species) %>%
   summarise(nrow=n(),
             total=sum(count))
@@ -121,7 +115,7 @@ num_spobs <- dat_effort %>%
 num_spobs
 
 dat_effort %>%
-  filter(year!=2020) %>%
+  filter(year!=2022) %>%
   group_by(species, year) %>%
   summarise(nrow=n(),
             total=sum(count)) %>%
@@ -129,7 +123,7 @@ dat_effort %>%
   geom_point(aes(shape=species)) + 
   geom_line() + 
   scale_y_log10() + 
-  scale_x_continuous(breaks=seq(2008, 2020, 3)) +
+  scale_x_continuous(breaks=seq(2008, 2022, 3)) +
   #  scale_x_discrete(limits=c("2008", "2012", "2016", "2019")) +
   xlab("Year") +
   ylab("checklist count") +
@@ -145,25 +139,22 @@ dat_effort %>%
 
 # Figure for ESA 2021 poster
 
-#FIXME: ggasve is not working (error message:Error in grDevices::dev.off() : QuartzBitmap_Output - unable to open file 'figs/checklist_counts.png')
-
 ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
 ```
 
 
----->## Weight mean locations 
+# Weight mean locations 
 Weight species counts by eBirder effort counts for each cell
+
+Note: After running "process-raw-eBrid-data", re-run the *spdata*, copying *dat_effort*, start from line 174(readRDS"df_nvector").
+If the data was updated then start the whole chunck. (converting 6369952 rows into n-vectors roufly takes 21hours). 
+*dat_effort* = *df*
+
 ```{r} 
-#ordering issues 
-
+#copying the raw data(dat_effort)
 copy <- data.frame(dat_effort)
-
 copy <- copy[c(order(copy$year, copy$day)),]
-  
 df <- data.frame(copy)
-
-#df <-df[c(1:50000),]
-
 df$freq <- df$count/df$effort
 
 #creating a columns for newx, newy, newz with NA values to store values of 3 vectors
@@ -171,8 +162,6 @@ df$newx <- NA
 df$newy <- NA
 df$newz <- NA
 
-
-#takes about 20 hours to run it
 #For each species of a given year and day, converting x and y to newx, newy, newz(radius)
 for (i in 1:nrow(df)){
   df[i,"newx"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[1]
@@ -180,14 +169,11 @@ for (i in 1:nrow(df)){
   df[i,"newz"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[3]
 }
 
-#saving converted nvector data frame 
-save(df, file = "df_nvector")
+#Save a single object to a file
+#saveRDS(df, "df_nvector.rds")
 
-# Save a single object to a file
-saveRDS(df, "df_nvector.rds")
-
-# Restore it under a different name
-#df <- readRDS("df_nvector.rds")
+#Restore it under a different name
+df <- readRDS("df_nvector.rds")
 
 #Dr. Lavin`s code 
 # df_w_weights <- df %>% mutate(weightedx=newx * freq, weightedy=newy * freq, weightedz=newz * freq)
@@ -245,9 +231,9 @@ ggplot(weighted_mean_locs, aes(weighted_lat)) + geom_histogram() + facet_wrap(~s
 
 #check if weighted sd differs by time of the year (expect to be higher during migration, lower during breeding)
 ggplot(weighted_mean_locs, aes(day, weighted_lon)) + geom_point(alpha=0.10) + facet_wrap(~species)
+#ggsave(filename = "figs/15_species_mean_locs_lon.png", height = 11, width=8)
 ggplot(weighted_mean_locs, aes(day, weighted_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
-
-
+#ggsave(filename = "figs/15_species_mean_locs_lat.png", height = 11, width=8)
 
 
 #Dr.supp old code
@@ -292,6 +278,8 @@ weighted_mean_locs <- weighted_mean_locs %>%
   ungroup() %>%
   mutate(ID = row_number()) %>%
   dplyr::select(-DAYm1, -origin)
+
+#saveRDS(weighted_mean_locs, "weighted_mean_locs.rds")
 ```
 
 
@@ -331,7 +319,7 @@ ggarrange(num_bins, num_gridcells, num_days,
           labels=c("A", "B", "C"),
           ncol=3, nrow=1)
 
-#ggsave(filename = "figs/species_obs.png", height = 11, width=8)
+ggsave(filename = "figs/species_obs.png", height = 11, width=8)
 ```
 
 
@@ -350,13 +338,15 @@ ggplot(weighted_mean_locs, aes(as.numeric(day), weighted_lat, group=year)) +
   xlab("Day of the year") + 
   scale_x_continuous(breaks = seq(1, 366, by = 60)) +
   facet_wrap(~species)
+
+ggsave(filename = "figs/15species_weighted_mean_locs_smmooth.png", height = 11, width=8)
 ```
 
 
 ## Calculates the count of observations within each cell, 
 weighted by total eBirder effort on that day in a given cell. 
 Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the target species in a cell divided by the total number of eBirder records in a cell.
--use raw data 
+
 ```{r}
 #using original data(dat_effort=df)
 dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
@@ -370,7 +360,7 @@ spp_counts <- df %>%
   summarise(sum_weighted_count=sum(freq),
             mean_weighted_count=mean(freq),
             sum_count=sum(count))
-# 
+
 # ggplot(spp_counts, aes(x=sum_weighted_count)) +
 #   geom_histogram(binwidth=10)
 
@@ -590,7 +580,7 @@ ggplot(dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(co
   geom_vline(xintercept = median(day), col = "indianred", linetype = "dashed")
   #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
 
-#ggsave(filename = "figs/species_distances.png", height = 5, width=8)
+ggsave(filename = "figs/15species_distances.png", height = 5, width=8)
 ```
 julian day_> check the month(convert the days)-> ~100~200 spring (highest peak)
 first peak spring 
@@ -637,12 +627,7 @@ speeds <- max_speed %>%
     median = median(max_speed)
   )
 
-
-
-
-
 #plot the results estimating yearly maximum migration speed (km/day)
-
 ggplot(max_speed %>% filter(species!="Cyanocitta cristata"), aes(year, max_speed)) + geom_line(aes(col=species)) +
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") +
   theme(text = element_text(size=12),
@@ -666,7 +651,7 @@ ggplot(max_speed, aes(year, max_speed)) + geom_point() +
  # annotate(geom="text", x= 3, y= 50, label=paste0("median = ", round(med,2), " km/day")) + 
   facet_wrap(~species)
 
-#ggsave(filename = "figs/WOTH_MedMaxMigrationSpeed.png")
+ggsave(filename = "figs/15species_MedMaxMigrationSpeed.png")
 ```
 make fig file in my github and change the name into more general 
 
@@ -700,8 +685,8 @@ Est3MigrationDates = function(dat){
         filter(!is.na(lon))
     print(paste0("species: ", s, "; year: ", y))
     #GAM model on predicted latitude of centroids by julian date
-    gam1 = gam(wtmean_lat ~ s(DAY, k = 40), data = dat, gamma = 1.5)
-    xpred = data.frame(DAY = c(1:max(dat$DAY)))
+    gam1 = gam(lat ~ s(day, k = 40), data = dat, gamma = 1.5)
+    xpred = data.frame(day = c(1:max(dat$day)))
     dpred = predict(gam1, newdata=xpred, type="response", se.fit=TRUE)
     
     ## cutoff based on 2 SE for spring and fall combined, following La Sorte et al. 2013 methods
@@ -711,15 +696,13 @@ Est3MigrationDates = function(dat){
     #                 AND          Aug 1-Dec 30 for Fall migration end 
    # CHANGED FROM PREVIOUS CODE FOR HUMMINGBIRD PROJECT
    # ALSO ADDED NA.RM=TRUE ARGUMENT, DOES THIS HAVE ANY DOWNSIDES?
-    
-   
-
-    
+  
     spring_threshold = min(filter(dat_subset, day %in% c(1:120))$lat_se*2.56 + filter(dat_subset, day %in% c(1:120))$lat, na.rm=TRUE) # 1:120 Jan 1 ~ April 30
     fall_threshold = min(filter(dat_subset, day %in% c(244:364))$lat_se*2.56 + filter(dat_subset, day %in% c(244:364))$lat, na.rm=TRUE) # Oct7 ~ Sep 1 244:364
     #FIXME: after removing DAY=1, there are years with 364 days and with 365 days.If we ignore the last day of the leap years, will this influence fall threshold?
-    spring_index = intersect(c(11:190), dat_subset$day) # between 11 Jan and 9 July #FIXME: what should these dates be, they don't match #190: july 9, index: finding exact date of the migration date
-    #TODO: double check index dates 
+    spring_index = intersect(c(11:190), dat_subset$day) # between 11 Jan and 9 July #FIXME: what should these dates be, they don't match 
+    #190: july 9, index: finding exact date of the migration date
+    #TODO: (Dr. Supp needs to check) double check index dates 
     fall_index = intersect(c(220:355), dat_subset$day) # between 8 August and 21 Dec
     spring_max = (dat_subset %>% filter(day %in% spring_index) %>% slice_max(lat))$day
     fall_max =  (dat_subset %>% filter(day %in% fall_index) %>% slice_max(lat))$day
