@@ -667,14 +667,22 @@ Spring migration should be between 11 Jan and 9 July
 Fall migration should be between 8 August and 21 Dec
 
 ```{r}
-# modified from old function Est3MigrationDates in migration-fxns.R
+#filtering only the migratory species 
+dailylocs <-dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Sturnella_magna" ,"Sturnus_vulgaris", "Turdus_migratorius", "Sialia_sialis") )
 
+#dailylocs2 <-dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus") )
+```
+
+
+```{r}
+# modified from old function Est3MigrationDates in migration-fxns.R
+#TODO: need to figure out for year 2022
 Est3MigrationDates = function(dat){
   #takes in predicted centroids for migration path, and estimates the beginning of spring migration,
   # the end of fall migration, and the date where the species reaches maximum latitude.
   dat <- dat %>%
   filter(day != 1)
-  year <- c(2008:2022)
+  year <- c(2008:2021)
   species <- unique(dat$species)
   df_dates <- data.frame(species="none", year=0, spring = 0, maxlat = 0, fall = 0)
   for (s in species) {
@@ -697,7 +705,7 @@ Est3MigrationDates = function(dat){
    # CHANGED FROM PREVIOUS CODE FOR HUMMINGBIRD PROJECT
    # ALSO ADDED NA.RM=TRUE ARGUMENT, DOES THIS HAVE ANY DOWNSIDES?
   
-    spring_threshold = min(filter(dat_subset, day %in% c(1:120))$lat_se*2.56 + filter(dat_subset, day %in% c(1:120))$lat, na.rm=TRUE) # 1:120 Jan 1 ~ April 30
+    spring_threshold = min(filter(dat_subset, day %in% c(2:120))$lat_se*2.56 + filter(dat_subset, day %in% c(2:120))$lat, na.rm=TRUE) # 1:120 Jan 1 ~ April 30
     fall_threshold = min(filter(dat_subset, day %in% c(244:364))$lat_se*2.56 + filter(dat_subset, day %in% c(244:364))$lat, na.rm=TRUE) # Oct7 ~ Sep 1 244:364
     #FIXME: after removing DAY=1, there are years with 364 days and with 365 days.If we ignore the last day of the leap years, will this influence fall threshold?
     spring_index = intersect(c(11:190), dat_subset$day) # between 11 Jan and 9 July #FIXME: what should these dates be, they don't match 
@@ -746,10 +754,11 @@ Est3MigrationDates = function(dat){
 return(df_dates)
 }
 
+dates <- Est3MigrationDates(dailylocs)
 #blue jays don't really migrate? Should I remove them from this part of the analysis:
 #filter out non-migratory species 
-dailylocs_4spp <- dailylocs %>% filter(species != "Cyanocitta cristata")
-dates <- Est3MigrationDates(dailylocs_4spp) 
+#dailylocs_4spp <- dailylocs %>% filter(species != "Cyanocitta cristata")
+#dates <- Est3MigrationDates(dailylocs_4spp) 
 
 median_migdates <- dates %>%
   group_by(species) %>%
