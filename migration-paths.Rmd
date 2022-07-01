@@ -479,7 +479,7 @@ p
 ```
 
 
-## Estimate migration pathway for Bombycilla each year separately using GAMs
+## Estimate migration pathway for 15 species each year separately using GAMs
 Use GAM model to predict daily location along a smoothing line, from the weighted mean locations. Daily location should be calculated for each year separately.
 
 In the GAM, we can use the weighted mean locations (latitude and longitude) that we have already calculated above. These become the inputs to the gam model, which finds the predicted (smooth) migration path for each day. The predicted (fitted) values become the migration path for the species, which we will then use to estimate start of spring, peak latitude (breeding), and end of autumn migration. Between end Autumn migration and begin of Spring migration, is the expected time that most individual birds are on their wintering grounds and not actively migrating. 
@@ -582,9 +582,6 @@ ggplot(dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(co
 
 ggsave(filename = "figs/15species_distances.png", height = 5, width=8)
 ```
-julian day_> check the month(convert the days)-> ~100~200 spring (highest peak)
-first peak spring 
-second peak winter 
 
 ## Estimate the maximum migration speed during migration 
 First, remove all values for Day = 1. Because each GAM was calculated separately by year, distance between Dec 31 and Jan 1 will not be valid. 
@@ -627,6 +624,7 @@ speeds <- max_speed %>%
     median = median(max_speed)
   )
 
+#TODO: filter only the migratory species 
 #plot the results estimating yearly maximum migration speed (km/day)
 ggplot(max_speed %>% filter(species!="Cyanocitta cristata"), aes(year, max_speed)) + geom_line(aes(col=species)) +
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") +
