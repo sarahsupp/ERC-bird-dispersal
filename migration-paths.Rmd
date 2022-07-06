@@ -347,6 +347,7 @@ ggsave(filename = "figs/15species_weighted_mean_locs_smmooth.png", height = 11, 
 weighted by total eBirder effort on that day in a given cell. 
 Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the target species in a cell divided by the total number of eBirder records in a cell.
 
+Should I filter out the non-migratory species?
 ```{r}
 #using original data(dat_effort=df)
 dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
@@ -376,13 +377,13 @@ ggplot(spp_counts, aes(x=mean_weighted_count)) +
 ## Create a map of eBird effort (all years, all dates)
 across eastern North America
 
-FIXME: dgcellstogrid not working (frame=TRUE, wrapcells=TRUE). Without (frame=TRUE, wrapcells=TRUE), grid does not has cell column 
+
 ```{r}
 #Get the grid cell boundaries for cells which had bird observations
 #FIXME: dgcellstogrid and merging is not working 
 
 #grid <-  dggridR::dgcellstogrid(dgg, spp_counts$cell, frame=TRUE, wrapcells=TRUE) #->not working 
-grid <- dggridR::dgcellstogrid(dgg, spp_counts$cell) #-> working.. IS this correct?s
+grid <- dggridR::dgcellstogrid(dgg, spp_counts$cell) 
 
 #changing dgg into dataframe 
 #dgg2<-as.data.frame(dgg)
@@ -484,6 +485,8 @@ Use GAM model to predict daily location along a smoothing line, from the weighte
 
 In the GAM, we can use the weighted mean locations (latitude and longitude) that we have already calculated above. These become the inputs to the gam model, which finds the predicted (smooth) migration path for each day. The predicted (fitted) values become the migration path for the species, which we will then use to estimate start of spring, peak latitude (breeding), and end of autumn migration. Between end Autumn migration and begin of Spring migration, is the expected time that most individual birds are on their wintering grounds and not actively migrating. 
 
+TODO: tyr to filter out the migratory species when plotting 
+
 *Creates a dataframe with daily location for each year and graphs results*
 ```{r}
 Estimatedailylocs = function(dat) {
@@ -572,7 +575,7 @@ dailylocs <- dailylocs %>%
 #TODO: If placed after the dates are calculated, then the speeds used can be limited to the migration seasons using the filter below. Not sure we need to do that here, but I think this is how I got around the year-to-year day 1 being wrong things last time, plus, that project was really only focused on the migration seasons alone.
 #  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
 
-#FIXME: 
+#TODO: filter out the non-migratory species when plotting 
 ggplot(dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
   theme(text = element_text(size=12)) + 
@@ -665,16 +668,26 @@ Spring migration should be between 11 Jan and 9 July
 Fall migration should be between 8 August and 21 Dec
 
 ```{r}
-#filtering only the migratory species 
-dailylocs <-dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Sturnella_magna" ,"Sturnus_vulgaris", "Turdus_migratorius", "Sialia_sialis") )
+#filtering only the migratory species (9 species)
+  #only 7 species are working, Sturnella magna and Sturnus vulgaris are not working (magna not working in 2017, vulgaris not      working in 2008)
 
-#dailylocs2 <-dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus") )
+spp7dailylocs <-dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Turdus_migratorius", "Sialia_sialis") )
+
+#TODO/FIXME:need to figure out these two species(why stopping at 2017 and 2008? why other year are working?)
+  #magnadailylocs <- dailylocs %>% filter (species %in% c("Sturnella_magna") )
+  #vulgarisdailylocs<-dailylocs %>% filter (species %in% c("Sturnus_vulgaris") )
+  #saveRDS(magnadailylocs, "magnadailylocs.rds")
+  #saveRDS(vulgarisdailylocs, "vulgarisdailylocs.rds")
+  #magnadailylocs <- readRDS("magnadailylocs.rds")
+  #vulgarisdailylocs <- readRDS("vulgarisdailylocs.rds")
+
 ```
 
 
 ```{r}
 # modified from old function Est3MigrationDates in migration-fxns.R
-#TODO: need to figure out for year 2022
+#TODO: Since 2022 is only half way filled, year of 2022 is not included
+
 Est3MigrationDates = function(dat){
   #takes in predicted centroids for migration path, and estimates the beginning of spring migration,
   # the end of fall migration, and the date where the species reaches maximum latitude.
@@ -703,11 +716,11 @@ Est3MigrationDates = function(dat){
    # CHANGED FROM PREVIOUS CODE FOR HUMMINGBIRD PROJECT
    # ALSO ADDED NA.RM=TRUE ARGUMENT, DOES THIS HAVE ANY DOWNSIDES?
   
-    spring_threshold = min(filter(dat_subset, day %in% c(2:120))$lat_se*2.56 + filter(dat_subset, day %in% c(2:120))$lat, na.rm=TRUE) # 1:120 Jan 1 ~ April 30
-    fall_threshold = min(filter(dat_subset, day %in% c(244:364))$lat_se*2.56 + filter(dat_subset, day %in% c(244:364))$lat, na.rm=TRUE) # Oct7 ~ Sep 1 244:364
+    spring_threshold = min(filter(dat_subset, day %in% c(2:120))$lat_se*2.56 + filter(dat_subset, day %in% c(2:120))$lat, na.rm=TRUE) # Jan 2 ~ April 30
+    fall_threshold = min(filter(dat_subset, day %in% c(244:364))$lat_se*2.56 + filter(dat_subset, day %in% c(244:364))$lat, na.rm=TRUE) # Oct7 ~ Sep 1 
     #FIXME: after removing DAY=1, there are years with 364 days and with 365 days.If we ignore the last day of the leap years, will this influence fall threshold?
     spring_index = intersect(c(11:190), dat_subset$day) # between 11 Jan and 9 July #FIXME: what should these dates be, they don't match 
-    #190: july 9, index: finding exact date of the migration date
+    #index: finding exact date of the migration date
     #TODO: (Dr. Supp needs to check) double check index dates 
     fall_index = intersect(c(220:355), dat_subset$day) # between 8 August and 21 Dec
     spring_max = (dat_subset %>% filter(day %in% spring_index) %>% slice_max(lat))$day
@@ -719,7 +732,7 @@ Est3MigrationDates = function(dat){
     while(tst > spring_threshold){
       if(nrow(filter(dat_subset, day==spring_index2))>0) {
         tst = filter(dat_subset, day %in% spring_index2)$lat
-        if(spring_index2 == 1) break
+        if(spring_index2 == 1) break #see if we have to put 2 
         spring_index2 = spring_index2 - 1
       }
       else { spring_index2 = spring_index2 - 1 }
@@ -752,36 +765,36 @@ Est3MigrationDates = function(dat){
 return(df_dates)
 }
 
-dates <- Est3MigrationDates(dailylocs)
-#blue jays don't really migrate? Should I remove them from this part of the analysis:
-#filter out non-migratory species 
-#dailylocs_4spp <- dailylocs %>% filter(species != "Cyanocitta cristata")
-#dates <- Est3MigrationDates(dailylocs_4spp) 
+spp7MigrationDates <- Est3MigrationDates(spp7dailylocs)
 
-median_migdates <- dates %>%
+#saveRDS(spp7MigrationDates, "spp7MigrationDates.rds")
+#spp7MigrationDates <- readRDS("spp7MigrationDates.rds")
+
+
+median_migdates <- spp7MigrationDates %>%
   group_by(species) %>%
-  summarise(begin_winter = median(FALL),
-            end_winter = median(SPRING))
+  summarise(begin_winter = median(fall),
+            end_winter = median(spring))
 
-# paste0("The beginning of winter is on average day ", begin_winter, " and the end of winter is on average day ", end_winter, ".")
+#paste0("The beginning of winter is on average day ", begin_winter, " and the end of winter is on average day ", end_winter, ".")
 
-begin <- ggplot(dates, aes(YEAR, FALL)) + 
+begin <- ggplot(spp7MigrationDates, aes(year, fall)) + 
   geom_point() + 
   geom_smooth(method="lm") +
   #geom_hline(yintercept = begin_winter, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Winter begin date") + 
-  theme(text = element_text(size=14), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
-  scale_x_continuous(breaks=seq(2008, 2019, 3)) +
+  theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  scale_x_continuous(breaks=seq(2008, 2021, 2)) +
  # annotate(geom="text", x= 2012, y= 340, label=paste0("median doy = ", round(begin_winter,2)))
   facet_wrap(~species)
 
-end <- ggplot(dates, aes(YEAR, SPRING)) + 
+end <- ggplot(spp7MigrationDates, aes(year, spring)) + 
   geom_point() + 
   geom_smooth(method="lm") +
  # geom_hline(yintercept = end_winter, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Winter end date") + 
-  theme(text = element_text(size=14), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +  
-  scale_x_continuous(breaks=seq(2008, 2019, 3)) +
+  theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +  
+  scale_x_continuous(breaks=seq(2008, 2021, 2)) +
   #annotate(geom="text", x= 2012, y= 55, label=paste0("median doy = ", round(end_winter,2)))
   facet_wrap(~species)
 
@@ -789,23 +802,137 @@ ggarrange(begin, end,
           labels=c("A", "B"),
           ncol=2, nrow=1)
 
-ggsave(filename = "figs/allspp_winterDates.png", height = 5, width=8)
+ggsave(filename = "figs/7spp_MigrationDates.png", height = 10, width=10)
 ```
+TODO: 
+linear regression 
+plot (time, spring day )
+slope: #days earlier/later migration per year 
 
-Let's look at the linear trends of these dates for species, especially S. coronata.
+regression example: Pr(>|t|) :0.415 if this p-value significant, then look at the slope -0.2857 (times 10)-> for decade, species started migration 2 days earlier 
+
+*Eastern Bluebird: Sialia_sialis fall p-value significant*
+
+
+Looking at the linear trends of these dates for 7 migratory species.
 ```{r}
-scoronata_spring <- dates %>%
-  filter(species=="Setophaga coronata")
+cedrorum <- spp7MigrationDates %>%
+  filter(species=="Bombycilla_cedrorum")
 
-mod1 <- lm(SPRING ~ YEAR, data=scoronata_spring)
-summary(mod1)
+#linear regression for spring 
+mod1_spring <- lm(spring ~ year, data=cedrorum)
+summary(mod1_spring)
+
+#linear regression for fall
+mod1_fall <- lm(spring ~ year, data=cedrorum)
+summary(mod1_fall)
+
+#anova 
+anova(mod1_spring)
+anova(mod1_fall)
 ```
+
+
+```{r}
+purpureus <- spp7MigrationDates %>%
+  filter(species=="Haemorhous_purpureus")
+
+mod2_spring <- lm(spring ~ year, data=purpureus)
+summary(mod2_spring)
+
+mod2_fall <- lm(fall ~ year, data=purpureus)
+summary(mod2_fall)
+
+#anova 
+anova(mod2_spring)
+anova(mod2_fall)
+```
+
+```{r}
+mustelina <- spp7MigrationDates %>%
+  filter(species=="Hylocichla_mustelina")
+
+mod3_spring <- lm(spring ~ year, data=mustelina)
+summary(mod3_spring)
+
+mod3_fall <- lm(fall ~ year, data=mustelina)
+summary(mod3_fall)
+
+#anova
+anova(mod3_spring)
+anova(mod3_fall)
+```
+
+
+```{r}
+hyemalis <- spp7MigrationDates %>%
+  filter(species=="Junco_hyemalis")
+
+mod4_spring <- lm(spring ~ year, data=hyemalis_spring)
+summary(mod4_spring)
+
+mod4_fall <- lm(fall ~ year, data=hyemalis_spring)
+summary(mod4_fall)
+
+#anova 
+anova(mod4_spring)
+anova(mod4_fall)
+```
+
+
+```{r}
+coronata <- spp7MigrationDates %>%
+  filter(species=="Setophaga_coronata")
+
+mod5_spring <- lm(spring ~ year, data=coronata)
+summary(mod5_spring)
+
+mod5_fall <- lm(fall ~ year, data=coronata)
+summary(mod5_fall)
+
+#anova
+anova(mod5_spring)
+anova(mod5_fall)
+```
+
+
+```{r}
+sialis <- spp7MigrationDates %>%
+  filter(species=="Sialia_sialis")
+
+mod6_spring <- lm(spring ~ year, data=sialis)
+summary(mod6_spring)
+
+mod6_fall <- lm(fall ~ year, data=sialis)
+summary(mod6_fall)
+
+#anova
+anova(mod6_spring)
+anova(mod6_fall)
+```
+
+
+```{r}
+migratorius <- spp7MigrationDates %>%
+  filter(species=="Turdus_migratorius")
+
+mod7_spring <- lm(spring ~ year, data=migratorius)
+summary(mod7_spring)
+
+mod7_fall <- lm(fall ~ year, data=migratorius)
+summary(mod7_fall)
+
+#anova 
+anova(mod7_spring)
+anova(mod7_fall)
+```
+
 
 
 Now we might just want to look at bird occurrences during the winter months, and in the latitudes that ERC occur in: 
 Can use the winter column to grab all data October-March and the latitudes ~ 26-47 --Note that these choices are somewhat arbitrary, just to get a quick look now. Will need to get finer grained info from D. Ward and lab later...
 ```{r}
-ERCbirds <- dailylocs %>%
+ERCbirds <- spp7dailylocs %>%
   filter(lat - lat_se > 27 & lat + lat_se < 47 & winter=="winter")
 
 ggplot() + 
@@ -825,7 +952,9 @@ ggplot() +
 
 # look at the dat_effort file locations, not just the daily locs (which are summarized centroids only)
 ```{r}
-winter_dat_effort <- df %>%
+ spp7 <- df %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Turdus_migratorius", "Sialia_sialis") )
+
+winter_dat_effort <- spp7 %>%
   mutate(DAYm1 = day-1,
          origin = paste0(year, "-01-01"),
          date = as.Date(DAYm1, origin=origin),
@@ -838,10 +967,10 @@ winter_dat_effort <- df %>%
   filter(winter=="winter") %>%
   filter(y > 27 & x < 47)
 
-# winter_dat_effort_new <- dailylocs %>%
+# winter_dat_effort <- df %>%
 #   mutate(DAYm1 = day-1,
 #          origin = paste0(year, "-01-01"),
-#          date = as.Date(DAYm1, origin=origin), 
+#          date = as.Date(DAYm1, origin=origin),
 #          month = month(date)) %>%
 #   mutate(winter = ifelse(month %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
 #   arrange(species,date) %>%
@@ -849,7 +978,8 @@ winter_dat_effort <- df %>%
 #   mutate(ID = row_number()) %>%
 #   dplyr::select(-DAYm1, -origin) %>%
 #   filter(winter=="winter") %>%
-#   filter(lat > 27 & lon < 47)
+#   filter(y > 27 & x < 47)
+
 
 
 
@@ -1062,7 +1192,12 @@ ggplot(df_sppR, aes(monthname, slope)) +
 
 #some basic t.tests to show that all slopes (sig and sig+NS) were significantly different from Zero, and significantly positive (very few with lower richness through time) -- correlate to higher potential disperser load over the past decade -- could imply an increasing role for dispersers, but need to discuss with Frank what else we'd need to check to ensure that this isn't just due to increasing eBird effort (In retrospect I may not have yet controlled well for this, or need to use the weighted measures instead of presence only directly?)
 
+#TODO: ANOVA -check out (grouping all the months )
+#boxplot: all positive, the middle part 95% percentile (median)
+
 ```
+
+
 
 Let's plot the map using the significant slopes, and all others shaded in grey
 ```{r}
