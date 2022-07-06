@@ -69,6 +69,9 @@ library(dplyr)
 library(tidyverse)
 library(nvctr)
 library(gapminder)
+library(sjPlot)
+library(sjmisc)
+library(sjlabelled)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
@@ -377,24 +380,25 @@ ggplot(spp_counts, aes(x=mean_weighted_count)) +
 ## Create a map of eBird effort (all years, all dates)
 across eastern North America
 
+TODO: need to update the code (see: https://github.com/r-barnes/dggridR/blob/master/vignettes/dggridR.Rmd)
 
 ```{r}
 #Get the grid cell boundaries for cells which had bird observations
-#FIXME: dgcellstogrid and merging is not working 
+#FIXME: after merging grid and spp_count, there are no longer a long and lat  
 
 #grid <-  dggridR::dgcellstogrid(dgg, spp_counts$cell, frame=TRUE, wrapcells=TRUE) #->not working 
 grid <- dggridR::dgcellstogrid(dgg, spp_counts$cell) 
 
-#changing dgg into dataframe 
-#dgg2<-as.data.frame(dgg)
-#grid2 <-  dggridR::dgcellstogrid(dgg2, spp_counts$cell) #->not working 
-#grid3 <- merge(grid2, spp_counts) -> gives 3801168 obs. of 7 variables
-#grid33 <- base::merge(grid2, spp_counts, by = c("cell")) -> give 1008 obs. of 2 variables 
 
 #Update the grid cells' properties to include the number of observations in each cell
 grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
 # grid <- merge(grid, spp_counts, by="cell")
 # grid <- merge(grid, spp_counts, by.x="cell", by.y="cell")
+
+#Make adjustments so the output is more visually interesting
+# grid$count    <- log(grid$sum_count)
+# cutoff        <- quantile(grid$count,0.9)
+# grid          <- grid %>% mutate(count=ifelse(count>cutoff,cutoff,count))
 
 #zoom to just eastern USA
 grid <- grid %>%
@@ -453,7 +457,8 @@ uw_spp_counts <- df %>%
   summarise(count_new_uw=sum(count))
 
 
-uw_grid <- dgcellstogrid(dgg, uw_spp_counts$cell, frame=TRUE, wrapcells=TRUE)
+
+uw_grid <- dgcellstogrid(dgg, uw_spp_counts$cell)
 uw_grid <- merge(grid, uw_spp_counts, by.x=c("cell", "species"), by.y=c("cell", "species")) 
 
 p <- ggplot() +
@@ -521,18 +526,22 @@ Estimatedailylocs = function(dat) {
 #get daily centroid locations for all species in all years
 dailylocs <- Estimatedailylocs(weighted_mean_locs)
 
-ggplot(dailylocs, aes(day, lat)) + geom_line(size=1, aes(col=species)) +
+#filtering only the migratory species (9 species)
+  #only 7 species are working, Sturnella magna and Sturnus vulgaris are not working (magna not working in 2017, vulgaris not      working in 2008)
+spp7dailylocs <-dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Turdus_migratorius", "Sialia_sialis") )
+
+ggplot(spp7dailylocs, aes(day, lat)) + geom_line(size=1, aes(col=species)) +
   # geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts with dates
   geom_vline(xintercept=c(91, 275), col="gray30") +
   facet_wrap( ~ year, ncol=3)+ xlab("Day of Year") + ylab("weighted mean latitude") +
   theme_bw()
 
-ggplot(dailylocs, aes(lon, lat, group=year)) +
+ggplot(spp7dailylocs, aes(lon, lat, group=year)) +
   geom_point(aes(col=winter), alpha=0.25) +
   scale_colour_manual(values = c("grey50", "blue")) +
   facet_wrap(~species)
 
-ggplot(dailylocs, aes(lon, lat, group=year)) +
+ggplot(spp7dailylocs, aes(lon, lat, group=year)) +
   geom_point(aes(col=winter), alpha=0.25) +
   scale_colour_manual(values = c("grey50", "blue")) +
   facet_grid(year~species)
@@ -545,7 +554,7 @@ ggplot(dailylocs, aes(lon, lat, group=year)) +
 This calculation uses Great Circle (ellipsoid) distance on the estimated daily locations from the GAM model predictions for latitude and longitude. Because of the way the distVicentyEllipsoid function works on the values, the rows *must* all be in chronological order.
 ```{r}
 #identify dates with no location and assign all values to NA
-missdates <- dailylocs %>%
+spp7missdates <- spp7dailylocs %>%
   group_by(species, year) %>%
   #technically this leaves out DAY 366 in 2008, 2012, 2016, and 2020, but I don't think that matters?
   summarize(missing = setdiff(1:365, day)) %>% 
@@ -553,7 +562,7 @@ missdates <- dailylocs %>%
   dplyr::select(species, day, year, month, lon, lat, lon_se, lat_se)
 
 #append the missing/NA date values to the main dailylocs dataframe
-dailylocs <- bind_rows(dailylocs, missdates)
+spp7dailylocs <- bind_rows(spp7dailylocs, spp7missdates)
 
 #calculate sequential distances using geosphere::distVicentyEllipsoid, adds NA for the first record
 calc_distances <- function(lon, lat) {
@@ -562,7 +571,7 @@ calc_distances <- function(lon, lat) {
   return(dist)
 }
 
-dailylocs <- dailylocs %>%
+spp7dailylocs <- spp7dailylocs %>%
   # ensures that everything is ordered chronologically by year and day of year
   arrange(species, year, day) %>%
   group_by(species, year) %>%
@@ -571,19 +580,56 @@ dailylocs <- dailylocs %>%
   #Remove Day 1 for all year, because due to our method of separating GAM by year, it will be a flawed value
   filter(day != 1)
 
-
-#TODO: If placed after the dates are calculated, then the speeds used can be limited to the migration seasons using the filter below. Not sure we need to do that here, but I think this is how I got around the year-to-year day 1 being wrong things last time, plus, that project was really only focused on the migration seasons alone.
-#  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
-
-#TODO: filter out the non-migratory species when plotting 
-ggplot(dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
+ggplot(spp7dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
   theme(text = element_text(size=12)) + 
   facet_wrap(~species)+  
   geom_vline(xintercept = median(day), col = "indianred", linetype = "dashed")
   #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
 
-ggsave(filename = "figs/15species_distances.png", height = 5, width=8)
+ggsave(filename = "figs/7species_distances.png", height = 5, width=8)
+
+
+# #identify dates with no location and assign all values to NA
+# missdates <- dailylocs %>%
+#   group_by(species, year) %>%
+#   #technically this leaves out DAY 366 in 2008, 2012, 2016, and 2020, but I don't think that matters?
+#   summarize(missing = setdiff(1:365, day)) %>% 
+#   mutate(day = missing, month=NA, winter=NA, lon=NA, lat=NA, lon_se=NA, lat_se=NA) %>%
+#   dplyr::select(species, day, year, month, lon, lat, lon_se, lat_se)
+# 
+# #append the missing/NA date values to the main dailylocs dataframe
+# dailylocs <- bind_rows(dailylocs, missdates)
+# 
+# #calculate sequential distances using geosphere::distVicentyEllipsoid, adds NA for the first record
+# calc_distances <- function(lon, lat) {
+#   m <- cbind(lon,lat)
+#   dist <- append(NA, distVincentyEllipsoid(m))/1000
+#   return(dist)
+# }
+# 
+# dailylocs <- dailylocs %>%
+#   # ensures that everything is ordered chronologically by year and day of year
+#   arrange(species, year, day) %>%
+#   group_by(species, year) %>%
+#   #calculate sequential distances, adds NA for the first record
+#   mutate(distance = calc_distances(lon, lat)) %>%
+#   #Remove Day 1 for all year, because due to our method of separating GAM by year, it will be a flawed value
+#   filter(day != 1)
+
+
+#TODO: If placed after the dates are calculated, then the speeds used can be limited to the migration seasons using the filter below. Not sure we need to do that here, but I think this is how I got around the year-to-year day 1 being wrong things last time, plus, that project was really only focused on the migration seasons alone.
+#  filter(DAY >= migration_dates$spring_begin & migration_dates <= migration_dates$autumn_end)
+
+#TODO: filter out the non-migratory species when plotting 
+# ggplot(dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
+#   theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
+#   theme(text = element_text(size=12)) + 
+#   facet_wrap(~species)+  
+#   geom_vline(xintercept = median(day), col = "indianred", linetype = "dashed")
+#   #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
+
+# ggsave(filename = "figs/15species_distances.png", height = 5, width=8)
 ```
 
 ## Estimate the maximum migration speed during migration 
@@ -617,9 +663,9 @@ return(df_maxspeed)
 }
 
 #estimate the maximum migration speed for each year
-max_speed <- EstimateMaxSpeed(dailylocs)
+spp7max_speed <- EstimateMaxSpeed(spp7dailylocs)
 
-speeds <- max_speed %>%
+spp7speeds <- spp7max_speed %>%
   group_by(species) %>%
   summarise(
     mean = mean(max_speed),
@@ -627,22 +673,16 @@ speeds <- max_speed %>%
     median = median(max_speed)
   )
 
-#TODO: filter only the migratory species 
+ 
 #plot the results estimating yearly maximum migration speed (km/day)
-ggplot(max_speed %>% filter(species!="Cyanocitta cristata"), aes(year, max_speed)) + geom_line(aes(col=species)) +
-  theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") +
-  theme(text = element_text(size=12),
-        legend.position="bottom") +
-  scale_x_continuous(breaks=seq(2008, 2022, 3))
-
-ggplot(max_speed %>% filter(species!="Cyanocitta cristata"), aes(year, max_speed)) + geom_line(aes(col=species)) +
+ggplot(spp7max_speed %>% filter(species!="Cyanocitta cristata"), aes(year, max_speed)) + geom_line(aes(col=species)) +
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") +
   theme(text = element_text(size=12),
         legend.position="bottom") +
   scale_x_continuous(breaks=seq(2008, 2022, 3))
 
 #suggest using points instead of lines, because we're not really plotting something continuous with an expected trend here, where speed in one year depends on speed in the previous year (depends on weather/climate?)
-ggplot(max_speed, aes(year, max_speed)) + geom_point() +
+ggplot(spp7max_speed, aes(year, max_speed)) + geom_point() +
   #geom_hline(yintercept = med, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
   theme(text = element_text(size=10), 
@@ -652,7 +692,70 @@ ggplot(max_speed, aes(year, max_speed)) + geom_point() +
  # annotate(geom="text", x= 3, y= 50, label=paste0("median = ", round(med,2), " km/day")) + 
   facet_wrap(~species)
 
-ggsave(filename = "figs/15species_MedMaxMigrationSpeed.png")
+ggsave(filename = "figs/7species_MedMaxMigrationSpeed.png")
+
+# # function to estimate the maximum speed of migration (km/day)
+# EstimateMaxSpeed = function(dat) {
+#   dat <- dat %>%
+#   filter(day != 1)
+#   years <- c(2008:2022)
+#   species <- unique(dat$species)
+#   df_maxspeed <- data.frame(species = "none", year = 0, max_speed = 0)
+#   for (s in species){
+#     for (i in years){
+#    sub_dailylocs <- 
+#        dailylocs %>%
+#        filter(year == i & species == s)
+#   
+#     median <- median(tail(sort(sub_dailylocs$distance),5))
+#   
+#     maximum_speed <-  data.frame(species = s, year = i, max_speed = median)
+#   
+#     df_maxspeed <- data.frame(bind_rows(df_maxspeed, maximum_speed))
+#   
+#     }
+#   }
+#   df_maxspeed = df_maxspeed[-1,]
+# return(df_maxspeed)
+# }
+# 
+# #estimate the maximum migration speed for each year
+# max_speed <- EstimateMaxSpeed(dailylocs)
+# 
+# speeds <- max_speed %>%
+#   group_by(species) %>%
+#   summarise(
+#     mean = mean(max_speed),
+#     sd = sd(max_speed),
+#     median = median(max_speed)
+#   )
+# 
+# #TODO: filter only the migratory species 
+# #plot the results estimating yearly maximum migration speed (km/day)
+# ggplot(max_speed %>% filter(species!="Cyanocitta cristata"), aes(year, max_speed)) + geom_line(aes(col=species)) +
+#   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") +
+#   theme(text = element_text(size=12),
+#         legend.position="bottom") +
+#   scale_x_continuous(breaks=seq(2008, 2022, 3))
+# 
+# ggplot(max_speed %>% filter(species!="Cyanocitta cristata"), aes(year, max_speed)) + geom_line(aes(col=species)) +
+#   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") +
+#   theme(text = element_text(size=12),
+#         legend.position="bottom") +
+#   scale_x_continuous(breaks=seq(2008, 2022, 3))
+# 
+# #suggest using points instead of lines, because we're not really plotting something continuous with an expected trend here, where speed in one year depends on speed in the previous year (depends on weather/climate?)
+# ggplot(max_speed, aes(year, max_speed)) + geom_point() +
+#   #geom_hline(yintercept = med, linetype="dashed", col="hotpink") +
+#   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") + 
+#   theme(text = element_text(size=10), 
+#         axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+#         legend.position="bottom") + 
+#   scale_x_continuous(breaks=seq(2008, 2022, 3)) +
+#  # annotate(geom="text", x= 3, y= 50, label=paste0("median = ", round(med,2), " km/day")) + 
+#   facet_wrap(~species)
+# 
+# ggsave(filename = "figs/15species_MedMaxMigrationSpeed.png")
 ```
 make fig file in my github and change the name into more general 
 
@@ -668,11 +771,6 @@ Spring migration should be between 11 Jan and 9 July
 Fall migration should be between 8 August and 21 Dec
 
 ```{r}
-#filtering only the migratory species (9 species)
-  #only 7 species are working, Sturnella magna and Sturnus vulgaris are not working (magna not working in 2017, vulgaris not      working in 2008)
-
-spp7dailylocs <-dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Turdus_migratorius", "Sialia_sialis") )
-
 #TODO/FIXME:need to figure out these two species(why stopping at 2017 and 2008? why other year are working?)
   #magnadailylocs <- dailylocs %>% filter (species %in% c("Sturnella_magna") )
   #vulgarisdailylocs<-dailylocs %>% filter (species %in% c("Sturnus_vulgaris") )
@@ -680,7 +778,6 @@ spp7dailylocs <-dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Hae
   #saveRDS(vulgarisdailylocs, "vulgarisdailylocs.rds")
   #magnadailylocs <- readRDS("magnadailylocs.rds")
   #vulgarisdailylocs <- readRDS("vulgarisdailylocs.rds")
-
 ```
 
 
@@ -820,16 +917,16 @@ cedrorum <- spp7MigrationDates %>%
   filter(species=="Bombycilla_cedrorum")
 
 #linear regression for spring 
-mod1_spring <- lm(spring ~ year, data=cedrorum)
-summary(mod1_spring)
+cedrorum_spring <- lm(spring ~ year, data=cedrorum)
+#summary(cedrorum_spring)
 
 #linear regression for fall
-mod1_fall <- lm(spring ~ year, data=cedrorum)
-summary(mod1_fall)
+cedrorum_fall <- lm(fall ~ year, data=cedrorum)
+#summary(cedrorum_fall)
 
-#anova 
-anova(mod1_spring)
-anova(mod1_fall)
+# #anova 
+# anova(mod1_spring)
+# anova(mod1_fall)
 ```
 
 
@@ -837,30 +934,30 @@ anova(mod1_fall)
 purpureus <- spp7MigrationDates %>%
   filter(species=="Haemorhous_purpureus")
 
-mod2_spring <- lm(spring ~ year, data=purpureus)
-summary(mod2_spring)
+purpureus_spring <- lm(spring ~ year, data=purpureus)
+#summary(purpureus_spring)
 
-mod2_fall <- lm(fall ~ year, data=purpureus)
-summary(mod2_fall)
+purpureus_fall <- lm(fall ~ year, data=purpureus)
+#summary(purpureus_fall)
 
-#anova 
-anova(mod2_spring)
-anova(mod2_fall)
+# #anova 
+# anova(mod2_spring)
+# anova(mod2_fall)
 ```
 
 ```{r}
 mustelina <- spp7MigrationDates %>%
   filter(species=="Hylocichla_mustelina")
 
-mod3_spring <- lm(spring ~ year, data=mustelina)
-summary(mod3_spring)
+mustelina_spring <- lm(spring ~ year, data=mustelina)
+#summary(mustelina_spring)
 
-mod3_fall <- lm(fall ~ year, data=mustelina)
-summary(mod3_fall)
+mustelina_fall <- lm(fall ~ year, data=mustelina)
+#summary(mustelina_fall)
 
-#anova
-anova(mod3_spring)
-anova(mod3_fall)
+# #anova
+# anova(mod3_spring)
+# anova(mod3_fall)
 ```
 
 
@@ -868,15 +965,15 @@ anova(mod3_fall)
 hyemalis <- spp7MigrationDates %>%
   filter(species=="Junco_hyemalis")
 
-mod4_spring <- lm(spring ~ year, data=hyemalis_spring)
-summary(mod4_spring)
+hyemalis_spring <- lm(spring ~ year, data=hyemalis)
+#summary(hyemalis_spring)
 
-mod4_fall <- lm(fall ~ year, data=hyemalis_spring)
-summary(mod4_fall)
+hyemalis_fall <- lm(fall ~ year, data=hyemalis)
+#summary(hyemalis_fall)
 
-#anova 
-anova(mod4_spring)
-anova(mod4_fall)
+# #anova 
+# anova(mod4_spring)
+# anova(mod4_fall)
 ```
 
 
@@ -884,15 +981,15 @@ anova(mod4_fall)
 coronata <- spp7MigrationDates %>%
   filter(species=="Setophaga_coronata")
 
-mod5_spring <- lm(spring ~ year, data=coronata)
-summary(mod5_spring)
+coronata_spring <- lm(spring ~ year, data=coronata)
+#summary(coronata_spring)
 
-mod5_fall <- lm(fall ~ year, data=coronata)
-summary(mod5_fall)
+coronata_fall <- lm(fall ~ year, data=coronata)
+#summary(coronata_fall)
 
-#anova
-anova(mod5_spring)
-anova(mod5_fall)
+# #anova
+# anova(mod5_spring)
+# anova(mod5_fall)
 ```
 
 
@@ -900,15 +997,15 @@ anova(mod5_fall)
 sialis <- spp7MigrationDates %>%
   filter(species=="Sialia_sialis")
 
-mod6_spring <- lm(spring ~ year, data=sialis)
-summary(mod6_spring)
+sialis_spring <- lm(spring ~ year, data=sialis)
+#summary(sialis_spring)
 
-mod6_fall <- lm(fall ~ year, data=sialis)
-summary(mod6_fall)
+sialis_fall <- lm(fall ~ year, data=sialis)
+#summary(sialis_fall)
 
-#anova
-anova(mod6_spring)
-anova(mod6_fall)
+# #anova
+# anova(mod6_spring)
+# anova(mod6_fall)
 ```
 
 
@@ -916,15 +1013,27 @@ anova(mod6_fall)
 migratorius <- spp7MigrationDates %>%
   filter(species=="Turdus_migratorius")
 
-mod7_spring <- lm(spring ~ year, data=migratorius)
-summary(mod7_spring)
+migratorius_spring <- lm(spring ~ year, data=migratorius)
+#summary(migratorius_spring)
 
-mod7_fall <- lm(fall ~ year, data=migratorius)
-summary(mod7_fall)
+migratorius_fall <- lm(fall ~ year, data=migratorius)
+#summary(migratorius_fall)
 
-#anova 
-anova(mod7_spring)
-anova(mod7_fall)
+# #anova
+# anova(mod7_spring)
+# anova(mod7_fall)
+```
+
+```{r}
+#making linear regression result table for fall 
+stargazer(cedrorum_fall, coronata_fall, migratorius_fall, mustelina_fall, purpureus_fall, hyemalis_fall, sialis_fall, type = "text",  
+     title = "Fall Migration Species Directional Changes")
+```
+
+```{r}
+#making linear regression result table for spring 
+stargazer(cedrorum_spring, coronata_spring, migratorius_spring, mustelina_spring, purpureus_spring, hyemalis_spring, sialis_spring, type = "text",  
+     title = "Spring Migration Species Directional Changes")
 ```
 
 
