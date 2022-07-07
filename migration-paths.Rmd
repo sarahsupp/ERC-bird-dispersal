@@ -31,7 +31,6 @@ Birds evaluated include:
 
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(echo = TRUE)
-
 library(here)
 library(data.table)
 library(devtools)
@@ -72,6 +71,7 @@ library(gapminder)
 library(sjPlot)
 library(sjmisc)
 library(sjlabelled)
+library(stargazer)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
@@ -84,6 +84,10 @@ You need to bring in:
 
 **If you have already completed the initial steps** and have saved out the effort file, start here instead, with loading it.
 Each species has it's own merged data file, and will be brought into one species data (spdata) file to work through the results.
+
+Note: If data has not been updated (~2022~.), then go straight to "weighted mean location" chunk and load "df_nvector.rds" file. If the data has been updated then have to start from the beginning (loading spdata)
+
+
 ```{r}
 # files = list.files(path=here(), recursive=T, pattern=glob2rx("dat_effort*.rds"))
 files = list.files(path=here("data/effort-merged_data/"), pattern=glob2rx("dat_effort*.rds"))
@@ -99,6 +103,7 @@ spdata <- spdata %>% filter(year!="0")
 [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
 
 Note: After running "process-raw-eBrid-data" and re-run the *spdata*, the names of the variables (columns names) are changed. For example, in num_spobs function, count.x is not found in dat_effort. YEAR and DAYS have to be change into lower case letter. 
+
 ```{r}
 # x = longitude 
 dat_effort <- spdata %>%
@@ -149,9 +154,9 @@ ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
 # Weight mean locations 
 Weight species counts by eBirder effort counts for each cell
 
-Note: After running "process-raw-eBrid-data", re-run the *spdata*, copying *dat_effort*, start from line 174(readRDS"df_nvector").
-If the data was updated then start the whole chunck. (converting 6369952 rows into n-vectors roufly takes 21hours). 
-*dat_effort* = *df*
+Note: After running "process-raw-eBrid-data", then load the 'df_nvector.rds'. 
+If the data was updated then start the whole code chunck. (converting 6369952 rows into n-vectors roughly takes 21hours). 
+Made an copy of original file just to be safe. "dat_effort = df"
 
 ```{r} 
 #copying the raw data(dat_effort)
@@ -172,18 +177,14 @@ for (i in 1:nrow(df)){
   df[i,"newz"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[3]
 }
 
-#Save a single object to a file
-#saveRDS(df, "df_nvector.rds")
+# #Save to RDS file
+# saveRDS(df, "df_nvector.rds")
 
-#Restore it under a different name
-df <- readRDS("df_nvector.rds")
-
-#Dr. Lavin`s code 
-# df_w_weights <- df %>% mutate(weightedx=newx * freq, weightedy=newy * freq, weightedz=newz * freq)
-# df_summary <- df_w_weights %>% group_by(year, day, species) %>% summarise(weighted_lat=mean(weightedy), weighted_lng=mean(weightedx), numobs=sum(count), numcells=n())
+# #Loading RDS file 
+# df <- readRDS("df_nvector.rds")
 
 
-#putting species, year, and days into list in order to see the unique varaibles of each
+#Putting species, year, and days into list in order
 species_list <- unique(df$species)
 year_list <- unique(df$year)
 day_list <- unique(df$day)
@@ -226,6 +227,7 @@ sample <- df %>% group_by(species, year, day) %>% summarise(numcells = n(), numo
 
 weighted_mean_locs <- cbind(weighted_mean_locs, sample[c("numcells", "numobs")])
 
+#Reordering the colunmns
 weighted_mean_locs <- weighted_mean_locs[,c(5,4,1,2,3,6,7)]
   
 #plot the weighted standard deviations by species, just to check
@@ -264,10 +266,9 @@ ggplot(weighted_mean_locs, aes(day, weighted_lat)) + geom_point(alpha=0.10) + fa
 # ggplot(weighted_mean_locs, aes(DAY, wtsd_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
 ```
 
-Cardinalis_cardinalis, Corvus_brachyrhynchos, Cyanocitta_crista, Drybates_pubescens, Mimus_polyglottos, Sialia_sialis, Sitta_carolinensis, Sitta_carolinensis, Stumus_vulgaris, are non-migratory bird species. 
 
 ## Add more detail to dates in the weighted mean location dataframe
-A DATE and MONTH formatted column to mean_daily_locs dataframe. TODO
+A DATE and MONTH formatted column to mean_daily_locs dataframe.
 An ID column is also added, which is an integer of each of the dates in order, 1-4383.
 **It is important to note when converting to Dates that for this data type only (why!?!) R uses a 0 based index. This means Day 1 is 0. So to convert our "day of year" integers to a Year-Month-Day format, we need to use DAY-1 and YEAR.**
 ```{r}
@@ -350,7 +351,7 @@ ggsave(filename = "figs/15species_weighted_mean_locs_smmooth.png", height = 11, 
 weighted by total eBirder effort on that day in a given cell. 
 Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the target species in a cell divided by the total number of eBirder records in a cell.
 
-Should I filter out the non-migratory species?
+
 ```{r}
 #using original data(dat_effort=df)
 dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
@@ -380,7 +381,8 @@ ggplot(spp_counts, aes(x=mean_weighted_count)) +
 ## Create a map of eBird effort (all years, all dates)
 across eastern North America
 
-TODO: need to update the code (see: https://github.com/r-barnes/dggridR/blob/master/vignettes/dggridR.Rmd)
+TODO: Need to update the code (see: https://github.com/r-barnes/dggridR/blob/master/vignettes/dggridR.Rmd). 
+FIXME: After merging grid and spp_counts, long and lat are gone. 
 
 ```{r}
 #Get the grid cell boundaries for cells which had bird observations
@@ -414,7 +416,8 @@ ggplot() +
   scale_fill_gradient(low="gray90", high="black") +
   theme_bw() + 
   facet_wrap(~species)
-# 
+ 
+# Dr. Supp old codes
 #   #geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), alpha=0.4)    +
 #   geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
 # #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
@@ -438,14 +441,14 @@ ggplot() +
 ## Create a map of species counts (all years, all dates)
 across eastern North America
 
+TODO: Needs to update the code. (see: https://github.com/r-barnes/dggridR/blob/master/vignettes/dggridR.Rmd). 
+FIXME: After merging grid and uw_spp_counts, cell is gone. Only sequem and geometry are shown. 
 
-FIXME: dgcellstogrid not working (frame=TRUE, wrapcells=TRUE). 
 ```{r}
 #TODO: Make how you prefer, but feel free to plot the data as the actual locations of the birds 
 #       (from the .csv files), or to use the .Rdata files to plot the polygon center, maybe with 
 #       point sized or colored by magnitude of the count.
 
-#FIXME:dgcellstogrid not working 
 
 #all_states <- map_data("state")
 state_prov <- rnaturalearth::ne_states(c("united states of america", "canada"))
@@ -490,7 +493,6 @@ Use GAM model to predict daily location along a smoothing line, from the weighte
 
 In the GAM, we can use the weighted mean locations (latitude and longitude) that we have already calculated above. These become the inputs to the gam model, which finds the predicted (smooth) migration path for each day. The predicted (fitted) values become the migration path for the species, which we will then use to estimate start of spring, peak latitude (breeding), and end of autumn migration. Between end Autumn migration and begin of Spring migration, is the expected time that most individual birds are on their wintering grounds and not actively migrating. 
 
-TODO: tyr to filter out the migratory species when plotting 
 
 *Creates a dataframe with daily location for each year and graphs results*
 ```{r}
@@ -527,8 +529,9 @@ Estimatedailylocs = function(dat) {
 dailylocs <- Estimatedailylocs(weighted_mean_locs)
 
 #filtering only the migratory species (9 species)
-  #only 7 species are working, Sturnella magna and Sturnus vulgaris are not working (magna not working in 2017, vulgaris not      working in 2008)
-spp7dailylocs <-dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Turdus_migratorius", "Sialia_sialis") )
+  #Sturnella magna and Sturnus vulgaris are not working (magna not working in 2017, vulgaris not working in 2008)
+  #Only using 7 species 
+spp7dailylocs <- dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Turdus_migratorius", "Sialia_sialis"))
 
 ggplot(spp7dailylocs, aes(day, lat)) + geom_line(size=1, aes(col=species)) +
   # geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts with dates
@@ -590,6 +593,7 @@ ggplot(spp7dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(ae
 ggsave(filename = "figs/7species_distances.png", height = 5, width=8)
 
 
+#Dr. Supp original code 
 # #identify dates with no location and assign all values to NA
 # missdates <- dailylocs %>%
 #   group_by(species, year) %>%
@@ -675,7 +679,7 @@ spp7speeds <- spp7max_speed %>%
 
  
 #plot the results estimating yearly maximum migration speed (km/day)
-ggplot(spp7max_speed %>% filter(species!="Cyanocitta cristata"), aes(year, max_speed)) + geom_line(aes(col=species)) +
+ggplot(spp7max_speed, aes(year, max_speed)) + geom_line(aes(col=species)) +
   theme_bw() + xlab("Year") + ylab("Max Speed (km/day)") +
   theme(text = element_text(size=12),
         legend.position="bottom") +
@@ -694,7 +698,8 @@ ggplot(spp7max_speed, aes(year, max_speed)) + geom_point() +
 
 ggsave(filename = "figs/7species_MedMaxMigrationSpeed.png")
 
-# # function to estimate the maximum speed of migration (km/day)
+
+# # function to estimate the maximum speed of migration (km/day) for all 15 species
 # EstimateMaxSpeed = function(dat) {
 #   dat <- dat %>%
 #   filter(day != 1)
@@ -757,34 +762,31 @@ ggsave(filename = "figs/7species_MedMaxMigrationSpeed.png")
 # 
 # ggsave(filename = "figs/15species_MedMaxMigrationSpeed.png")
 ```
-make fig file in my github and change the name into more general 
 
 
 # estimate 3 migration dates, beginning of spring, peak latitude (summer), end of fall migration
 This will need some editing to work on each year separately. Ideally a resulting data frame with columns for year, begin_spring, peak_latitude, end_autumn
 
-winter and non-winter are for eastern read cedar tree (cone season)
-day %in% c(1:151))-> refering julian day
-
-These are spring index and fall index 
-Spring migration should be between 11 Jan and 9 July
-Fall migration should be between 8 August and 21 Dec
-
+TODO/FIXME:need to figure out these two species(why stopping at 2017 and 2008? why other year are working?)
 ```{r}
-#TODO/FIXME:need to figure out these two species(why stopping at 2017 and 2008? why other year are working?)
-  #magnadailylocs <- dailylocs %>% filter (species %in% c("Sturnella_magna") )
-  #vulgarisdailylocs<-dailylocs %>% filter (species %in% c("Sturnus_vulgaris") )
-  #saveRDS(magnadailylocs, "magnadailylocs.rds")
-  #saveRDS(vulgarisdailylocs, "vulgarisdailylocs.rds")
-  #magnadailylocs <- readRDS("magnadailylocs.rds")
-  #vulgarisdailylocs <- readRDS("vulgarisdailylocs.rds")
+#saving S.magna and S.vulgaris data into rds file seperately
+
+#magnadailylocs <- dailylocs %>% filter (species %in% c("Sturnella_magna") )
+#vulgarisdailylocs<-dailylocs %>% filter (species %in% c("Sturnus_vulgaris") )
+
+#saveRDS(magnadailylocs, "magnadailylocs.rds")
+#saveRDS(vulgarisdailylocs, "vulgarisdailylocs.rds")
+
+#magnadailylocs <- readRDS("magnadailylocs.rds")
+#vulgarisdailylocs <- readRDS("vulgarisdailylocs.rds")
 ```
 
+FIXME/TODO: (Dr. Supp needs to check) double check index dates 
+Note: Since 2022 is only half way filled, year of 2022 is excluded in Est3MigrationDates. 
+index is finding exact date of the migration date
 
 ```{r}
 # modified from old function Est3MigrationDates in migration-fxns.R
-#TODO: Since 2022 is only half way filled, year of 2022 is not included
-
 Est3MigrationDates = function(dat){
   #takes in predicted centroids for migration path, and estimates the beginning of spring migration,
   # the end of fall migration, and the date where the species reaches maximum latitude.
@@ -815,10 +817,10 @@ Est3MigrationDates = function(dat){
   
     spring_threshold = min(filter(dat_subset, day %in% c(2:120))$lat_se*2.56 + filter(dat_subset, day %in% c(2:120))$lat, na.rm=TRUE) # Jan 2 ~ April 30
     fall_threshold = min(filter(dat_subset, day %in% c(244:364))$lat_se*2.56 + filter(dat_subset, day %in% c(244:364))$lat, na.rm=TRUE) # Oct7 ~ Sep 1 
+    
     #FIXME: after removing DAY=1, there are years with 364 days and with 365 days.If we ignore the last day of the leap years, will this influence fall threshold?
+    
     spring_index = intersect(c(11:190), dat_subset$day) # between 11 Jan and 9 July #FIXME: what should these dates be, they don't match 
-    #index: finding exact date of the migration date
-    #TODO: (Dr. Supp needs to check) double check index dates 
     fall_index = intersect(c(220:355), dat_subset$day) # between 8 August and 21 Dec
     spring_max = (dat_subset %>% filter(day %in% spring_index) %>% slice_max(lat))$day
     fall_max =  (dat_subset %>% filter(day %in% fall_index) %>% slice_max(lat))$day
@@ -867,7 +869,6 @@ spp7MigrationDates <- Est3MigrationDates(spp7dailylocs)
 #saveRDS(spp7MigrationDates, "spp7MigrationDates.rds")
 #spp7MigrationDates <- readRDS("spp7MigrationDates.rds")
 
-
 median_migdates <- spp7MigrationDates %>%
   group_by(species) %>%
   summarise(begin_winter = median(fall),
@@ -896,22 +897,13 @@ end <- ggplot(spp7MigrationDates, aes(year, spring)) +
   facet_wrap(~species)
 
 ggarrange(begin, end,
-          labels=c("A", "B"),
+          labels=c("Begining of the winter", "End of the winter"),
           ncol=2, nrow=1)
 
 ggsave(filename = "figs/7spp_MigrationDates.png", height = 10, width=10)
 ```
-TODO: 
-linear regression 
-plot (time, spring day )
-slope: #days earlier/later migration per year 
 
-regression example: Pr(>|t|) :0.415 if this p-value significant, then look at the slope -0.2857 (times 10)-> for decade, species started migration 2 days earlier 
-
-*Eastern Bluebird: Sialia_sialis fall p-value significant*
-
-
-Looking at the linear trends of these dates for 7 migratory species.
+Looking at the linear trends of these dates for each 7 migratory species to see if there are any significance. 
 ```{r}
 cedrorum <- spp7MigrationDates %>%
   filter(species=="Bombycilla_cedrorum")
@@ -1300,9 +1292,6 @@ ggplot(df_sppR, aes(monthname, slope)) +
         ) 
 
 #some basic t.tests to show that all slopes (sig and sig+NS) were significantly different from Zero, and significantly positive (very few with lower richness through time) -- correlate to higher potential disperser load over the past decade -- could imply an increasing role for dispersers, but need to discuss with Frank what else we'd need to check to ensure that this isn't just due to increasing eBird effort (In retrospect I may not have yet controlled well for this, or need to use the weighted measures instead of presence only directly?)
-
-#TODO: ANOVA -check out (grouping all the months )
-#boxplot: all positive, the middle part 95% percentile (median)
 
 ```
 
