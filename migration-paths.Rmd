@@ -919,10 +919,7 @@ cedrorum_fall <- lm(fall ~ year, data=cedrorum)
 # #anova 
 # anova(mod1_spring)
 # anova(mod1_fall)
-```
 
-
-```{r}
 purpureus <- spp7MigrationDates %>%
   filter(species=="Haemorhous_purpureus")
 
@@ -935,9 +932,7 @@ purpureus_fall <- lm(fall ~ year, data=purpureus)
 # #anova 
 # anova(mod2_spring)
 # anova(mod2_fall)
-```
 
-```{r}
 mustelina <- spp7MigrationDates %>%
   filter(species=="Hylocichla_mustelina")
 
@@ -950,10 +945,7 @@ mustelina_fall <- lm(fall ~ year, data=mustelina)
 # #anova
 # anova(mod3_spring)
 # anova(mod3_fall)
-```
 
-
-```{r}
 hyemalis <- spp7MigrationDates %>%
   filter(species=="Junco_hyemalis")
 
@@ -966,10 +958,7 @@ hyemalis_fall <- lm(fall ~ year, data=hyemalis)
 # #anova 
 # anova(mod4_spring)
 # anova(mod4_fall)
-```
 
-
-```{r}
 coronata <- spp7MigrationDates %>%
   filter(species=="Setophaga_coronata")
 
@@ -982,10 +971,7 @@ coronata_fall <- lm(fall ~ year, data=coronata)
 # #anova
 # anova(mod5_spring)
 # anova(mod5_fall)
-```
 
-
-```{r}
 sialis <- spp7MigrationDates %>%
   filter(species=="Sialia_sialis")
 
@@ -998,10 +984,7 @@ sialis_fall <- lm(fall ~ year, data=sialis)
 # #anova
 # anova(mod6_spring)
 # anova(mod6_fall)
-```
 
-
-```{r}
 migratorius <- spp7MigrationDates %>%
   filter(species=="Turdus_migratorius")
 
@@ -1019,13 +1002,14 @@ migratorius_fall <- lm(fall ~ year, data=migratorius)
 ```{r}
 #making linear regression result table for fall 
 stargazer(cedrorum_fall, coronata_fall, migratorius_fall, mustelina_fall, purpureus_fall, hyemalis_fall, sialis_fall, type = "text",  
-     title = "Fall Migration Species Directional Changes")
+     title = "Fall Migration Species Directional Changes",out="Fall Migration Species Directional Changes.txt", column.labels=c("B.cedrorum","S.coronata","T.migratorius", "H.mustelina","H.purpureus","J.hyemalis","S.sialis"))
+
 ```
 
 ```{r}
 #making linear regression result table for spring 
-stargazer(cedrorum_spring, coronata_spring, migratorius_spring, mustelina_spring, purpureus_spring, hyemalis_spring, sialis_spring, type = "text",  
-     title = "Spring Migration Species Directional Changes")
+stargazer(cedrorum_spring, coronata_spring, migratorius_spring, mustelina_spring, purpureus_spring, hyemalis_spring, sialis_spring, type = "text",title = "Spring Migration Species Directional Changes", column.labels=c("B.cedrorum","S.coronata","T.migratorius", "H.mustelina","H.purpureus","J.hyemalis","S.sialis"), out = "Spring Migration Species Directional Changes.txt")
+
 ```
 
 
