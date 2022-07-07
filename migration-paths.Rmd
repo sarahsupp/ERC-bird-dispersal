@@ -586,8 +586,8 @@ spp7dailylocs <- spp7dailylocs %>%
 ggplot(spp7dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
   theme(text = element_text(size=12)) + 
-  facet_wrap(~species)+  
-  geom_vline(xintercept = median(day), col = "indianred", linetype = "dashed")
+  facet_wrap(~species)  
+  #geom_vline(xintercept = median(day), col = "indianred", linetype = "dashed")
   #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
 
 ggsave(filename = "figs/7species_distances.png", height = 5, width=8)
