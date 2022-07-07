@@ -1002,13 +1002,13 @@ summary(migratorius_fall)
 ```{r}
 #making linear regression result table for fall 
 stargazer(cedrorum_fall, coronata_fall, migratorius_fall, mustelina_fall, purpureus_fall, hyemalis_fall, sialis_fall, type = "text",  
-     title = "Fall Migration Species Directional Changes",out="Fall Migration Species Directional Changes.txt", column.labels=c("B.cedrorum","S.coronata","T.migratorius", "H.mustelina","H.purpureus","J.hyemalis","S.sialis"),covariate.labels = c("year", "Intercept") ,report = "vcp*")
+     title = "Fall Migration Species Directional Changes",out="figs/Fall Migration Species Directional Changes.txt", column.labels=c("B.cedrorum","S.coronata","T.migratorius", "H.mustelina","H.purpureus","J.hyemalis","S.sialis"),covariate.labels = c("year", "Intercept") ,report = "vcp*")
 
 ```
 
 ```{r}
 #making linear regression result table for spring 
-stargazer(cedrorum_spring, coronata_spring, migratorius_spring, mustelina_spring, purpureus_spring, hyemalis_spring, sialis_spring, type = "text",title = "Spring Migration Species Directional Changes", column.labels=c("B.cedrorum","S.coronata","T.migratorius", "H.mustelina","H.purpureus","J.hyemalis","S.sialis"), out = "Spring Migration Species Directional Changes.txt", covariate.labels = c("year", "Intercept") ,report = "vcp*")
+stargazer(cedrorum_spring, coronata_spring, migratorius_spring, mustelina_spring, purpureus_spring, hyemalis_spring, sialis_spring, type = "text",title = "Spring Migration Species Directional Changes", column.labels=c("B.cedrorum","S.coronata","T.migratorius", "H.mustelina","H.purpureus","J.hyemalis","S.sialis"), out = "figs/Spring Migration Species Directional Changes.txt", covariate.labels = c("year", "Intercept") ,report = "vcp*")
 
 ```
 
