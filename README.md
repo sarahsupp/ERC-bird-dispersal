@@ -4,7 +4,7 @@
 Evaluate abundance and distribution of potential birds dispersing Eastern Red Cedar seeds.
 Project is currently under development (2020).
 
-**Authors:** Sarah Supp, Jessy Niu, Kairuo Yan (Denison University)
+**Authors:** Sarah Supp, Jessy Niu, Kairuo Yan, Esther Lee (Denison University)
 
 **Email:** supps@denison.edu
 
