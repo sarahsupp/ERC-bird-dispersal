@@ -1,0 +1,77 @@
+---
+title: "imp"
+output: html_document
+date: '2022-10-19'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mgcv)
+library(features)
+library(geosphere)
+```
+
+```{r}
+#loading original data
+weighted_mean_locs
+```
+
+```{r}
+#taking single species: Bombycilla cedrorum 
+
+Bombycilla_c <-weighted_mean_locs %>% 
+  filter(species == "Bombycilla_cedrorum") %>%
+  dplyr::select(species, year, weighted_lon,weighted_lat)
+                                 
+Bombycilla_c
+
+for (i in unique(weighted_mean_locs$species))
+{weighted_mean_locs %>% 
+    filter(species == i) %>%
+    dplyr::select(year, weighted_lon,weighted_lat) %>%
+    print()
+  print(i)}
+
+```
+
+```{r}
+centroids = blocs[, c("species","year","weighted_lon","weighted_lat")]
+centroids
+years <- sort(unique(centroids$year))
+```
+```{r}
+max_value<-centroids %>%
+  group_by(species, year) %>%
+  filter(weighted_lat == max(weighted_lat, na.rm=TRUE)) %>%
+  rename(
+    max_lat = weighted_lat,
+    max_lon = weighted_lon
+    )
+max_value
+
+
+min_value <- centroids %>%
+  group_by(species, year) %>%
+  filter(weighted_lat == min(weighted_lat, na.rm=TRUE)) %>%
+  rename(
+    min_lat = weighted_lat,
+    min_lon = weighted_lon
+    )
+min_value
+
+maxmin_dis <- merge(max_value, min_value, by = c("species", "year"))
+maxmin_dis
+```
+
+```{r}
+max <- maxmin_dis[,3:4]
+min <- maxmin_dis[,5:6]
+
+maxmin_dis$total_distance <- round(distVincentyEllipsoid(max, min)/1000)
+maxmin_dis
+```
+
+```{r}
+
+```
+

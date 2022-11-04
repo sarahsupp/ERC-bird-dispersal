@@ -181,7 +181,7 @@ for (i in 1:nrow(df)){
 # saveRDS(df, "df_nvector.rds")
 
 # #Loading RDS file 
-# df <- readRDS("df_nvector.rds")
+#df <- readRDS("df_nvector.rds")
 
 
 #Putting species, year, and days into list in order
@@ -284,6 +284,9 @@ weighted_mean_locs <- weighted_mean_locs %>%
   dplyr::select(-DAYm1, -origin)
 
 #saveRDS(weighted_mean_locs, "weighted_mean_locs.rds")
+
+# #Loading RDS file 
+#weighted_mean_locs <- readRDS("weighted_mean_locs.rds")
 ```
 
 
