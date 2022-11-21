@@ -72,6 +72,8 @@ library(sjPlot)
 library(sjmisc)
 library(sjlabelled)
 library(stargazer)
+#install.packages("kableExtra")
+library(kableExtra)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
@@ -651,13 +653,7 @@ ggsave(filename = "figs/7species_distances.png", height = 5, width=8)
 First, remove all values for Day = 1. Because each GAM was calculated separately by year, distance between Dec 31 and Jan 1 will not be valid. 
 Use the median of the top 5 migration speeds for each year separately, as the estimated maximum migration speed (km/day) for the species. 
 ```{r}
-#originallly dailylocs has 9 colums and spp7dailylcs has 10 columns. In order to run the function, we need to have the same column. So pad shortest vector with NA's to have same length as longest vector
-#length(dailylocs) <- length(spp7dailylocs)
-
-# as.data.frame(dailylocs)
-# as.data.frame(spp7dailylocs)
-
-
+#originallly dailylocs has 9 colums and spp7dailylcs has 10 columns. In order to run the function, we need to have the same column. 
 
 # function to estimate the maximum speed of migration (km/day)
 EstimateMaxSpeed = function(dat) {
@@ -686,6 +682,29 @@ return(df_maxspeed)
 
 #estimate the maximum migration speed for each year
 spp7max_speed <- EstimateMaxSpeed(spp7dailylocs)
+
+spp7max_speed
+
+#saveRDS(spp7max_speed, "spp7max_speed.rds")
+
+# #Loading RDS file 
+#spp7max_speed <- readRDS("spp7max_speed.rds")
+
+# #showing the table of the migration speed 
+# spp7migrationspeedtable<-kbl(spp7max_speed) %>%
+#   kable_paper(bootstrap_options = "striped", full_width = F)
+# 
+# spp7migrationspeedtable
+# 
+# #exporting the table in txt format 
+# write.table(spp7max_speed, file = 'spp7migrationspeedtable.txt', col.names = TRUE,
+#              row.names = FALSE, sep = "\t")
+
+
+# library(gridExtra)
+# pdf("data_output.pdf", height=20, width=8.5)
+# grid.table(spp7max_speed)
+# dev.off()
 
 
 # # function to estimate the maximum speed of migration (km/day)
