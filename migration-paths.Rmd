@@ -567,6 +567,7 @@ spp7missdates <- spp7dailylocs %>%
   mutate(day = missing, month=NA, winter=NA, lon=NA, lat=NA, lon_se=NA, lat_se=NA) %>%
   dplyr::select(species, day, year, month, lon, lat, lon_se, lat_se)
 
+
 #append the missing/NA date values to the main dailylocs dataframe
 spp7dailylocs <- bind_rows(spp7dailylocs, spp7missdates)
 
@@ -586,7 +587,14 @@ spp7dailylocs <- spp7dailylocs %>%
   #Remove Day 1 for all year, because due to our method of separating GAM by year, it will be a flawed value
   filter(day != 1)
 
-ggplot(spp7dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
+
+#saving 7 migratory species of daily location 
+# Save an object to a file
+#saveRDS(spp7dailylocs, file = "spp7dailylocs.rds")
+# Restore the object
+#readRDS(file = "spp7dailylocs.rds")
+
+#ggplot(spp7dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
   theme(text = element_text(size=12)) + 
   facet_wrap(~species)  
@@ -643,6 +651,13 @@ ggsave(filename = "figs/7species_distances.png", height = 5, width=8)
 First, remove all values for Day = 1. Because each GAM was calculated separately by year, distance between Dec 31 and Jan 1 will not be valid. 
 Use the median of the top 5 migration speeds for each year separately, as the estimated maximum migration speed (km/day) for the species. 
 ```{r}
+#originallly dailylocs has 9 colums and spp7dailylcs has 10 columns. In order to run the function, we need to have the same column. So pad shortest vector with NA's to have same length as longest vector
+#length(dailylocs) <- length(spp7dailylocs)
+
+# as.data.frame(dailylocs)
+# as.data.frame(spp7dailylocs)
+
+
 
 # function to estimate the maximum speed of migration (km/day)
 EstimateMaxSpeed = function(dat) {
@@ -654,7 +669,7 @@ EstimateMaxSpeed = function(dat) {
   for (s in species){
     for (i in years){
    sub_dailylocs <- 
-       dailylocs %>%
+       spp7dailylocs %>%
        filter(year == i & species == s)
   
     median <- median(tail(sort(sub_dailylocs$distance),5))
@@ -671,6 +686,35 @@ return(df_maxspeed)
 
 #estimate the maximum migration speed for each year
 spp7max_speed <- EstimateMaxSpeed(spp7dailylocs)
+
+
+# # function to estimate the maximum speed of migration (km/day)
+# EstimateMaxSpeed = function(dat) {
+#   dat <- dat %>%
+#   filter(day != 1)
+#   years <- c(2008:2022)
+#   species <- unique(dat$species)
+#   df_maxspeed <- data.frame(species = "none", year = 0, max_speed = 0)
+#   for (s in species){
+#     for (i in years){
+#    sub_dailylocs <- 
+#        dailylocs %>%
+#        filter(year == i & species == s)
+#   
+#     median <- median(tail(sort(sub_dailylocs$distance),5))
+#   
+#     maximum_speed <-  data.frame(species = s, year = i, max_speed = median)
+#   
+#     df_maxspeed <- data.frame(bind_rows(df_maxspeed, maximum_speed))
+#   
+#     }
+#   }
+#   df_maxspeed = df_maxspeed[-1,]
+# return(df_maxspeed)
+# }
+# 
+# #estimate the maximum migration speed for each year
+# spp7max_speed <- EstimateMaxSpeed(spp7dailylocs)
 
 spp7speeds <- spp7max_speed %>%
   group_by(species) %>%

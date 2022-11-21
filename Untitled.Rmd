@@ -9,67 +9,234 @@ knitr::opts_chunk$set(echo = TRUE)
 library(mgcv)
 library(features)
 library(geosphere)
+library(dplyr)
 ```
 
 ```{r}
 #loading original data
+weighted_mean_locs <- readRDS("weighted_mean_locs.rds")
 weighted_mean_locs
 ```
 
 ```{r}
 #taking single species: Bombycilla cedrorum 
-
 Bombycilla_c <-weighted_mean_locs %>% 
   filter(species == "Bombycilla_cedrorum") %>%
-  dplyr::select(species, year, weighted_lon,weighted_lat)
+  dplyr::select(species, year, day, weighted_lon,weighted_lat)
                                  
 Bombycilla_c
 
-for (i in unique(weighted_mean_locs$species))
-{weighted_mean_locs %>% 
-    filter(species == i) %>%
-    dplyr::select(year, weighted_lon,weighted_lat) %>%
-    print()
-  print(i)}
-
+#need to find a way to save it as a seperate dataframe
+# spp <- NULL;
+# for (i in unique(weighted_mean_locs$species))
+# {species <- weighted_mean_locs %>% 
+#     filter(species == i) %>%
+#     dplyr::select(species,year, weighted_lon,weighted_lat) %>%
+#     print()
+#   spp <- rbind(spp, species)}
 ```
 
 ```{r}
-centroids = blocs[, c("species","year","weighted_lon","weighted_lat")]
+#taking only "species","year","weighted_lon","weighted_lat"
+centroids = Bombycilla_c[, c("species","year","day","weighted_lon","weighted_lat")]
 centroids
+
+#sorting the years
 years <- sort(unique(centroids$year))
 ```
+
+
 ```{r}
-max_value<-centroids %>%
+#calculating daily basis 
+
+  #calculating the maximum longitude and latitude for each year for Bombycilla_c
+max_value_day<-centroids %>%
+  group_by(species, year,day) %>%
+  filter(weighted_lat == max(weighted_lat, na.rm=TRUE)) %>%
+  rename(
+    max_lat = weighted_lat,
+    max_lon = weighted_lon
+    )
+max_value_day
+
+#calculating the minimum longitude and latitude for each year for Bombycilla_c
+min_value_day <- centroids %>%
+  group_by(species, year,day) %>%
+  filter(weighted_lat == min(weighted_lat, na.rm=TRUE)) %>%
+  rename(
+    min_lat = weighted_lat,
+    min_lon = weighted_lon
+    )
+min_value_day
+
+#combining max and min value for Bombycilla_c in daily 
+maxmin_val_day <- merge(max_value, min_value, by = c("species", "year"))
+maxmin_val_day
+```
+
+```{r}
+#taking only max_lon and max_lat
+max_day <- maxmin_val_day[,4:5]
+#taking only min_lon and min_lat
+min_day <- maxmin_val_day[,7:8]
+
+#calculating the total distance for Bombycilla_cedrorum
+maxmin_val_day$total_distance <- round(distVincentyEllipsoid(max_day, min_day)/1000)
+maxmin_val_day
+
+#dropping day.y and renaming day.x to day
+maxmin_val_day<-maxmin_val_day %>% 
+  select(-c(day.y)) %>% 
+  rename(day = day.x)
+
+maxmin_val_day #need to be save
+```
+
+```{r}
+#calculating yearly
+  #calculating the maximum longitude and latitude for each year for Bombycilla_c
+max_value_year<-centroids %>%
   group_by(species, year) %>%
   filter(weighted_lat == max(weighted_lat, na.rm=TRUE)) %>%
   rename(
     max_lat = weighted_lat,
     max_lon = weighted_lon
     )
-max_value
+max_value_year
+```
 
-
-min_value <- centroids %>%
+```{r}
+#calculating the minimum longitude and latitude for each year for Bombycilla_c
+min_value_year <- centroids %>%
   group_by(species, year) %>%
   filter(weighted_lat == min(weighted_lat, na.rm=TRUE)) %>%
   rename(
     min_lat = weighted_lat,
     min_lon = weighted_lon
     )
-min_value
-
-maxmin_dis <- merge(max_value, min_value, by = c("species", "year"))
-maxmin_dis
+min_value_year
 ```
 
 ```{r}
-max <- maxmin_dis[,3:4]
-min <- maxmin_dis[,5:6]
-
-maxmin_dis$total_distance <- round(distVincentyEllipsoid(max, min)/1000)
-maxmin_dis
+#combining max and min value for Bombycilla_c in daily 
+maxmin_val_year <- merge(max_value_year, min_value_year, by = c("species", "year"))
+maxmin_val_year
 ```
+
+```{r}
+#taking only max_lon and max_lat
+max_year <- maxmin_val_year[,4:5]
+#taking only min_lon and min_lat
+min_year <- maxmin_val_year[,7:8]
+```
+
+
+```{r}
+#calculating the total distance for Bombycilla_cedrorum
+maxmin_val_year$total_distance <- round(distVincentyEllipsoid(max_year, min_year)/1000)
+maxmin_val_year
+```
+
+```{r}
+#dropping day.y and renaming day.x to day
+maxmin_val_year<-maxmin_val_year %>% 
+  select(-c(day.y)) %>% 
+  rename(day = day.x)
+
+maxmin_val_year 
+```
+
+```{r}
+#get rid of extra day in leap years
+noleapyear_Bombycilla_c<-centroids[centroids$day != 366,] 
+unique(noleapyear_Bombycilla_c$day)
+```
+
+
+
+```{r}
+year <- 2008:2022
+seas.out <- NULL
+lat.out <- NULL
+for(jjj in 1:length(year)){
+    yrs3 <- c(year[jjj]-1, year[jjj], year[jjj]+1) #find the buffer years (focal-1,focal, focal+1)-> this is taking 2021,2022,2023 why..?
+    out2 <- centroids[centroids$year %in% yrs3,] #filtering down to the three year period->only have 2021,2022
+    if(nrow(out2)==0) next #test if there no data
+    
+    out2 <- out2[out2$day!=366,] #get rid of extra day in leap years
+    out2a <- out2[out2$year==yrs3[1] & out2$day>319,] #end of year1 (winter)->2021
+    out2a$day2 <- out2a$day - 365 #renubmering so it makes sense in order
+    out2b <- out2[out2$year==yrs3[2],] #focal year (year2; all)
+    out2b$day2 <- out2b$day #->2022
+    out2c <- out2[out2$year==yrs3[3] & out2$day<74,] #beginning of year3 (winter) -> not working; no data
+    out2c$day2 <- out2c$day + 365 #renumbering so it makes sense in order
+    out2 <- rbind(out2a, out2b, out2c) #merge together the buffer times for the focal year
+    out2 <- out2[order(out2$day2),] #sort by all the days
+    
+    if(nrow(out2)<300) next #check for missing/incomplete data
+}
+```
+
+
+```{r}
+y <- 2009:2021
+season <- NULL
+latitude <- NULL 
+for(iii in 1:length(y)) {
+  threeyear <- c(y[iii]-1, y[iii], y[iii]+1) #->2020, 2021, 2022
+  result <- centroids[centroids$year %in% threeyear,] #->2020, 2021, 2022
+  
+  result <- result[result$day != 366,]
+  resulta <- result[result$year == threeyear[1] & result$day>319,] #year = 2020, day=320~365
+  resulta$day <- resulta$day - 365 #day = -45~0
+  resultb <- result[result$year == threeyear[2],] #year=2021, day= 1~365
+  resultb$day2 <- resultb$day
+  resultc <- result[result$year==threeyear[3] & result$day<74,] #year = 2022, day=1~73
+  resultc$day2 <- resultc$day + 365 #year=2022, day=366~438
+  result <- rbind(resulta, resultb, resultc)
+}
+
+```
+
+
+
+
+
+```{r}
+noleapyear<-maxmin_val[maxmin_val$day != 366,] #get rid of extra day in leap years
+unique(noleapyear$day)
+
+
+#datafram consist of the year, 
+#starting from 2009 
+
+y <- 2008:2021
+endofyear <- noleapyear[noleapyear$year==yrs3[1] & out2$day>319,] #end of year1 (winter)
+
+maybe <- 2008:2021
+  for(jjj in 1:length(maybe)){
+    yrs3 <- c(y[jjj]-1, y[jjj], y[jjj]+1)
+    out2 <- noleapyear[noleapyear$year %in% yrs3,] }#filtering down to the three year period}
+yrs3
+out2
+
+
+
+pleasework <- maxmin_val %>% 
+  group_by(species) %>% 
+  select(species, year) %>%
+  mutate("focal_before" = lag(year)) %>% 
+  mutate("focal" = (year)) %>%
+  mutate("focal_after" = lead(year))
+pleasework
+
+
+# #not working 
+# three_buffer_year <- maxmin_val[maxmin_val$year %in% buffer_year]
+# three_buffer_year
+
+```
+
 
 ```{r}
 
