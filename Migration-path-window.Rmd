@@ -1,0 +1,311 @@
+---
+title: "Migratin-path-window"
+output: html_document
+date: '2022-10-19'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mgcv)
+library(features)
+library(geosphere)
+library(dplyr)
+```
+
+#Needs to be checked before running the codes. 
+1. Before loading the data, make sure the users in the correct path. 
+2. The current version (end of the fall semester 2022) only worked with the one migratory species, Bombycilla_cedrorum. 
+3. Before starting with this migration path window, check if the two species that did not work in migration path rmd file. (The codes for the two species did not work). 
+4. If being able to fix and add the two species from the migration path rmd file, make sure to update the "weighted_mean_locs" file and then read the file here. 
+
+```{r}
+#Step 1:loading the original data (the data is from the migration-path rmd file)
+weighted_mean_locs <- readRDS("weighted_mean_locs.rds")
+weighted_mean_locs
+
+#Step 2: taking single species,Bombycilla cedrorum and saving it as Bombycilla_centroids. (In the future no need to take out the species when running the whole migratory species)
+  #need only species, year, day, longitude, and latitude
+  #renaming the weighted_lat and weighted_long as centroid_longitude and centroid_latitude
+Bombycilla_centroids <-weighted_mean_locs %>% 
+  filter(species == "Bombycilla_cedrorum") %>%
+  dplyr::select(species, year, day, weighted_lon,weighted_lat) %>%
+  rename(centroid_longitude = weighted_lon, centroid_latitude = weighted_lat)
+
+#Step 3:checking if it is right data frame                                 
+Bombycilla_centroids
+
+#Step 4: sorting the years (will have year 2008 to 2022 with day 1 to 365 or 366)
+years <- sort(unique(Bombycilla_centroids$year))
+```
+
+#Supplementray code on calculating daily basis 
+
+```{r}
+#calculating daily basis 
+#calculating the maximum longitude and latitude for each year for Bombycilla_c
+max_value_day<-Bombycilla_centroids %>%
+  group_by(species, year,day) %>%
+  filter(centroid_latitude == max(centroid_latitude, na.rm=TRUE)) %>%
+  rename(
+    max_lat = centroid_latitude,
+    max_lon = centroid_longitude
+    )
+max_value_day
+
+#calculating the minimum longitude and latitude for each year for Bombycilla_c
+min_value_day <- Bombycilla_centroids %>%
+  group_by(species, year,day) %>%
+  filter(centroid_latitude == min(centroid_latitude, na.rm=TRUE)) %>%
+  rename(
+    min_lat = centroid_latitude,
+    min_lon = centroid_longitude
+    )
+min_value_day
+
+#combining max and min value for Bombycilla_c in daily 
+maxmin_val_day <- merge(max_value, min_value, by = c("species", "year"))
+maxmin_val_day
+
+#taking only max_lon and max_lat
+max_day <- maxmin_val_day[,4:5]
+#taking only min_lon and min_lat
+min_day <- maxmin_val_day[,7:8]
+
+#calculating the total distance for Bombycilla_cedrorum
+maxmin_val_day$total_distance <- round(distVincentyEllipsoid(max_day, min_day)/1000)
+maxmin_val_day
+
+#dropping day.y and renaming day.x to day(only kepping the latitude day)
+maxmin_val_day<-maxmin_val_day %>% 
+  dplyr::select(-c(day.x)) %>%  #keeping the latitude dates
+  rename(latitude_dates = day.y)
+
+maxmin_val_day 
+
+#saveRDS(maxmin_val_day, file = "maxmin_val_day.RDS") 
+```
+
+```{r}
+#Step 5: calculating yearly
+  #calculating the maximum longitude and latitude for each year for Bombycilla_c
+max_value_year<-Bombycilla_centroids %>%
+  group_by(species, year) %>%
+  filter(centroid_latitude == max(centroid_latitude, na.rm=TRUE)) %>%
+  rename(
+    max_lat = centroid_latitude,
+    max_lon = centroid_longitude
+    )
+max_value_year
+
+#saveRDS(max_value_year, file = "max_value_year.RDS") 
+
+#calculating the minimum longitude and latitude for each year for Bombycilla_c
+min_value_year <- Bombycilla_centroids %>%
+  group_by(species, year) %>%
+  filter(centroid_latitude == min(centroid_latitude, na.rm=TRUE)) %>%
+  rename(
+    min_lat = centroid_latitude,
+    min_lon = centroid_longitude
+    )
+min_value_year
+
+#saveRDS(min_value_year, file = "min_value_year.RDS") 
+
+#combining max and min value for Bombycilla_c in daily 
+maxmin_val_year <- merge(max_value_year, min_value_year, by = c("species", "year"))
+maxmin_val_year
+
+#taking only max_lon and max_lat
+max_year <- maxmin_val_year[,4:5]
+#taking only min_lon and min_lat
+min_year <- maxmin_val_year[,7:8]
+
+#calculating the total distance for Bombycilla_cedrorum
+maxmin_val_year$total_distance <- round(distVincentyEllipsoid(max_year, min_year)/1000)
+maxmin_val_year
+
+#dropping day.y and renaming day.x to day(only keeping the latitude day)
+maxmin_val_year<-maxmin_val_year %>% 
+  dplyr::select(-c(day.x)) %>% 
+  rename(latitude_dates = day.y)
+
+maxmin_val_year 
+
+#reordering the columns
+colnames(maxmin_val_year)
+maxmin_val_year <- maxmin_val_year[, c(1,2,5,3,4)]
+maxmin_val_year
+
+#saveRDS(maxmin_val_year, file = "maxmin_val_year.RDS") 
+```
+
+```{r}
+years <- sort(unique(Bombycilla_centroids$year))
+
+
+dataresult<- NULL
+
+for(jjj in dataresult){
+
+  years <- 2009:2021
+  season <- NULL
+  latitude <- NULL 
+  for(jjj in 1:length(years)) {
+    bufferyear <- c(years[jjj]-1, years[jjj], years[jjj]+1) #->2008, 2009, 2010
+    filterdowntothreeyrs <- Bombycilla_centroids[Bombycilla_centroids$year %in% bufferyear,] #->2008,2009,2010
+    if(nrow(filterdowntothreeyrs)==0) next
+  
+    takeoutextraday <- filterdowntothreeyrs[filterdowntothreeyrs$day != 366,] #working
+    endofyear1winter <- takeoutextraday[takeoutextraday$year == bufferyear[1] & takeoutextraday$day>319,] # (2008;320~365)
+    endofyear1winter$day2 <- endofyear1winter$day - 365 #(2008;-40~0)
+  
+    focalyear <- takeoutextraday[takeoutextraday$year == bufferyear[2],] #(2009;365)
+    focalyear$day2 <- focalyear$day
+  
+    beginningofyear3winter <- takeoutextraday[takeoutextraday$year==bufferyear[3] & takeoutextraday$day<74,] #(2010;1~73)
+    beginningofyear3winter$day2 <- beginningofyear3winter$day + 365 #(2010;366~483)
+  
+    merging <- rbind(endofyear1winter, focalyear, beginningofyear3winter)
+    merging <- merging[order(merging$day2),]
+  
+    if(nrow(merging)<300) next
+
+  #changing name of the variables causes the error
+
+    gv <- seq(0,8,1) #test a range of different parameters to try to get the best gam
+    kv <- seq(8,20,1) #test a range of parameters
+    spring_max <- NULL
+    autumn_min <- NULL
+    prediction_out<- NULL
+    dates <- NULL
+    for(kkk in 1:length(kv)){
+      for(ggg in 1:length(gv)){
+        mdl <- gam(centroid_latitude ~ s(day2,k=kv[kkk]), 
+                   data=merging, 
+                   gamma=gv[ggg])
+        x.data <- data.frame(day2=1:365)
+        prediction_lat <- predict(mdl, newdata=x.data, type="response")           
+        prediction_out <- cbind(prediction_out, prediction_lat) #predicted dates from gam fit
+        
+    ## derivatives
+    ### features package extracts the 1st and 2nd derivatives
+        fts <- features(x.data$day2, prediction_lat, smoother="glkerns",
+                        control = list(npts=365))
+        names(fts)
+        d1 <- attributes(fts)$fits$d1
+        spring_max <- c(spring_max, which.max(d1[20:140])+19) #spring max date (day of year)
+        autumn_min <- c(autumn_min, which.min(d1[220:320])+219) #autumn min date (day of year)
+        
+        d2 <- attributes(fts)$fits$d2
+        
+    ## for all the dates within -- seek expert opinion and check that windows contain those dates, treat them as a buffer for a sensible set up to the analysis.
+    ## spring (get three dates)
+       s2 <- which.max(d1[10:140]) + 9 #middle
+       s1 <- try(which.max(d2[(s2-40):s2]) + (s2-41), silent=TRUE) #beginning
+       s3 <- try(which.min(d2[s2:(s2+40)]) + (s2-1), silent=TRUE) #end
+    ## autumn
+       a2 <- which.min(d1[220:355]) + 219 #middle
+       a1 <- try(which.min(d2[(a2-40):a2]) + (a2-41), silent=TRUE) #beginning
+       a3 <- try(which.max(d2[a2:(a2+40)]) + (a2-1), silent=TRUE) #end
+        
+        ##
+       if(class(s1)=="try-error") s1 <- NA
+       if(class(s3)=="try-error") s3 <- NA
+       if(class(a1)=="try-error") a1 <- NA
+       if(class(a3)=="try-error") a3 <- NA
+        
+        ##
+        dates <- rbind(dates, data.frame(s1=s1, s2=s2, s3=s3, 
+                                     a1=a1, a2=a2, a3=a3))
+      }
+    }
+  prediction_lat <- rowMeans(prediction_out) #average prediction
+
+  data.frame(prediction_lat)
+
+## mean first derivative
+  spring_max <- mean(spring_max)
+  autumn_min <- mean(autumn_min)
+   
+## quantile second derivative 
+#### (method is to look across all the results to find the best line that would match what you'd expect to see)
+#### recommend using 0.1 and 0.9, could be adjusted but found to work well on lots of species
+#### removes some of the extreme outliers
+  dates <- data.frame(species=Bombycilla_centroids[,c("species")],
+                  year=y[jjj],
+                  s1=quantile(dates[is.finite(dates$s1),"s1"], 0.1, na.rm=TRUE), 
+                  s2=spring_max,
+                  s3=quantile(dates[is.finite(dates$s3),"s3"], 0.9, na.rm=TRUE),
+                  a1=quantile(dates[is.finite(dates$a1),"a1"], 0.1, na.rm=TRUE), 
+                  a2=autumn_min,
+                  a3=quantile(dates[is.finite(dates$a3),"a3"], 0.9, na.rm=TRUE))
+    
+    ##
+  season <- rbind(season, dates) #season out, stacks everything together into one datatable, results from dts quantile
+  latitude <- rbind(latitude, data.frame(species=Bombycilla_cenjtroids[,c("species")],
+                                     year=y[jjj],
+                                     day=1:365,
+                                     lat=prediction_lat))
+  }
+  if(is.null(season)) next
+}
+season
+latitude
+merging
+
+```
+
+__________experimenting_________
+
+```{r}
+#not sure why it is starting from 2020.. 
+#individual lines gives me the right year with dates 
+  years <- 2009:2021
+  season <- NULL
+  latitude <- NULL 
+  for(jjj in 1:length(years)) {
+    bufferyear <- c(years[jjj]-1, years[jjj], years[jjj]+1) #->2008, 2009, 2010
+    filterdowntothreeyrs <- centroids[centroids$year %in% bufferyear,] #->2008,2009,2010
+    if(nrow(filterdowntothreeyrs)==0) next
+  
+    takeoutextraday <- filterdowntothreeyrs[filterdowntothreeyrs$day != 366,] #working
+    endofyear1winter <- takeoutextraday[takeoutextraday$year == bufferyear[1] & takeoutextraday$day>319,] # (2008;320~365)
+    endofyear1winter$day2 <- endofyear1winter$day - 365 #(2008;-40~0)
+  
+    focalyear <- takeoutextraday[takeoutextraday$year == bufferyear[2],] #(2009;365)
+    focalyear$day2 <- focalyear$day
+  
+    beginningofyear3winter <- takeoutextraday[takeoutextraday$year==bufferyear[3] & takeoutextraday$day<74,] #(2010;1~73)
+    beginningofyear3winter$day2 <- beginningofyear3winter$day + 365 #(2010;366~483)
+  
+    merging <- rbind(endofyear1winter, focalyear, beginningofyear3winter)
+    merging <- merging[order(merging$day2),]
+  }
+merging
+
+endofyear1winter
+```
+
+```{r}
+bufferyear <- c("2008", "2009", "2010") #->2008, 2009, 2010
+filterdowntothreeyrs <- centroids[centroids$year %in% bufferyear,] #->2008,2009,2010
+    #if(nrow(filterdowntothreeyrs)==0) next
+  
+takeoutextraday <- filterdowntothreeyrs[filterdowntothreeyrs$day != 366,] #working
+endofyear1winter <- takeoutextraday[takeoutextraday$year == bufferyear[1] & takeoutextraday$day>319,] # (2008;320~365)
+endofyear1winter$day2 <- endofyear1winter$day - 365 #(2008;-40~0)
+endofyear1winter = subset(endofyear1winter, select = -c(day) )
+  
+focalyear <- takeoutextraday[takeoutextraday$year == bufferyear[2],] #(2009;365)
+focalyear$day2 <- focalyear$day
+focalyear = subset(focalyear, select = -c(day) )
+  
+beginningofyear3winter <- takeoutextraday[takeoutextraday$year==bufferyear[3] & takeoutextraday$day<74,] #(2010;1~73)
+beginningofyear3winter$day2 <- beginningofyear3winter$day + 365 #(2010;366~483)
+beginningofyear3winter = subset(beginningofyear3winter, select = -c(day) )
+  
+merging <- rbind(endofyear1winter, focalyear, beginningofyear3winter)
+merging <- merging[order(merging$day2),]
+merging
+```
+
