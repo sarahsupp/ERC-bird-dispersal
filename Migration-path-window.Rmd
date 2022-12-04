@@ -178,7 +178,7 @@ for(jjj in dataresult){
   
     if(nrow(merging)<300) next
 
-  #changing name of the variables causes the error
+  
 
     gv <- seq(0,8,1) #test a range of different parameters to try to get the best gam
     kv <- seq(8,20,1) #test a range of parameters
