@@ -139,7 +139,15 @@ maxmin_val_year
 #saveRDS(maxmin_val_year, file = "maxmin_val_year.RDS") 
 ```
 
+
+
 ```{r}
+#Step 6: calculating the windows 
+#TODO: Figure out how to run the for loop. (try to make an empty dataframe that goes inside the for(jjj in _____) and try to run it.)
+#    : All the dataframes at the ends are not correct. Season dataframe is giving out the year of 2009 with multiple same values, latitude is NULL. Merging dataframe looks correct but needs to be double check
+
+#No needs of tbl and tbl2 from Frank`s code 
+
 years <- sort(unique(Bombycilla_centroids$year))
 
 
@@ -189,34 +197,34 @@ for(jjj in dataresult){
         
     ## derivatives
     ### features package extracts the 1st and 2nd derivatives
-        fts <- features(x.data$day2, prediction_lat, smoother="glkerns",
+        feature <- features(x.data$day2, prediction_lat, smoother="glkerns",
                         control = list(npts=365))
-        names(fts)
-        d1 <- attributes(fts)$fits$d1
-        spring_max <- c(spring_max, which.max(d1[20:140])+19) #spring max date (day of year)
-        autumn_min <- c(autumn_min, which.min(d1[220:320])+219) #autumn min date (day of year)
+        names(feature)
+        first_derivative <- attributes(fts)$fits$d1
+        spring_max <- c(spring_max, which.max(first_derivative[20:140])+19) #spring max date (day of year)
+        autumn_min <- c(autumn_min, which.min(first_derivative[220:320])+219) #autumn min date (day of year)
         
-        d2 <- attributes(fts)$fits$d2
+        second_derivative <- attributes(feature)$fits$d2
         
     ## for all the dates within -- seek expert opinion and check that windows contain those dates, treat them as a buffer for a sensible set up to the analysis.
     ## spring (get three dates)
-       s2 <- which.max(d1[10:140]) + 9 #middle
-       s1 <- try(which.max(d2[(s2-40):s2]) + (s2-41), silent=TRUE) #beginning
-       s3 <- try(which.min(d2[s2:(s2+40)]) + (s2-1), silent=TRUE) #end
+       spring_middle <- which.max(first_derivative[10:140]) + 9 #middle
+       spring_beginning <- try(which.max(second_derivative[(spring_middle-40):spring_middle]) + (spring_middle-41), silent=TRUE) #beginning
+       spring_end <- try(which.min(second_derivative[spring_middle:(spring_middle+40)]) + (spring_middle-1), silent=TRUE) #end
     ## autumn
-       a2 <- which.min(d1[220:355]) + 219 #middle
-       a1 <- try(which.min(d2[(a2-40):a2]) + (a2-41), silent=TRUE) #beginning
-       a3 <- try(which.max(d2[a2:(a2+40)]) + (a2-1), silent=TRUE) #end
+       autumn_middle <- which.min(first_derivative[220:355]) + 219 #middle
+       autumn_beginning <- try(which.min(second_derivative[(autumn_middle-40):autumn_middle]) + (autumn_middle-41), silent=TRUE) #beginning
+       autumn_end <- try(which.max(second_derivative[autumn_middle:(autumn_middle+40)]) + (autumn_middle-1), silent=TRUE) #end
         
         ##
-       if(class(s1)=="try-error") s1 <- NA
-       if(class(s3)=="try-error") s3 <- NA
-       if(class(a1)=="try-error") a1 <- NA
-       if(class(a3)=="try-error") a3 <- NA
+       if(class(spring_beginning)=="try-error") spring_beginning <- NA
+       if(class(spring_end)=="try-error") spring_end <- NA
+       if(class(autumn_beginning)=="try-error") autumn_beginning <- NA
+       if(class(autumn_end)=="try-error") autumn_end <- NA
         
         ##
-        dates <- rbind(dates, data.frame(s1=s1, s2=s2, s3=s3, 
-                                     a1=a1, a2=a2, a3=a3))
+        dates <- rbind(dates, data.frame(spring_beginning=spring_beginning, spring_middle=spring_middle, spring_end=spring_end, 
+                                     autumn_beginning=autumn_beginning, autumn_middle=autumn_middle, autumn_end=autumn_end))
       }
     }
   prediction_lat <- rowMeans(prediction_out) #average prediction
@@ -241,7 +249,7 @@ for(jjj in dataresult){
                   a3=quantile(dates[is.finite(dates$a3),"a3"], 0.9, na.rm=TRUE))
     
     ##
-  season <- rbind(season, dates) #season out, stacks everything together into one datatable, results from dts quantile
+  season <- rbind(season, dates) #season out, stacks everything together into one datatable, results from dates quantile
   latitude <- rbind(latitude, data.frame(species=Bombycilla_cenjtroids[,c("species")],
                                      year=y[jjj],
                                      day=1:365,
@@ -255,57 +263,5 @@ merging
 
 ```
 
-__________experimenting_________
 
-```{r}
-#not sure why it is starting from 2020.. 
-#individual lines gives me the right year with dates 
-  years <- 2009:2021
-  season <- NULL
-  latitude <- NULL 
-  for(jjj in 1:length(years)) {
-    bufferyear <- c(years[jjj]-1, years[jjj], years[jjj]+1) #->2008, 2009, 2010
-    filterdowntothreeyrs <- centroids[centroids$year %in% bufferyear,] #->2008,2009,2010
-    if(nrow(filterdowntothreeyrs)==0) next
-  
-    takeoutextraday <- filterdowntothreeyrs[filterdowntothreeyrs$day != 366,] #working
-    endofyear1winter <- takeoutextraday[takeoutextraday$year == bufferyear[1] & takeoutextraday$day>319,] # (2008;320~365)
-    endofyear1winter$day2 <- endofyear1winter$day - 365 #(2008;-40~0)
-  
-    focalyear <- takeoutextraday[takeoutextraday$year == bufferyear[2],] #(2009;365)
-    focalyear$day2 <- focalyear$day
-  
-    beginningofyear3winter <- takeoutextraday[takeoutextraday$year==bufferyear[3] & takeoutextraday$day<74,] #(2010;1~73)
-    beginningofyear3winter$day2 <- beginningofyear3winter$day + 365 #(2010;366~483)
-  
-    merging <- rbind(endofyear1winter, focalyear, beginningofyear3winter)
-    merging <- merging[order(merging$day2),]
-  }
-merging
-
-endofyear1winter
-```
-
-```{r}
-bufferyear <- c("2008", "2009", "2010") #->2008, 2009, 2010
-filterdowntothreeyrs <- centroids[centroids$year %in% bufferyear,] #->2008,2009,2010
-    #if(nrow(filterdowntothreeyrs)==0) next
-  
-takeoutextraday <- filterdowntothreeyrs[filterdowntothreeyrs$day != 366,] #working
-endofyear1winter <- takeoutextraday[takeoutextraday$year == bufferyear[1] & takeoutextraday$day>319,] # (2008;320~365)
-endofyear1winter$day2 <- endofyear1winter$day - 365 #(2008;-40~0)
-endofyear1winter = subset(endofyear1winter, select = -c(day) )
-  
-focalyear <- takeoutextraday[takeoutextraday$year == bufferyear[2],] #(2009;365)
-focalyear$day2 <- focalyear$day
-focalyear = subset(focalyear, select = -c(day) )
-  
-beginningofyear3winter <- takeoutextraday[takeoutextraday$year==bufferyear[3] & takeoutextraday$day<74,] #(2010;1~73)
-beginningofyear3winter$day2 <- beginningofyear3winter$day + 365 #(2010;366~483)
-beginningofyear3winter = subset(beginningofyear3winter, select = -c(day) )
-  
-merging <- rbind(endofyear1winter, focalyear, beginningofyear3winter)
-merging <- merging[order(merging$day2),]
-merging
-```
 
