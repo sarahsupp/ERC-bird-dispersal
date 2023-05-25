@@ -1,0 +1,154 @@
+---
+title: "ERC shapefile basics"
+author: "Maximilian Wisnefski"
+date: '2023-05-23'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rgdal)
+library(sf)
+library(raster)
+library(terra)
+library(broom)
+library(ggplot2)
+library(leaflet)
+library(sp)
+```
+
+
+## Working with Shapefile
+This file is mostly just for me (Max Wisnefski) to figure out how to work with shapefiles
+
+```{r}
+#unzipping wasn't really necessary, but I'll leave these as comments anyways
+#system("unzip ../ERC-range.zip")
+#system("unzip ../USA_Canada_ShapefileMerge.zip")
+```
+
+the shapefile of US and Canada comes from USGS
+link: https://www.sciencebase.gov/catalog/item/51bf5940e4b0eb321c798ec9 
+
+```{r}
+#spdf is short for spatial polygon dataframe
+US_CAN_spdf <- readOGR(dsn = "../USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
+my_spdf <- readOGR(dsn = "../ERC-range", layer = "junivirg")
+```
+^I'm not sure why I am getting these warnings. I'm using both the sf and terra packages. 
+
+
+### Plotting ERC range in base R
+```{r}
+par(mar=c(0,0,0,0))   #changes size of image
+plot(my_spdf, col="#69b3a2", bg="white", lwd=0.25, border=0 )
+```
+
+```{r}
+#also plotting US and some of Canada
+par(mar=c(0,0,0,0))
+plot(US_CAN_spdf, col="lightblue", bg="white", lwd=0.25, border=0, xlim = c(-130, -65), ylim = c(20,50))
+```
+
+
+
+
+```{r}
+#just looking at names for the object 
+names(my_spdf)
+```
+
+
+### plotting in ggplot2
+```{r}
+#must first change into df that ggplot can read
+#setting region equal to different columns in @data slot of shapefile does not seem to change output at all
+#I just went with CODE
+spdf_tidy <- tidy(my_spdf, regions = "CODE")
+```
+
+```{r}
+#produces same thing as base R
+ggplot() +
+  geom_polygon(data = spdf_tidy, aes( x = long, y = lat, group = group), fill="#69b3a2", color="white") +
+  theme_void() 
+```
+
+
+
+
+```{r}
+#checking to see if the two shapefiles have the same projection
+#my_spdf@proj4string@projargs #does same thing as next line
+crs(my_spdf)
+extent(my_spdf)
+
+crs(US_CAN_spdf)
+extent(US_CAN_spdf)
+#They do not have same projection
+```
+
+
+```{r}
+#ERC projection is mercator, must change to longlat to match US/CAN projection
+#changing the projection of ERC shapefile
+spdf_latlon <- spTransform(my_spdf,
+                                "+proj=longlat +datum=NAD83 +no_defs")
+```
+
+
+```{r}
+#checking if change was successful
+crs(spdf_latlon)
+extent(spdf_latlon)
+```
+
+### Putting ERC range on top of US/CAN map
+
+```{r}
+#creating a transparent color for ERC range, so you can still see state boundaries
+mycol <- rgb(105, 179, 162, max = 255, alpha = 170, names = "color")
+
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith ERC range",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -65), ylim = c(25,50))
+
+
+# add ERC range
+plot(spdf_latlon,
+     col = mycol,
+     add = TRUE)
+```
+
+### Mapping ERC range in leaflet
+
+I also figured out how to do this in leaflet, but I don't think it looks as good
+
+```{r}
+#making long/lat projection of ERC into df that I can use with leaflet
+new_proj_tidy <- tidy(spdf_latlon, region = "CODE")
+```
+
+
+```{r}
+outline <- new_proj_tidy[chull(new_proj_tidy$long, new_proj_tidy$lat),]
+
+m <- leaflet(new_proj_tidy) %>% 
+  addTiles() %>% 
+  setView(lng = -100.45, lat = 35.25, zoom = 4 ) %>%
+  #adding a dot for each point in shapefile
+  addCircles(~long, ~lat, ~100, stroke = F, color = "black", group = "ERC Range") %>%
+  #adding the outline
+  addPolygons(data = outline, lng = ~long, lat = ~lat,
+    fill = F, weight = 2, color = "darkgreen", group = "Outline of Range") %>%
+  #Layers control
+  addLayersControl(
+    overlayGroups = c("ERC Range", "Outline of Range"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+m
+```
+
+
+
