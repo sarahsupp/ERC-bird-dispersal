@@ -15,11 +15,17 @@ library(broom)
 library(ggplot2)
 library(leaflet)
 library(sp)
+library(s2)
+library(tidyr)
+library(dplyr)
 ```
+
+
 
 
 ## Working with Shapefile
 This file is mostly just for me (Max Wisnefski) to figure out how to work with shapefiles
+
 
 ```{r}
 #unzipping wasn't really necessary, but I'll leave these as comments anyways
@@ -149,6 +155,82 @@ m <- leaflet(new_proj_tidy) %>%
   )
 m
 ```
+
+
+## Filter bird banding data based on ERC range lat/longs
+
+Here I use the sf::st_intersects function to filter the Bird Banding Lab (BBL) data based on the ERC range shapefile
+
+```{r}
+BBL <- read.csv("../BBL_data/BBL2022.csv")
+#changing names of lat/lon columns for convenience
+colnames(BBL)[which(names(BBL) == "lat_dd")] <- "lat"
+colnames(BBL)[which(names(BBL) == "lon_dd")] <- "lon"
+```
+
+```{r}
+#removing rows with NA for lat/lon columns
+BBL <- BBL[!is.na(BBL$lat),]
+BBL <- BBL[!is.na(BBL$lat),]
+```
+
+
+```{r}
+#making both shapefile and BBL data into sf objects so I can comepare the lats/lons
+ERC_range_sf <- st_read("../ERC-range/junivirg.shp", quiet = TRUE) %>%
+  st_transform(crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+BBL_sf <- st_as_sf(BBL, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+```
+
+
+```{r}
+# scatter 100 points around
+#just testing st_intersects function before I actually use it on entire data set
+pts = st_jitter(st_sample(ERC_range_sf, 100), factor=0.2)
+#inside will be a list of boolean vals, TRUE if point falls in range, FALSE otherwise
+inside = lengths(st_intersects(pts, ERC_range_sf)) > 0
+out = !inside
+```
+
+
+```{r}
+#making sure it categorized the points correctly
+plot(ERC_range_sf$geom)
+plot(pts[inside], pch=1, col="blue", add=TRUE);
+plot(pts[out], pch=1, col="red", add=TRUE);
+```
+
+```{r}
+#applying st_intersects to BBL data
+inside = lengths(st_intersects(BBL_sf, ERC_range_sf)) > 0
+#out = !inside
+```
+
+^This will give you a list of TRUE/FALSE vals, use this list to filter data frame, TRUE means point falls within ERC range, FALSE means it does not
+
+```{r}
+#visual from this chunk of code is not particularly useful 
+#plot(ERC_range_sf$geom)
+#plot(BBL_sf$geometry[inside], pch=1, col="blue", add=TRUE);
+#plot(BBL_sf$geometry[out], pch=1, col="red", add=TRUE);
+```
+
+
+
+
+```{r}
+#using the inside list to filter the BBL data to just 
+BBL_in_range = BBL_sf %>%
+  filter(BBL_sf$geometry %in% BBL_sf$geometry[inside])
+```
+
+
+```{r}
+#export as .csv
+write.csv(BBL_in_range, "../BBL_data/BBL_in_range_2022.csv", row.names=FALSE)
+```
+
+^ I will eventually repeat this process with the eBird data
 
 
 
