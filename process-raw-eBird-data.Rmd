@@ -43,22 +43,22 @@ You need to bring in:
 Load the eBird effort and location files, from FAL (July 2020)
 ```{r}
 # raw eBirder data, queried by FAL
- load("data/raw_eBird_data_2022/effort-count_2022.Rdata") 
+ load("data/raw_eBird_data_2023/effort-count_2023.Rdata") 
  # (2020) will load as eft.c, FAL named previously
  # (2022) will load as dat, FAL named previously
 
- load("data/raw_eBird_data_2022/locs_2022.Rdata") 
+ load("data/raw_eBird_data_2023/locs_2023.Rdata") 
  # (2020 & 2022) will load as locs, FAL named previously
 ```
 
 *For all 15 species .RData files*
 This code chunk will identify all 15 species files, bring them in one by one, and loop through the merge on polygon ID (POLYFID) with the total eBirder effort, the center lat-long for each hexagonal icosahedron cell, and write to .RDS file for use in the next steps.
 ```{r}
-spfiles = list.files(path=here("data/raw_eBird_data_2022/species/"), pattern=glob2rx("*.RData"))
+spfiles = list.files(path=here("data/raw_eBird_data_2023/species/"), pattern=glob2rx("*.RData"))
 
 for (i in spfiles) {
   # These RData files have one object and it is named "dat2" 
-  load(paste0(here("data/raw_eBird_data_2022/species/"),(i)))
+  load(paste0(here("data/raw_eBird_data_2023/species/"),(i)))
   
   #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(dat2, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -73,6 +73,6 @@ for (i in spfiles) {
   spname <- sub("\\.[[:alnum:]]+$", "", i)
   dat_effort$species <- spname
   # save file, also adding the species name, into a new folder with the species + effort merged datasets
-  saveRDS(dat_effort, file = paste0("data/effort-merged_data/dat_effort_", spname, ".rds"))
+  saveRDS(dat_effort, file = paste0("data/effort-merged_data_2023/dat_effort_", spname, ".rds"))
 }
 ```
