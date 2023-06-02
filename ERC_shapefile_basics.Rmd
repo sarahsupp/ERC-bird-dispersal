@@ -29,8 +29,8 @@ This file is mostly just for me (Max Wisnefski) to figure out how to work with s
 
 ```{r}
 #unzipping wasn't really necessary, but I'll leave these as comments anyways
-#system("unzip ../ERC-range.zip")
-#system("unzip ../USA_Canada_ShapefileMerge.zip")
+#system("unzip data/ERC-range.zip")
+#system("unzip data/USA_Canada_ShapefileMerge.zip")
 ```
 
 the shapefile of US and Canada comes from USGS
@@ -38,8 +38,8 @@ link: https://www.sciencebase.gov/catalog/item/51bf5940e4b0eb321c798ec9
 
 ```{r}
 #spdf is short for spatial polygon dataframe
-US_CAN_spdf <- readOGR(dsn = "../USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
-my_spdf <- readOGR(dsn = "../ERC-range", layer = "junivirg")
+US_CAN_spdf <- readOGR(dsn = "data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
+my_spdf <- readOGR(dsn = "data/ERC_shapefile_2023", layer = "junivirg")
 ```
 ^I'm not sure why I am getting these warnings. I'm using both the sf and terra packages. 
 
@@ -163,7 +163,7 @@ Here I use the sf::st_intersects function to filter the Bird Banding Lab (BBL) d
 
 ```{r}
 #note that github repo data folder only has .rds since .csv was too big
-BBL <- read.csv("../BBL_data/BBL2022.csv")
+BBL <- readRDS("data/BBL_data/BBL2022.rds")
 #changing names of lat/lon columns for convenience
 colnames(BBL)[which(names(BBL) == "lat_dd")] <- "lat"
 colnames(BBL)[which(names(BBL) == "lon_dd")] <- "lon"
@@ -178,7 +178,7 @@ BBL <- BBL[!is.na(BBL$lat),]
 
 ```{r}
 #making both shapefile and BBL data into sf objects so I can comepare the lats/lons
-ERC_range_sf <- st_read("../ERC-range/junivirg.shp", quiet = TRUE) %>%
+ERC_range_sf <- st_read("data/ERC_shapefile_2023/junivirg.shp", quiet = TRUE) %>%
   st_transform(crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
 BBL_sf <- st_as_sf(BBL, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
 ```
