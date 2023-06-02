@@ -224,17 +224,28 @@ BBL_in_range = BBL_sf %>%
 ```
 
 
+
+```{r}
+#making lat/lon back into separate cols (still keeping geometry column in case it ends up being useful)
+#h <- head(BBL_in_range)
+latlon <- do.call(rbind, st_geometry(BBL_in_range)) %>% 
+    as_tibble() %>% setNames(c("lon","lat"))
+BBL_in_range <- cbind(BBL_in_range, latlon)
+```
+
+
+
 ```{r}
 #export as .rds
 #(it's too big to push to repo as a .csv)
-saveRDS(BBL_in_range, "../BBL_data/BBL_in_range_2022.rds")
+saveRDS(BBL_in_range, "data/BBL_data/BBL_in_range_2022.rds")
 ```
 
 ^ I will eventually repeat this process with the eBird data
 
 ```{r}
 #also exporting unfiltered data as .rds, so I can push it to github repo 
-saveRDS(BBL, "../BBL_data/BBL2022.rds")
+saveRDS(BBL, "data/BBL_data/BBL2022.rds")
 ```
 
 
