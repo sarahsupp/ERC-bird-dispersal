@@ -1,0 +1,121 @@
+---
+title: "BBL Summary Statistics"
+author: "Maximilian Wisnefski"
+date: '2023-06-02'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+
+In this .rmd, I am using the filtered BBL data to 
+
+```{r}
+#this data has been filtered using lats/lons of ERC shapefile
+BBL <- readRDS("data/BBL_data/BBL_in_range_2022.rds")
+```
+
+
+```{r}
+#filtering to just banding events, not encounters (since encounters all overlap with bandings)
+BBL <- BBL[BBL$event_type == 'B',]
+```
+
+
+
+```{r}
+#getting counts for each bird
+#probably could have just used a groupby, but this was the first way I thought to do it
+birds <- unique(BBL$species_name)
+bird_counts <- list()
+for (b in birds){
+  count <- length(which(BBL$species_name == b))
+  bird_counts <- append(bird_counts, count)
+}
+
+bird_df = data.frame(unlist(birds),unlist(bird_counts))
+names(bird_df) = c("species_name","count")
+```
+
+```{r}
+ggplot(bird_df, aes(x=species_name, y=count)) +
+  geom_bar(stat="identity") + 
+  ggtitle("Counts for Each Bird for all years (1960-2022)") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+#should probably also get rid of 2022 since there is not data for full year
+BBL_recent <- BBL[BBL$event_year >= 2008,]
+
+
+#getting counts for each bird
+#probably could have just used a groupby, but this was the first way I thought to do it
+birds <- unique(BBL_recent$species_name)
+bird_counts <- list()
+for (b in birds){
+  count <- length(which(BBL_recent$species_name == b))
+  bird_counts <- append(bird_counts, count)
+}
+
+bird_df_recent = data.frame(unlist(birds),unlist(bird_counts))
+names(bird_df_recent) = c("species_name","count")
+```
+
+
+```{r}
+ggplot(bird_df_recent, aes(x=species_name, y=count)) +
+  geom_bar(stat="identity") + 
+  ggtitle("Counts for Each Bird (2008-2022)") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),plot.title = element_text(hjust = 0.5))
+```
+
+
+```{r}
+#used a groupby this time
+#grouping by year and species
+#come back and fix issue with geometry column later!
+BBL_year_count <- BBL %>% group_by(species_name, event_year) %>% 
+  summarise(total_count=n(),.groups = 'drop') %>%
+  as.data.frame()
+```
+
+
+```{r}
+ggplot(BBL_year_count, aes(x = event_year, y = total_count)) + 
+  geom_line(aes(color = species_name)) + 
+  #scale_color_manual(values = c()) +   #might change line colors later  
+  ggtitle("Change in number of species records each year (1960-2022")
+```
+
+
+```{r}
+#grouping by year and species for just more recent years
+#come back and fix issue with geometry column later!
+BBL_year_count_recent <- BBL_recent %>% group_by(species_name, event_year) %>% 
+  summarise(total_count=n(),.groups = 'drop') %>%
+  as.data.frame()
+```
+
+
+```{r}
+ggplot(BBL_year_count_recent, aes(x = event_year, y = total_count)) + 
+  geom_line(aes(color = species_name)) + 
+  #scale_color_manual(values = c()) +   #might change line colors later  
+  ggtitle("Change in number of species records each year (2003-2022)")
+```
+
+
+```{r}
+#grouping by year and species for just more recent years
+#come back and fix issue with geometry column later!
+BBL_unique_bird_recent <- BBL_recent %>% group_by(species_name, band) %>% 
+  summarise(total_count=n(), .groups = 'drop') %>%
+  as.data.frame()
+```
+
+
