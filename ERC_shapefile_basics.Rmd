@@ -162,6 +162,7 @@ m
 Here I use the sf::st_intersects function to filter the Bird Banding Lab (BBL) data based on the ERC range shapefile
 
 ```{r}
+#note that github repo data folder only has .rds since .csv was too big
 BBL <- read.csv("../BBL_data/BBL2022.csv")
 #changing names of lat/lon columns for convenience
 colnames(BBL)[which(names(BBL) == "lat_dd")] <- "lat"
@@ -216,8 +217,6 @@ inside = lengths(st_intersects(BBL_sf, ERC_range_sf)) > 0
 ```
 
 
-
-
 ```{r}
 #using the inside list to filter the BBL data to just 
 BBL_in_range = BBL_sf %>%
@@ -226,11 +225,18 @@ BBL_in_range = BBL_sf %>%
 
 
 ```{r}
-#export as .csv
-write.csv(BBL_in_range, "../BBL_data/BBL_in_range_2022.csv", row.names=FALSE)
+#export as .rds
+#(it's too big to push to repo as a .csv)
+saveRDS(BBL_in_range, "../BBL_data/BBL_in_range_2022.rds")
 ```
 
 ^ I will eventually repeat this process with the eBird data
+
+```{r}
+#also exporting unfiltered data as .rds, so I can push it to github repo 
+saveRDS(BBL, "../BBL_data/BBL2022.rds")
+```
+
 
 
 
