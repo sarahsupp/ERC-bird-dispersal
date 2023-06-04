@@ -180,14 +180,20 @@ for (i in 1:nrow(df)){
   df[i,"newy"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[2]
   df[i,"newz"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[3]
 }
+```
+
+
+```{r}
 
 # #Save to RDS file
-# saveRDS(df, "df_nvector.rds")
+#saveRDS(df, "df_nvector_2023.rds")
 
 # #Loading RDS file 
-#df <- readRDS("df_nvector.rds")
+df <- readRDS("df_nvector.rds")
+```
 
 
+```{r}
 #Putting species, year, and days into list in order
 species_list <- unique(df$species)
 year_list <- unique(df$year)
