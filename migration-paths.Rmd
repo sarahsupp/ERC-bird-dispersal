@@ -293,7 +293,7 @@ weighted_mean_locs <- weighted_mean_locs %>%
   mutate(ID = row_number()) %>%
   dplyr::select(-DAYm1, -origin)
 
-#saveRDS(weighted_mean_locs, "weighted_mean_locs.rds")
+#saveRDS(weighted_mean_locs, "weighted_mean_locs_2023.rds")
 
 # #Loading RDS file 
 #weighted_mean_locs <- readRDS("weighted_mean_locs.rds")
