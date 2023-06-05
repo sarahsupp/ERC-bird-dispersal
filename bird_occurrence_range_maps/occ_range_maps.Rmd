@@ -1,0 +1,47 @@
+---
+title: "Occurrence Range Maps"
+author: "Maximilian Wisnefski"
+date: '2023-06-05'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sf)
+```
+
+This is just for the purpose of calculating migration distances for the avian traits table
+
+
+```{r}
+bird_occ_map <- st_read("BOTW.gdb", layer = "All_Species")
+```
+
+```{r}
+layers <- st_layers(dsn = "BOTW.gdb")
+```
+
+
+```{r}
+#data_frame_mod <- data_frame[data_frame$col1 %in% c("b","e"),]
+filt_birds <- bird_occ_map[bird_occ_map$sci_name %in% c("Bombycilla cedrorum", "Turdus migratorius", "Hylocichla mustelina", "Setophaga coronata", "Cyanocitta cristata", "Sturnus vulgaris", "Sialia sialis", "Mimus polyglottos", "Dryobates pubescens", "Sturnella magna", "Sitta carolinensis", "Haemorhous purpureus", "Cardinalis cardinalis", "Junco hyemalis", "Corvus brachyrhynchos"), ]
+```
+
+
+
+```{r}
+#saveRDS(filt_birds, "occurrence_map.rds")
+filt_birds <- readRDS("occurrence_map.rds")
+```
+
+```{r}
+x <- head(filt_birds, 1)
+```
+
+
+
+```{r}
+plot(x)
+```
+
+
