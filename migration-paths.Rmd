@@ -189,7 +189,7 @@ for (i in 1:nrow(df)){
 #saveRDS(df, "df_nvector_2023.rds")
 
 # #Loading RDS file 
-df <- readRDS("df_nvector.rds")
+df <- readRDS("df_nvector_2023.rds")
 ```
 
 
@@ -294,9 +294,12 @@ weighted_mean_locs <- weighted_mean_locs %>%
   dplyr::select(-DAYm1, -origin)
 
 #saveRDS(weighted_mean_locs, "weighted_mean_locs_2023.rds")
+```
 
+
+```{r}
 # #Loading RDS file 
-#weighted_mean_locs <- readRDS("weighted_mean_locs.rds")
+weighted_mean_locs <- readRDS("weighted_mean_locs_2023.rds")
 ```
 
 
@@ -336,7 +339,7 @@ ggarrange(num_bins, num_gridcells, num_days,
           labels=c("A", "B", "C"),
           ncol=3, nrow=1)
 
-ggsave(filename = "figs/species_obs.png", height = 11, width=8)
+ggsave(filename = "figs/species_obs_2023.png", height = 11, width=8)
 ```
 
 
@@ -544,7 +547,7 @@ dailylocs <- Estimatedailylocs(weighted_mean_locs)
 #filtering only the migratory species (9 species)
   #Sturnella magna and Sturnus vulgaris are not working (magna not working in 2017, vulgaris not working in 2008)
   #Only using 7 species 
-spp7dailylocs <- dailylocs %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Turdus_migratorius", "Sialia_sialis"))
+spp7dailylocs <- dailylocs %>% filter (species %in% c("Bombycilla cedrorum", "Haemorhous purpureus", "Hylocichla mustelina", "Junco hyemalis", "Setophaga coronata", "Turdus migratorius", "Sialia sialis"))
 
 ggplot(spp7dailylocs, aes(day, lat)) + geom_line(size=1, aes(col=species)) +
   # geom_vline(xintercept=c(101, 209, 362), col="gray30") + #FIXME: Update xintercepts with dates
@@ -604,14 +607,14 @@ spp7dailylocs <- spp7dailylocs %>%
 # Restore the object
 #readRDS(file = "spp7dailylocs.rds")
 
-#ggplot(spp7dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
+ggplot(spp7dailylocs, aes(as.numeric(day), distance, group=year)) + geom_line(aes(col=species)) + 
   theme_bw() + xlab("Julian Day") + ylab("Distance Traveled (km)") + 
   theme(text = element_text(size=12)) + 
   facet_wrap(~species)  
   #geom_vline(xintercept = median(day), col = "indianred", linetype = "dashed")
   #geom_vline(xintercept = median(migr_dates), col = "indianred", linetype = "dashed")
 
-ggsave(filename = "figs/7species_distances.png", height = 5, width=8)
+ggsave(filename = "figs/7species_distances_2023.png", height = 5, width=8)
 
 
 #Dr. Supp original code 
@@ -770,7 +773,7 @@ ggplot(spp7max_speed, aes(year, max_speed)) + geom_point() +
  # annotate(geom="text", x= 3, y= 50, label=paste0("median = ", round(med,2), " km/day")) + 
   facet_wrap(~species)
 
-ggsave(filename = "figs/7species_MedMaxMigrationSpeed.png")
+ggsave(filename = "figs/7species_MedMaxMigrationSpeed_2023.png")
 
 
 # # function to estimate the maximum speed of migration (km/day) for all 15 species
@@ -866,7 +869,7 @@ Est3MigrationDates = function(dat){
   # the end of fall migration, and the date where the species reaches maximum latitude.
   dat <- dat %>%
   filter(day != 1)
-  year <- c(2008:2021)
+  year <- c(2008:2022)
   species <- unique(dat$species)
   df_dates <- data.frame(species="none", year=0, spring = 0, maxlat = 0, fall = 0)
   for (s in species) {
@@ -939,8 +942,11 @@ return(df_dates)
 }
 
 spp7MigrationDates <- Est3MigrationDates(spp7dailylocs)
+#saveRDS(spp7MigrationDates, "spp7MigrationDates_2023.rds")
+```
 
-#saveRDS(spp7MigrationDates, "spp7MigrationDates.rds")
+
+```{r}
 #spp7MigrationDates <- readRDS("spp7MigrationDates.rds")
 
 median_migdates <- spp7MigrationDates %>%
@@ -974,13 +980,13 @@ ggarrange(begin, end,
           labels=c("Begining of the winter", "End of the winter"),
           ncol=2, nrow=1)
 
-ggsave(filename = "figs/7spp_MigrationDates.png", height = 10, width=10)
+ggsave(filename = "figs/7spp_MigrationDates_2023.png", height = 10, width=10)
 ```
 
 Looking at the linear trends of these dates for each 7 migratory species to see if there are any significance. 
 ```{r}
 cedrorum <- spp7MigrationDates %>%
-  filter(species=="Bombycilla_cedrorum")
+  filter(species=="Bombycilla cedrorum")
 
 #linear regression for spring 
 cedrorum_spring <- lm(spring ~ year, data=cedrorum)
@@ -995,7 +1001,7 @@ cedrorum_fall <- lm(fall ~ year, data=cedrorum)
 # anova(mod1_fall)
 
 purpureus <- spp7MigrationDates %>%
-  filter(species=="Haemorhous_purpureus")
+  filter(species=="Haemorhous purpureus")
 
 purpureus_spring <- lm(spring ~ year, data=purpureus)
 #summary(purpureus_spring)
@@ -1008,7 +1014,7 @@ purpureus_fall <- lm(fall ~ year, data=purpureus)
 # anova(mod2_fall)
 
 mustelina <- spp7MigrationDates %>%
-  filter(species=="Hylocichla_mustelina")
+  filter(species=="Hylocichla mustelina")
 
 mustelina_spring <- lm(spring ~ year, data=mustelina)
 #summary(mustelina_spring)
@@ -1021,7 +1027,7 @@ mustelina_fall <- lm(fall ~ year, data=mustelina)
 # anova(mod3_fall)
 
 hyemalis <- spp7MigrationDates %>%
-  filter(species=="Junco_hyemalis")
+  filter(species=="Junco hyemalis")
 
 hyemalis_spring <- lm(spring ~ year, data=hyemalis)
 #summary(hyemalis_spring)
@@ -1034,7 +1040,7 @@ hyemalis_fall <- lm(fall ~ year, data=hyemalis)
 # anova(mod4_fall)
 
 coronata <- spp7MigrationDates %>%
-  filter(species=="Setophaga_coronata")
+  filter(species=="Setophaga coronata")
 
 coronata_spring <- lm(spring ~ year, data=coronata)
 #summary(coronata_spring)
@@ -1047,7 +1053,7 @@ coronata_fall <- lm(fall ~ year, data=coronata)
 # anova(mod5_fall)
 
 sialis <- spp7MigrationDates %>%
-  filter(species=="Sialia_sialis")
+  filter(species=="Sialia sialis")
 
 sialis_spring <- lm(spring ~ year, data=sialis)
 #summary(sialis_spring)
@@ -1060,7 +1066,7 @@ sialis_fall <- lm(fall ~ year, data=sialis)
 # anova(mod6_fall)
 
 migratorius <- spp7MigrationDates %>%
-  filter(species=="Turdus_migratorius")
+  filter(species=="Turdus migratorius")
 
 migratorius_spring <- lm(spring ~ year, data=migratorius)
 #summary(migratorius_spring)
@@ -1076,7 +1082,7 @@ summary(migratorius_fall)
 ```{r}
 #making linear regression result table for fall 
 stargazer(cedrorum_fall, coronata_fall, migratorius_fall, mustelina_fall, purpureus_fall, hyemalis_fall, sialis_fall, type = "text",  
-     title = "Fall Migration Species Directional Changes",out="figs/Fall Migration Species Directional Changes.txt", column.labels=c("B.cedrorum","S.coronata","T.migratorius", "H.mustelina","H.purpureus","J.hyemalis","S.sialis"),covariate.labels = c("year", "Intercept") ,report = "vcp*")
+     title = "Fall Migration Species Directional Changes",out="figs/Fall Migration Species Directional Changes.txt", column.labels=c("B.cedrorum","S.coronata","T.migratorius", "H.mustelina","H.purpureus","J.hyemalis","S.sialis"), covariate.labels = c("year", "Intercept"), report = "vcp*")
 
 ```
 
@@ -1098,6 +1104,7 @@ ggplot() +
   geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
   geom_point(data=ERCbirds, aes(lon, lat, col=species), size=.1) + 
   xlim(-102,-52) + 
+  ylim(25,50) +
   theme_bw() + 
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
