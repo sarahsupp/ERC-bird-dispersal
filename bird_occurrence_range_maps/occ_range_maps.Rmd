@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(rgdal)
 library(sf)
 library(s2)
+library(geosphere)
 ```
 
 
@@ -51,7 +52,7 @@ filt_birds$centroid <- st_centroid(st_make_valid(filt_birds$Shape), of_largest_p
 ```{r}
 US_CAN_spdf <- readOGR(dsn = "../data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
 ```
-
+## Cedar Waxwing
 
 ```{r}
 #plotting breeding and non-breeding ranges of cedar waxwing
@@ -73,3 +74,252 @@ plot(filt_birds[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
 ```
 
 
+```{r}
+#distance between centroids of ranges for Cedar Waxwing (in meters)
+distHaversine(c(filt_birds$centroid[[1]][1], filt_birds$centroid[[1]][2]), c(filt_birds$centroid[[2]][1], filt_birds$centroid[[2]][2]))
+```
+
+
+## Eastern Bludebird
+
+```{r}
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith Eastern Bluebird ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -30), ylim = c(25,50))
+
+plot(filt_birds[3:3, ]$Shape, col = mycol1, add = TRUE) 
+plot(filt_birds[4:4, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(filt_birds[3:4, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+```{r}
+#distance between centroids of ranges for Cedar Waxwing (in meters)
+distHaversine(c(filt_birds$centroid[[3]][1], filt_birds$centroid[[3]][2]), c(filt_birds$centroid[[4]][1], filt_birds$centroid[[4]][2]))
+```
+
+
+## American Robin
+
+```{r}
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf, 
+     main = "Map of US and Canada\nWith American Robin ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -30), ylim = c(25,50))
+
+plot(filt_birds[6:6, ]$Shape, col = mycol1, add = TRUE) 
+plot(filt_birds[5:5, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(filt_birds[5:6, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+
+```{r}
+#distance between centroids of ranges for American Robin (in meters)
+distHaversine(c(filt_birds$centroid[[5]][1], filt_birds$centroid[[5]][2]), c(filt_birds$centroid[[6]][1], filt_birds$centroid[[6]][2]))
+```
+
+
+## Wood Thrush
+
+```{r}
+#easier to just make subset
+wood_thrush <- filt_birds[filt_birds$sci_name %in% c("Hylocichla mustelina"), ]
+
+
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith Wood Thrush ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, 0), ylim = c(25,50))
+
+plot(wood_thrush[2:2, ]$Shape, col = mycol1, add = TRUE) 
+plot(wood_thrush[1:1, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(wood_thrush[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+
+```{r}
+#distance between centroids of ranges for Wood Thrush (in meters)
+distHaversine(c(wood_thrush$centroid[[1]][1], wood_thrush$centroid[[1]][2]), c(wood_thrush$centroid[[2]][1], wood_thrush$centroid[[2]][2]))
+```
+
+
+## Yellow-Rumped Warbler
+
+```{r}
+#easier to just make subset
+YR_warbler <- filt_birds[filt_birds$sci_name %in% c("Setophaga coronata"), ]
+
+
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith Yellow-Rumped Warbler ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, 0), ylim = c(25,50))
+
+plot(YR_warbler[1:1, ]$Shape, col = mycol1, add = TRUE) 
+plot(YR_warbler[2:2, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(YR_warbler[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+
+```{r}
+#distance between centroids of ranges (in meters)
+distHaversine(c(YR_warbler$centroid[[1]][1], YR_warbler$centroid[[1]][2]), c(YR_warbler$centroid[[2]][1], YR_warbler$centroid[[2]][2]))
+```
+
+
+## Blue Jay
+
+```{r}
+#easier to just make subset
+blue_jay <- filt_birds[filt_birds$sci_name %in% c("Cyanocitta cristata"), ]
+
+
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith Blue Jay ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -45), ylim = c(25,50))
+
+plot(blue_jay[2:2, ]$Shape, col = mycol1, add = TRUE) 
+plot(blue_jay[1:1, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(blue_jay[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+
+```{r}
+#distance between centroids of ranges (in meters)
+distHaversine(c(blue_jay$centroid[[1]][1], blue_jay$centroid[[1]][2]), c(blue_jay$centroid[[2]][1], blue_jay$centroid[[2]][2]))
+```
+
+
+## European Starling
+
+```{r}
+#easier to just make subset
+euro_star <- filt_birds[filt_birds$sci_name %in% c("Sturnus vulgaris"), ]
+
+
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith European Starlings ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, 0), ylim = c(25,50))
+
+plot(euro_star[4:4, ]$Shape, col = mycol1, add = TRUE) 
+plot(euro_star[3:3, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(euro_star[3:4, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+
+```{r}
+#distance between centroids of ranges (in meters)
+distHaversine(c(euro_star$centroid[[3]][1], euro_star$centroid[[3]][2]), c(euro_star$centroid[[4]][1], euro_star$centroid[[4]][2]))
+```
+
+
+## Eastern Meadowlark 
+Unfortunately, the dataset only features the Eastern Meadowlark's breeding range
+
+```{r}
+#easier to just make subset
+meadow <- filt_birds[filt_birds$sci_name %in% c("Sturnella magna"), ]
+
+
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith Eastern Meadowlark ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, 0), ylim = c(25,50))
+
+plot(meadow[1:1, ]$Shape, col = mycol1, add = TRUE) 
+plot(meadow[2:2, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(meadow[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+## Purple Finch
+
+```{r}
+#easier to just make subset
+finch <- filt_birds[filt_birds$sci_name %in% c("Haemorhous purpureus"), ]
+
+
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith Blue Jay ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -20), ylim = c(25,50))
+
+plot(finch[2:2, ]$Shape, col = mycol1, add = TRUE) 
+plot(finch[1:1, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(finch[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+
+```{r}
+#distance between centroids of ranges (in meters)
+distHaversine(c(finch$centroid[[1]][1], finch$centroid[[1]][2]), c(finch$centroid[[2]][1], finch$centroid[[2]][2]))
+```
+
+
+## Dark-Eyed Junco
+
+```{r}
+#easier to just make subset
+junco <- filt_birds[filt_birds$sci_name %in% c("Junco hyemalis"), ]
+
+
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith Dark-Eyed Junco ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -10), ylim = c(25,50))
+
+plot(junco[2:2, ]$Shape, col = mycol1, add = TRUE) 
+plot(junco[1:1, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(junco[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+
+```{r}
+#distance between centroids of ranges (in meters)
+distHaversine(c(junco$centroid[[1]][1], junco$centroid[[1]][2]), c(junco$centroid[[2]][1], junco$centroid[[2]][2]))
+```
+
+
+## American Crow
+
+```{r}
+#easier to just make subset
+crow <- filt_birds[filt_birds$sci_name %in% c("Corvus brachyrhynchos"), ]
+
+
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith Dark-Eyed Junco ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -10), ylim = c(25,50))
+
+plot(crow[2:2, ]$Shape, col = mycol1, add = TRUE) 
+plot(crow[1:1, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(crow[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
+```
+
+
+```{r}
+#distance between centroids of ranges (in meters)
+distHaversine(c(crow$centroid[[1]][1], crow$centroid[[1]][2]), c(crow$centroid[[2]][1], crow$centroid[[2]][2]))
+```
