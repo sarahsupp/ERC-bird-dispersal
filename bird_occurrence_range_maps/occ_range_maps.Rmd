@@ -7,41 +7,69 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(rgdal)
 library(sf)
+library(s2)
 ```
+
 
 This is just for the purpose of calculating migration distances for the avian traits table
-
-
 ```{r}
-bird_occ_map <- st_read("BOTW.gdb", layer = "All_Species")
+#commenting these out since we can just use .rds with the info that we need
+#and because github repo doesn't actually have .gdb file on it (too big)
+#bird_occ_map <- st_read("BOTW.gdb", layer = "All_Species")
+
+#layers <- st_layers(dsn = "BOTW.gdb")
 ```
 
-```{r}
-layers <- st_layers(dsn = "BOTW.gdb")
-```
-
 
 ```{r}
-#data_frame_mod <- data_frame[data_frame$col1 %in% c("b","e"),]
-filt_birds <- bird_occ_map[bird_occ_map$sci_name %in% c("Bombycilla cedrorum", "Turdus migratorius", "Hylocichla mustelina", "Setophaga coronata", "Cyanocitta cristata", "Sturnus vulgaris", "Sialia sialis", "Mimus polyglottos", "Dryobates pubescens", "Sturnella magna", "Sitta carolinensis", "Haemorhous purpureus", "Cardinalis cardinalis", "Junco hyemalis", "Corvus brachyrhynchos"), ]
+#commenting this out for the same reason
+
+#filt_birds <- bird_occ_map[bird_occ_map$sci_name %in% c("Bombycilla cedrorum", "Turdus migratorius", "Hylocichla mustelina", "Setophaga coronata", "Cyanocitta cristata", "Sturnus vulgaris", "Sialia sialis", "Mimus polyglottos", "Dryobates pubescens", "Sturnella magna", "Sitta carolinensis", "Haemorhous purpureus", "Cardinalis cardinalis", "Junco hyemalis", "Corvus brachyrhynchos"), ]
 ```
 
 
 
 ```{r}
 #saveRDS(filt_birds, "occurrence_map.rds")
-filt_birds <- readRDS("occurrence_map.rds")
+birds <- readRDS("occurrence_map.rds")
 ```
 
 ```{r}
-x <- head(filt_birds, 1)
+#row vals of 2 and 3 for "seasonal" col represent polygons for breeding season range and non-breeding season range respectively, so we filter for those two vals
+filt_birds <- birds[birds$seasonal %in% c(2, 3), ]
 ```
 
 
+```{r}
+#sf_use_s2(TRUE)
+filt_birds$centroid <- st_centroid(st_make_valid(filt_birds$Shape), of_largest_polygon = FALSE)
+```
+
 
 ```{r}
-plot(x)
+US_CAN_spdf <- readOGR(dsn = "../data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
+```
+
+
+```{r}
+#plotting breeding and non-breeding ranges of cedar waxwing
+#use col2rgb("color") to find right numbers for color you want
+mycol1 <- rgb(173, 216, 230, max = 255, alpha = 170, names = "color")
+mycol2 <- rgb(255, 165, 162, max = 255, alpha = 170, names = "color")
+
+#TO DO: should probably find a shapefile that includes Mexico
+par(mar = c(0,0,2.5,0))
+plot(US_CAN_spdf,
+     main = "Map of US and Canada\nWith Cedar Waxwing ranges",
+     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -30), ylim = c(25,50))
+
+plot(filt_birds[1:1, ]$Shape, col = mycol1, add = TRUE) 
+plot(filt_birds[2:2, ]$Shape, col = mycol2, add = TRUE) 
+
+#plotting the centroids of the range
+plot(filt_birds[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
 ```
 
 
