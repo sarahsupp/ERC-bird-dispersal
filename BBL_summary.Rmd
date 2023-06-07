@@ -16,13 +16,13 @@ In this .rmd, I am using the filtered BBL data to
 
 ```{r}
 #this data has been filtered using lats/lons of ERC shapefile
-BBL <- readRDS("data/BBL_data/BBL_in_range_2022.rds")
+BBL_all <- readRDS("data/BBL_data/BBL_in_range_2022.rds")
 ```
 
 
 ```{r}
 #filtering to just banding events, not encounters (since encounters all overlap with bandings)
-BBL <- BBL[BBL$event_type == 'B',]
+BBL <- BBL_all[BBL_all$event_type == 'B',]
 ```
 
 
@@ -111,11 +111,42 @@ ggplot(BBL_year_count_recent, aes(x = event_year, y = total_count)) +
 
 
 ```{r}
-#grouping by year and species for just more recent years
-#come back and fix issue with geometry column later!
-BBL_unique_bird_recent <- BBL_recent %>% group_by(species_name, band) %>% 
+#grouping by year and species for all years
+#maybe group by original band?
+BBL_unique_1960 <- BBL %>% group_by(species_name, original_band) %>% 
   summarise(total_count=n(), .groups = 'drop') %>%
   as.data.frame()
+
+#filtering for just unique birds that were found more than once 
+unique_mult_1960 <- BBL_unique_1960[BBL_unique_1960$total_count >= 2, ]
+```
+
+
+```{r}
+#grouping by year and species for recent years (2008-2022)
+#maybe group by original band?
+BBL_unique_recent <- BBL_recent %>% group_by(species_name, original_band) %>% 
+  summarise(total_count=n(), .groups = 'drop') %>%
+  as.data.frame()
+
+#filtering for just unique birds that were found more than once 
+unique_mult_recent <- BBL_unique_recent[BBL_unique_recent$total_count >= 2, ]
+
+#getting list of original bands that have 2 or more captures
+capture_mult <- as.list(unique_mult_recent$original_band)
+
+#filtering for just those bands
+BBL_unique_mult_recent <- BBL_recent[BBL_recent$original_band %in% capture_mult, ]
+```
+
+Each bird with more than one capture was captured in the exact same place every time according to the data. The captures are, however, on different dates. This prevents me from doing any calculations about distance traveled, as unique birds only ever seem to get captured at the same location every time, at least according to the original_band column. 
+
+```{r}
+#calculating the earliest and latest month that each species was encountered within the ERC range
+#earliest month is mostly Jan and latest is mostly Dec. 
+#(results could be different for eBird data)
+min_months <- aggregate(BBL_recent$event_month, list(BBL_recent$species_scientific_name), FUN = min)
+max_months <- aggregate(BBL_recent$event_month, list(BBL_recent$species_scientific_name), FUN = max)
 ```
 
 
