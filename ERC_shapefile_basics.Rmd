@@ -18,6 +18,7 @@ library(sp)
 library(s2)
 library(tidyr)
 library(dplyr)
+library(lwgeom)
 ```
 
 
@@ -218,11 +219,10 @@ inside = lengths(st_intersects(BBL_sf, ERC_range_sf)) > 0
 
 
 ```{r}
-#using the inside list to filter the BBL data to just 
+#using the inside list to filter the BBL data to just observations within ERC range
 BBL_in_range = BBL_sf %>%
   filter(BBL_sf$geometry %in% BBL_sf$geometry[inside])
 ```
-
 
 
 ```{r}
@@ -238,16 +238,59 @@ BBL_in_range <- cbind(BBL_in_range, latlon)
 ```{r}
 #export as .rds
 #(it's too big to push to repo as a .csv)
-saveRDS(BBL_in_range, "data/BBL_data/BBL_in_range_2022.rds")
+#saveRDS(BBL_in_range, "data/BBL_data/BBL_in_range_2022.rds")
 ```
 
-^ I will eventually repeat this process with the eBird data
 
 ```{r}
 #also exporting unfiltered data as .rds, so I can push it to github repo 
-saveRDS(BBL, "data/BBL_data/BBL2022.rds")
+#saveRDS(BBL, "data/BBL_data/BBL2022.rds")
+```
+
+## eBird data
+
+```{r}
+#going to repeat lat/lon filtering process with eBird data
+eBird_2023 <- readRDS("df_nvector_2023.rds")
 ```
 
 
+```{r}
+#converting eBird data into an sf object 
+eBird_sf <- st_as_sf(eBird_2023, coords = c("x", "y"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
 
+```
+
+
+```{r}
+#applying st_intersects to eBird data
+inside_eBird = lengths(st_intersects(eBird_sf, ERC_range_sf)) > 0
+```
+
+
+```{r}
+#using the inside list to filter the eBird data to just observations within ERC range
+eBird_in_range = eBird_sf %>%
+  filter(eBird_sf$geometry %in% eBird_sf$geometry[inside_eBird])
+```
+
+
+```{r}
+BBL_in_range = BBL_sf %>%
+  filter(BBL_sf$geometry %in% BBL_sf$geometry[inside])
+```
+
+```{r}
+#making lat/lon back into separate cols (still keeping geometry column in case it ends up being useful)
+#h <- head(BBL_in_range)
+latlon_eBird <- do.call(rbind, st_geometry(eBird_in_range)) %>% 
+    as_tibble() %>% setNames(c("lon","lat"))
+eBird_in_range <- cbind(eBird_in_range, latlon_eBird)
+```
+
+
+```{r}
+#export as .rds
+#saveRDS(eBird_in_range, "data/df_nvectors_in_range_2023.rds")
+```
 
