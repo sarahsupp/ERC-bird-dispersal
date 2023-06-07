@@ -28,14 +28,14 @@ Calling the data can be done by "readRDS("name of the data frame.rds")
 #Step 1:loading the original data (the data is from the migration-path rmd file)
 
 #weighted_mean_locs is the centroid latitude and longitude of each migratory speices. 
-weighted_mean_locs <- readRDS("weighted_mean_locs.rds")
+weighted_mean_locs <- readRDS("weighted_mean_locs_2023.rds")
 weighted_mean_locs
 
 #Step 2: taking single species,Bombycilla cedrorum and saving it as Bombycilla_centroids. (In the future no need to take out the species when running the whole migratory species)
   #need only species, year, day, longitude, and latitude
   #renaming the weighted_lat and weighted_long as centroid_longitude and centroid_latitude
 Bombycilla_centroids <-weighted_mean_locs %>% 
-  filter(species == "Bombycilla_cedrorum") %>%
+  filter(species == "Bombycilla cedrorum") %>%
   dplyr::select(species, year, day, weighted_lon,weighted_lat) %>%
   rename(centroid_longitude = weighted_lon, centroid_latitude = weighted_lat)
 
@@ -71,7 +71,7 @@ min_value_day <- Bombycilla_centroids %>%
 min_value_day
 
 #combining max and min value for Bombycilla_c in daily 
-maxmin_val_day <- merge(max_value, min_value, by = c("species", "year")) #combining max_value_day and mim_value_day data frames by species and year columns
+maxmin_val_day <- merge(max_value_day, min_value_day, by = c("species", "year")) #combining max_value_day and mim_value_day data frames by species and year columns
 maxmin_val_day
 
 #taking only max_lon and max_lat
@@ -90,7 +90,7 @@ maxmin_val_day<-maxmin_val_day %>%
 
 maxmin_val_day 
 
-#saveRDS(maxmin_val_day, file = "maxmin_val_day.RDS") 
+saveRDS(maxmin_val_day, file = "data_2023/maxmin_val_day_2023.RDS") 
 ```
 
 ```{r}
@@ -105,7 +105,7 @@ max_value_year<-Bombycilla_centroids %>%
     )
 max_value_year
 
-#saveRDS(max_value_year, file = "max_value_year.RDS") 
+#saveRDS(max_value_year, file = "data_2023/max_value_year_2023.RDS") 
 
 #calculating the minimum longitude and latitude for each year for Bombycilla_c
 min_value_year <- Bombycilla_centroids %>%
@@ -117,7 +117,7 @@ min_value_year <- Bombycilla_centroids %>%
     )
 min_value_year
 
-#saveRDS(min_value_year, file = "min_value_year.RDS") 
+#saveRDS(min_value_year, file = "data_2023/min_value_year_2023.RDS") 
 
 #combining max and min value for Bombycilla_c in daily 
 maxmin_val_year <- merge(max_value_year, min_value_year, by = c("species", "year"))
@@ -144,7 +144,7 @@ colnames(maxmin_val_year)
 maxmin_val_year <- maxmin_val_year[, c(1,2,5,3,4,6,7,8)]
 maxmin_val_year
 
-#saveRDS(maxmin_val_year, file = "maxmin_val_year.RDS") 
+saveRDS(maxmin_val_year, file = "data_2023/maxmin_val_year_2023.RDS")
 ```
 
 
