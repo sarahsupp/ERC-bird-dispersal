@@ -359,7 +359,7 @@ ggplot(weighted_mean_locs, aes(as.numeric(day), weighted_lat, group=year)) +
   scale_x_continuous(breaks = seq(1, 366, by = 60)) +
   facet_wrap(~species)
 
-ggsave(filename = "figs/15species_weighted_mean_locs_smmooth.png", height = 11, width=8)
+ggsave(filename = "figs/15species_weighted_mean_locs_smmooth_2023.png", height = 11, width=8)
 ```
 
 
