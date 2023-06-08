@@ -43,18 +43,18 @@ You need to bring in:
 Load the eBird effort and location files, from FAL (July 2020)
 ```{r}
 # raw eBirder data, queried by FAL
- load("data/raw_eBird_data_2023/effort-count_2023.Rdata") 
+ load("data_2023/raw_eBird_data_2023/effort-count_2023.Rdata") 
  # (2020) will load as eft.c, FAL named previously
  # (2022) will load as dat, FAL named previously
 
- load("data/raw_eBird_data_2023/locs_2023.Rdata") 
+ load("data_2023/raw_eBird_data_2023/locs_2023.Rdata") 
  # (2020 & 2022) will load as locs, FAL named previously
 ```
 
 *For all 15 species .RData files*
 This code chunk will identify all 15 species files, bring them in one by one, and loop through the merge on polygon ID (POLYFID) with the total eBirder effort, the center lat-long for each hexagonal icosahedron cell, and write to .RDS file for use in the next steps.
 ```{r}
-spfiles = list.files(path=here("data/raw_eBird_data_2023/species/"), pattern=glob2rx("*.RData"))
+spfiles = list.files(path=here("data_2023/raw_eBird_data_2023/species/"), pattern=glob2rx("*.RData"))
 
 for (i in spfiles) {
   # These RData files have one object and it is named "dat2" 
