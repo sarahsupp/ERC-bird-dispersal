@@ -45,17 +45,22 @@ library(rnaturalearthhires)
 
 Each species has it's own merged data file, and will be brought into one species data (spdata) file to work through the results. I'll make an example figure with Yellow-rumped Warbler in 2019
 ```{r}
-files = list.files(path=here(), recursive=T, pattern=glob2rx("dat_effort*.rds"))
+files = list.files(path=here(), recursive=T, pattern=glob2rx("data/dat_effort*.rds"))
 
-#for Figure 2
+#for Figure 2 (yellow-rumped warbler)
 yewa <- readRDS(paste0(here(), "/data/dat_effort_YEWA.rds")) 
 yewa <- yewa %>% filter(YEAR==2019)
+
+#for Figure 2 (yellow-rumped warbler)
+#yewa <- readRDS(paste0(here(), "/data_2023/effort-merged_data_2023/dat_effort_Setophaga coronata.rds")) 
+#yewa <- yewa %>% filter(YEAR==2022)
+
 
 #for Figure 3
 robi <- readRDS(paste0(here(), "/data/dat_effort_ROBI.rds"))
 robi <- robi %>% filter(lon >= -103)
-bchu <- readRDS("/home/sarah/Documents/GitHub/hb-mig-env/data/dat_effort_bchu.rds")
-bchu <- bchu %>% filter(lon <= -103)
+#bchu <- readRDS("/home/sarah/Documents/GitHub/hb-mig-env/data/dat_effort_bchu.rds")
+#bchu <- bchu %>% filter(lon <= -103)
 
 #load annas hb
 load(paste0(here(), "/data/FAL-data-update/ANHU-count-effort.RData"))
@@ -83,10 +88,9 @@ us  <- map_data("usa")
 ggplot() + 
   geom_polygon(data=coastlines, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
   geom_point(data=yewa, aes(lon, lat), col="darkorchid4", alpha=.2, size=.1) + 
- # xlim(-102,-52) + 
   theme_bw() + 
-  theme_void()
-#  theme(axis.title.x=element_blank(),
+  theme_void() +
+  theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
         axis.title.y=element_blank(),
@@ -201,16 +205,16 @@ spp_counts <- yewa %>%
             sum_count=sum(count.x))
 
 #Get the grid cell boundaries for cells which had bird observations
-grid <- dgcellstogrid(dgg, spp_counts$cell, frame=TRUE, wrapcells=TRUE)
-
+grid <- dgcellstogrid(dgg, spp_counts$cell)#, frame=TRUE, wrapcells=TRUE)
 #Update the grid cells' properties to include the number of observations in each cell
-grid <- merge(grid, spp_counts, by.x="cell", by.y="cell")
+grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
 
 ggplot() + 
-  geom_polygon(data=coastlines, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
+  geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
   #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), size=0.001)    +
-  geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color=NA) +
+  geom_sf(data = grid, aes(fill = mean_weighted_count), color = NA) +
+  #geom_polygon(data=grid, aes(x=long, y=lat, group=seqnum, fill=mean_weighted_count), size=0.001)    +
+  #geom_path   (data=grid, aes(x=long, y=lat, group=seqnum), alpha=0.4, color=NA) +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
   scale_fill_gradient(low="gray90", high="darkorchid4") + 
   #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
@@ -218,6 +222,12 @@ ggplot() +
   facet_wrap(~species)
 
 ```
+
+```{r}
+plot(as.data.frame(grid$geometry[[1]][1]))
+```
+
+
 Calculates weights separately by east vs west flyway
 
 ```{r}
