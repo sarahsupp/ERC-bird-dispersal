@@ -40,7 +40,7 @@ link: https://www.sciencebase.gov/catalog/item/51bf5940e4b0eb321c798ec9
 ```{r}
 #spdf is short for spatial polygon dataframe
 US_CAN_spdf <- readOGR(dsn = "data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
-my_spdf <- readOGR(dsn = "data/ERC_shapefile_2023", layer = "junivirg")
+my_spdf <- readOGR(dsn = "data_2023/ERC_shapefile_2023", layer = "junivirg")
 ```
 ^I'm not sure why I am getting these warnings. I'm using both the sf and terra packages. 
 
@@ -164,7 +164,7 @@ Here I use the sf::st_intersects function to filter the Bird Banding Lab (BBL) d
 
 ```{r}
 #note that github repo data folder only has .rds since .csv was too big
-BBL <- readRDS("data/BBL_data/BBL2022.rds")
+BBL <- readRDS("data_2023/BBL_data/BBL2022.rds")
 #changing names of lat/lon columns for convenience
 colnames(BBL)[which(names(BBL) == "lat_dd")] <- "lat"
 colnames(BBL)[which(names(BBL) == "lon_dd")] <- "lon"
@@ -179,7 +179,7 @@ BBL <- BBL[!is.na(BBL$lat),]
 
 ```{r}
 #making both shapefile and BBL data into sf objects so I can comepare the lats/lons
-ERC_range_sf <- st_read("data/ERC_shapefile_2023/junivirg.shp", quiet = TRUE) %>%
+ERC_range_sf <- st_read("data_2023/ERC_shapefile_2023/junivirg.shp", quiet = TRUE) %>%
   st_transform(crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
 BBL_sf <- st_as_sf(BBL, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
 ```
@@ -238,20 +238,20 @@ BBL_in_range <- cbind(BBL_in_range, latlon)
 ```{r}
 #export as .rds
 #(it's too big to push to repo as a .csv)
-#saveRDS(BBL_in_range, "data/BBL_data/BBL_in_range_2022.rds")
+#saveRDS(BBL_in_range, "data_2023/BBL_data/BBL_in_range_2022.rds")
 ```
 
 
 ```{r}
 #also exporting unfiltered data as .rds, so I can push it to github repo 
-#saveRDS(BBL, "data/BBL_data/BBL2022.rds")
+#saveRDS(BBL, "data_2023/BBL_data/BBL2022.rds")
 ```
 
 ## eBird data
 
 ```{r}
 #going to repeat lat/lon filtering process with eBird data
-eBird_2023 <- readRDS("df_nvector_2023.rds")
+eBird_2023 <- readRDS("data_2023/df_nvector_2023.rds")
 ```
 
 
@@ -291,6 +291,6 @@ eBird_in_range <- cbind(eBird_in_range, latlon_eBird)
 
 ```{r}
 #export as .rds
-#saveRDS(eBird_in_range, "data/df_nvectors_in_range_2023.rds")
+#saveRDS(eBird_in_range, "data_2023/df_nvectors_in_range_2023.rds")
 ```
 
