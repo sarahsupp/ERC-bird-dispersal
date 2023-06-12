@@ -10,19 +10,30 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(sfheaders)
+library(rnaturalearth)
+#devtools::install_github("ropensci/rnaturalearthhires")
+library(rnaturalearthhires)
 ```
 
-In this .rmd, I am using the filtered BBL data to 
+In this .rmd, I am using the filtered BBL data to learn about the movement of individual banded birds for the 15 species of interest. I'm also making some basic visuals describing the data.
 
 ```{r}
 #this data has been filtered using lats/lons of ERC shapefile
-BBL_all <- readRDS("data/BBL_data/BBL_in_range_2022.rds")
+#BBL_all <- readRDS("data_2023/BBL_data/BBL_in_range_2022.rds")
+
+#this data has not been filtered
+BBL_all <- readRDS("data_2023/BBL_data/BBL2022.rds")
+#converting dataframe from sf object to normal df
+#BBL_all <- sf_to_df(BBL_all, fill = TRUE, unlist = NULL)
+#BBL_all = subset(BBL_all, select = -c(sfg_id,x,y) )
+BBL_all$species_name <-tolower(BBL_all$species_name)
 ```
 
 
 ```{r}
 #filtering to just banding events, not encounters (since encounters all overlap with bandings)
-BBL <- BBL_all[BBL_all$event_type == 'B',]
+#BBL <- BBL_all[BBL_all$event_type == 'B',]
 ```
 
 
@@ -50,7 +61,8 @@ ggplot(bird_df, aes(x=species_name, y=count)) +
 
 ```{r}
 #should probably also get rid of 2022 since there is not data for full year
-BBL_recent <- BBL[BBL$event_year >= 2008,]
+BBL_recent <- BBL_all[BBL_all$event_year >= 2008,]
+#BBL_recent <- BBL[BBL$event_year >= 2008,]
 
 
 #getting counts for each bird
@@ -89,7 +101,7 @@ BBL_year_count <- BBL %>% group_by(species_name, event_year) %>%
 ggplot(BBL_year_count, aes(x = event_year, y = total_count)) + 
   geom_line(aes(color = species_name)) + 
   #scale_color_manual(values = c()) +   #might change line colors later  
-  ggtitle("Change in number of species records each year (1960-2022")
+  ggtitle("Change in number of species records each year (1960-2022)")
 ```
 
 
@@ -111,8 +123,7 @@ ggplot(BBL_year_count_recent, aes(x = event_year, y = total_count)) +
 
 
 ```{r}
-#grouping by year and species for all years
-#maybe group by original band?
+#grouping by original band and species for all years
 BBL_unique_1960 <- BBL %>% group_by(species_name, original_band) %>% 
   summarise(total_count=n(), .groups = 'drop') %>%
   as.data.frame()
@@ -123,8 +134,7 @@ unique_mult_1960 <- BBL_unique_1960[BBL_unique_1960$total_count >= 2, ]
 
 
 ```{r}
-#grouping by year and species for recent years (2008-2022)
-#maybe group by original band?
+#grouping by original band and species for recent years (2008-2022)
 BBL_unique_recent <- BBL_recent %>% group_by(species_name, original_band) %>% 
   summarise(total_count=n(), .groups = 'drop') %>%
   as.data.frame()
@@ -139,7 +149,67 @@ capture_mult <- as.list(unique_mult_recent$original_band)
 BBL_unique_mult_recent <- BBL_recent[BBL_recent$original_band %in% capture_mult, ]
 ```
 
+
+```{r}
+for (b in birds){
+  df <- BBL_unique_mult_recent[BBL_unique_mult_recent$species_name == b, ]
+  #df$event_month<-as.factor(df$event_month)
+  print(ggplot(df, aes(x = event_month)) +
+    xlim(1,12) +
+    ggtitle(b, "number of recaptures each month (2008-2022)") +
+    xlab("encounter month") +
+    geom_histogram(bins = 12) +
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))) 
+}
+```
+
+
+
 Each bird with more than one capture was captured in the exact same place every time according to the data. The captures are, however, on different dates. This prevents me from doing any calculations about distance traveled, as unique birds only ever seem to get captured at the same location every time, at least according to the original_band column. 
+
+
+```{r}
+#grouping previous df by unique lons and lats, as well as original id
+#trying to see if any of these birds are being recaptured at different locations
+unique_loc <- BBL_unique_mult_recent %>% group_by(lon, lat, original_band) %>% 
+  summarise(total_count=n(), .groups = 'drop') %>%
+  as.data.frame()
+
+locs <- unique_loc[unique_loc$total_count == 1, ]
+list_locs <- as.list(locs$original_band)
+
+recap_diff_locs <- BBL_recent[BBL_recent$original_band %in% list_locs, ]
+```
+
+^ this shows that there are, in fact, some recaptures that happen at different locations than the original, but as far as I can tell, all of these recaptures are still really close to each other
+
+
+```{r}
+#making map of range that I am interested in
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
+#state_prov <- st_crop(state_prov, xmin = -115, xmax = -50, ymin = 5, ymax = 50)
+state_prov <- st_crop(state_prov, xmin = -160, xmax = -50, ymin = 5, ymax = 75)
+
+```
+
+
+```{r}
+for (b in birds){
+  df <- recap_diff_locs[recap_diff_locs$species_name == b, ]
+  df <- df[df$lat != 0.0, ] 
+  print(ggplot() + 
+    geom_sf(data=state_prov, colour="grey50", fill="white") + 
+    geom_path(data = df, aes(x = lon, y = lat, color = original_band), 
+              size = 1, lineend = "round") +
+    labs(x = " ", y = " ", title = b) +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(hjust = 0.5)))
+}
+
+```
+
+
+
 
 ```{r}
 #calculating the earliest and latest month that each species was encountered within the ERC range
