@@ -9,11 +9,17 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ggplot2)
 library(sf)
 library(rgdal)
+library(terra)
+library(raster)
 library(broom)
 library(dggridR)
 library(rnaturalearth)
+library(dplyr)
+library(radiant.data)
 #devtools::install_github("ropensci/rnaturalearthhires")
 library(rnaturalearthhires)
+library(viridisLite)
+library(viridis) 
 ```
 
 I need to write some better comments on here. Will do later. Also, running into issues with mapping 
@@ -30,13 +36,21 @@ waxwing <- waxwing %>% filter(year == 2022)
 
 
 ```{r}
-state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"))
+#making the returnclass sf, so I can zoom in on it 
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
+state_prov <- st_crop(state_prov, xmin = -160, xmax = -50, ymin = 5, ymax = 75)
+```
+
+
+```{r}
+crs(state_prov)
+extent(state_prov)
 ```
 
 
 ```{r}
 ggplot() + 
-  geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
+  geom_sf(data=state_prov, colour="grey50", fill="white") + 
   geom_point(data=waxwing, aes(x, y), col="darkorchid4", alpha=.2, size=.1) + 
   theme_bw() + 
   theme_void() +
@@ -77,12 +91,13 @@ weight_waxwing <- weight_waxwing %>%
   arrange(species,DATE) %>%
   ungroup() %>%
   mutate(ID = row_number()) %>%
-  select(-DAYm1, -origin)
+  dplyr::select(-DAYm1, -origin)
 
 ## Calculates the count of observations within each cell, 
 #weighted by total eBirder effort on that day in a given cell. 
 #Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the #target species in a cell divided by the total number of eBirder records in a cell.
 
+#changed resolution to 5 because 6 looked too small on map
 dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
 waxwing$cell <- dgGEO_to_SEQNUM(dgg, waxwing$x, waxwing$y)$seqnum
 waxwing$cell_lat <- dgSEQNUM_to_GEO(dgg, waxwing$cell)$lat_deg 
@@ -104,13 +119,15 @@ grid <- dgcellstogrid(dgg, spp_counts$cell)#, frame=TRUE, wrapcells=TRUE)
 grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
 
 ggplot() + 
-  geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") +
+  geom_sf(data=state_prov, colour="grey50", fill="white") + 
+  #geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") +
   #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  geom_sf(data = grid, aes(fill = mean_weighted_count), color = NA) +
+  geom_sf(data = grid, aes(fill = sum_weighted_count), color = NA) +
   #geom_polygon(data=grid, aes(x=long, y=lat, group=seqnum, fill=mean_weighted_count), size=0.001)    +
   #geom_path   (data=grid, aes(x=long, y=lat, group=seqnum), alpha=0.4, color=NA) +
 #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient(low="gray90", high="darkorchid4") + 
+  scale_fill_viridis(option = "D") +
+  #scale_fill_gradient(low="gray90", high="darkorchid4") + 
   #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
   theme_void() + 
   facet_wrap(~species)
