@@ -11,6 +11,9 @@ library(rgdal)
 library(sf)
 library(s2)
 library(geosphere)
+library(rnaturalearth)
+#devtools::install_github("ropensci/rnaturalearthhires")
+library(rnaturalearthhires)
 ```
 
 
@@ -52,6 +55,13 @@ filt_birds$centroid <- st_centroid(st_make_valid(filt_birds$Shape), of_largest_p
 ```{r}
 US_CAN_spdf <- readOGR(dsn = "../data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
 ```
+
+
+```{r}
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
+state_prov <- st_crop(state_prov, xmin = -170, xmax = -50, ymin = 5, ymax = 70)
+```
+
 ## Cedar Waxwing
 
 ```{r}
@@ -62,10 +72,10 @@ mycol2 <- rgb(255, 165, 162, max = 255, alpha = 170, names = "color")
 
 #TO DO: should probably find a shapefile that includes Mexico
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith Cedar Waxwing ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -30), ylim = c(25,50))
 
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith Cedar Waxwing Ranges",
+     col = "white", lwd = 0.25, xlim = c(-130,-50))
 plot(filt_birds[1:1, ]$Shape, col = mycol1, add = TRUE) 
 plot(filt_birds[2:2, ]$Shape, col = mycol2, add = TRUE) 
 
@@ -84,9 +94,9 @@ distHaversine(c(filt_birds$centroid[[1]][1], filt_birds$centroid[[1]][2]), c(fil
 
 ```{r}
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith Eastern Bluebird ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -30), ylim = c(25,50))
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith Eastern Bluebird Ranges",
+     col = "white", lwd = 0.25)
 
 plot(filt_birds[3:3, ]$Shape, col = mycol1, add = TRUE) 
 plot(filt_birds[4:4, ]$Shape, col = mycol2, add = TRUE) 
@@ -105,9 +115,9 @@ distHaversine(c(filt_birds$centroid[[3]][1], filt_birds$centroid[[3]][2]), c(fil
 
 ```{r}
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf, 
-     main = "Map of US and Canada\nWith American Robin ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -30), ylim = c(25,50))
+plot(state_prov$geometry, 
+     main = "Map of US and Canada\nWith American Robin Ranges",
+     col = "white", lwd = 0.25)
 
 plot(filt_birds[6:6, ]$Shape, col = mycol1, add = TRUE) 
 plot(filt_birds[5:5, ]$Shape, col = mycol2, add = TRUE) 
@@ -131,9 +141,9 @@ wood_thrush <- filt_birds[filt_birds$sci_name %in% c("Hylocichla mustelina"), ]
 
 
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith Wood Thrush ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, 0), ylim = c(25,50))
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith Wood Thrush Ranges",
+     col = "white", lwd = 0.25)
 
 plot(wood_thrush[2:2, ]$Shape, col = mycol1, add = TRUE) 
 plot(wood_thrush[1:1, ]$Shape, col = mycol2, add = TRUE) 
@@ -157,9 +167,9 @@ YR_warbler <- filt_birds[filt_birds$sci_name %in% c("Setophaga coronata"), ]
 
 
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith Yellow-Rumped Warbler ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, 0), ylim = c(25,50))
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith Yellow-Rumped Warbler Ranges",
+     col = "white", lwd = 0.25)
 
 plot(YR_warbler[1:1, ]$Shape, col = mycol1, add = TRUE) 
 plot(YR_warbler[2:2, ]$Shape, col = mycol2, add = TRUE) 
@@ -183,9 +193,9 @@ blue_jay <- filt_birds[filt_birds$sci_name %in% c("Cyanocitta cristata"), ]
 
 
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith Blue Jay ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -45), ylim = c(25,50))
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith Blue Jay Ranges",
+     col = "white", lwd = 0.25, border = 1)
 
 plot(blue_jay[2:2, ]$Shape, col = mycol1, add = TRUE) 
 plot(blue_jay[1:1, ]$Shape, col = mycol2, add = TRUE) 
@@ -209,9 +219,9 @@ euro_star <- filt_birds[filt_birds$sci_name %in% c("Sturnus vulgaris"), ]
 
 
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith European Starlings ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, 0), ylim = c(25,50))
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith European Starlings Ranges",
+     col = "white", lwd = 0.25)
 
 plot(euro_star[4:4, ]$Shape, col = mycol1, add = TRUE) 
 plot(euro_star[3:3, ]$Shape, col = mycol2, add = TRUE) 
@@ -236,9 +246,9 @@ meadow <- filt_birds[filt_birds$sci_name %in% c("Sturnella magna"), ]
 
 
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith Eastern Meadowlark ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, 0), ylim = c(25,50))
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith Eastern Meadowlark Ranges",
+     col = "white", lwd = 0.25, border = 1)
 
 plot(meadow[1:1, ]$Shape, col = mycol1, add = TRUE) 
 plot(meadow[2:2, ]$Shape, col = mycol2, add = TRUE) 
@@ -255,9 +265,9 @@ finch <- filt_birds[filt_birds$sci_name %in% c("Haemorhous purpureus"), ]
 
 
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith Blue Jay ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -20), ylim = c(25,50))
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith Blue Jay Ranges",
+     col = "white", lwd = 0.25)
 
 plot(finch[2:2, ]$Shape, col = mycol1, add = TRUE) 
 plot(finch[1:1, ]$Shape, col = mycol2, add = TRUE) 
@@ -281,9 +291,9 @@ junco <- filt_birds[filt_birds$sci_name %in% c("Junco hyemalis"), ]
 
 
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith Dark-Eyed Junco ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -10), ylim = c(25,50))
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith Dark-Eyed Junco Ranges",
+     col = "white", lwd = 0.25)
 
 plot(junco[2:2, ]$Shape, col = mycol1, add = TRUE) 
 plot(junco[1:1, ]$Shape, col = mycol2, add = TRUE) 
@@ -307,9 +317,9 @@ crow <- filt_birds[filt_birds$sci_name %in% c("Corvus brachyrhynchos"), ]
 
 
 par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith Dark-Eyed Junco ranges",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -10), ylim = c(25,50))
+plot(state_prov$geometry,
+     main = "Map of US and Canada\nWith American Crow Ranges",
+     col = "white", lwd = 0.25)
 
 plot(crow[2:2, ]$Shape, col = mycol1, add = TRUE) 
 plot(crow[1:1, ]$Shape, col = mycol2, add = TRUE) 
@@ -323,3 +333,6 @@ plot(crow[1:2, ]$centroid, col = "darkgreen", pch = 16, add = TRUE)
 #distance between centroids of ranges (in meters)
 distHaversine(c(crow$centroid[[1]][1], crow$centroid[[1]][2]), c(crow$centroid[[2]][1], crow$centroid[[2]][2]))
 ```
+
+
+
