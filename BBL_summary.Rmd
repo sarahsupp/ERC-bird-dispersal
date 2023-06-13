@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(sf)
 library(sfheaders)
 library(rnaturalearth)
 #devtools::install_github("ropensci/rnaturalearthhires")
@@ -24,6 +25,7 @@ In this .rmd, I am using the filtered BBL data to learn about the movement of in
 
 #this data has not been filtered
 BBL_all <- readRDS("data_2023/BBL_data/BBL2022.rds")
+
 #converting dataframe from sf object to normal df
 #BBL_all <- sf_to_df(BBL_all, fill = TRUE, unlist = NULL)
 #BBL_all = subset(BBL_all, select = -c(sfg_id,x,y) )
@@ -33,7 +35,8 @@ BBL_all$species_name <-tolower(BBL_all$species_name)
 
 ```{r}
 #filtering to just banding events, not encounters (since encounters all overlap with bandings)
-#BBL <- BBL_all[BBL_all$event_type == 'B',]
+#BBL_all <- BBL_all[BBL_all$event_type == 'B',]
+just_banding <- BBL_all[BBL_all$event_type == 'B',]
 ```
 
 
@@ -41,10 +44,13 @@ BBL_all$species_name <-tolower(BBL_all$species_name)
 ```{r}
 #getting counts for each bird
 #probably could have just used a groupby, but this was the first way I thought to do it
-birds <- unique(BBL$species_name)
+birds <- unique(just_banding$species_name)
+#also making list of scientific names
+sci_birds <- unique(just_banding$species_scientific_name)
+
 bird_counts <- list()
 for (b in birds){
-  count <- length(which(BBL$species_name == b))
+  count <- length(which(BBL_all$species_name == b))
   bird_counts <- append(bird_counts, count)
 }
 
@@ -91,7 +97,7 @@ ggplot(bird_df_recent, aes(x=species_name, y=count)) +
 #used a groupby this time
 #grouping by year and species
 #come back and fix issue with geometry column later!
-BBL_year_count <- BBL %>% group_by(species_name, event_year) %>% 
+BBL_year_count <- BBL_all %>% group_by(species_name, event_year) %>% 
   summarise(total_count=n(),.groups = 'drop') %>%
   as.data.frame()
 ```
@@ -124,7 +130,7 @@ ggplot(BBL_year_count_recent, aes(x = event_year, y = total_count)) +
 
 ```{r}
 #grouping by original band and species for all years
-BBL_unique_1960 <- BBL %>% group_by(species_name, original_band) %>% 
+BBL_unique_1960 <- BBL_all %>% group_by(species_name, original_band) %>% 
   summarise(total_count=n(), .groups = 'drop') %>%
   as.data.frame()
 
@@ -175,6 +181,7 @@ unique_loc <- BBL_unique_mult_recent %>% group_by(lon, lat, original_band) %>%
   summarise(total_count=n(), .groups = 'drop') %>%
   as.data.frame()
 
+#this ensures that we are excluding recaptures that happened at the exact same location as the original capture
 locs <- unique_loc[unique_loc$total_count == 1, ]
 list_locs <- as.list(locs$original_band)
 
@@ -188,22 +195,28 @@ recap_diff_locs <- BBL_recent[BBL_recent$original_band %in% list_locs, ]
 #making map of range that I am interested in
 state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
 #state_prov <- st_crop(state_prov, xmin = -115, xmax = -50, ymin = 5, ymax = 50)
-state_prov <- st_crop(state_prov, xmin = -160, xmax = -50, ymin = 5, ymax = 75)
+state_prov <- st_crop(state_prov, xmin = -140, xmax = -50, ymin = 5, ymax = 60)
 
 ```
 
 
 ```{r}
-for (b in birds){
-  df <- recap_diff_locs[recap_diff_locs$species_name == b, ]
+i = 1 
+for (b in sci_birds){
+  #these next two lines are so I can also include common name on map
+  name = birds[i]
+  i = i + 1
+
+  df <- recap_diff_locs[recap_diff_locs$species_scientific_name == b, ]
   df <- df[df$lat != 0.0, ] 
   print(ggplot() + 
     geom_sf(data=state_prov, colour="grey50", fill="white") + 
     geom_path(data = df, aes(x = lon, y = lat, color = original_band), 
               size = 1, lineend = "round") +
-    labs(x = " ", y = " ", title = b) +
+    labs(x = " ", y = " ", title = b, subtitle = name) +
     theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(hjust = 0.5)))
+    theme(legend.position = "none", plot.title = element_text(hjust = 0.5), 
+          plot.subtitle = element_text(hjust = 0.5)))
 }
 
 ```
