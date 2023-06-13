@@ -28,7 +28,7 @@ Calling the data can be done by "readRDS("name of the data frame.rds")
 #Step 1:loading the original data (the data is from the migration-path rmd file)
 
 #weighted_mean_locs is the centroid latitude and longitude of each migratory speices. 
-weighted_mean_locs <- readRDS("weighted_mean_locs_2023.rds")
+weighted_mean_locs <- readRDS("data_2023/weighted_mean_locs_2023.rds")
 weighted_mean_locs
 
 #Step 2: taking single species,Bombycilla cedrorum and saving it as Bombycilla_centroids. (In the future no need to take out the species when running the whole migratory species)
@@ -164,9 +164,9 @@ years <- sort(unique(Bombycilla_centroids$year)) #sorting the year
 
 dataresult<- NULL #creating an empty data set
 
-for(jjj in dataresult){
+for(i in range(1:10)){
 
-  years <- 2009:2021 #need to take year from 2009 to 2021 so that it will include 2008 and 2022 as calculating the buffer year
+  years <- 2009:2022 #need to take year from 2009 to 2021 so that it will include 2008 and 2022 as calculating the buffer year
   season <- NULL #empty season
   latitude <- NULL #empty latitude
   for(jjj in 1:length(years)) {
@@ -210,7 +210,7 @@ for(jjj in dataresult){
         feature <- features(x.data$day2, prediction_lat, smoother="glkerns",
                         control = list(npts=365))
         names(feature)
-        first_derivative <- attributes(fts)$fits$d1
+        first_derivative <- attributes(feature)$fits$d1
         spring_max <- c(spring_max, which.max(first_derivative[20:140])+19) #spring max date (day of year)
         autumn_min <- c(autumn_min, which.min(first_derivative[220:320])+219) #autumn min date (day of year)
         
@@ -250,7 +250,7 @@ for(jjj in dataresult){
 #### recommend using 0.1 and 0.9, could be adjusted but found to work well on lots of species
 #### removes some of the extreme outliers
   dates <- data.frame(species=Bombycilla_centroids[,c("species")],
-                  year=y[jjj],
+                  year=years[jjj],
                   s1=quantile(dates[is.finite(dates$s1),"s1"], 0.1, na.rm=TRUE), 
                   s2=spring_max,
                   s3=quantile(dates[is.finite(dates$s3),"s3"], 0.9, na.rm=TRUE),
@@ -260,8 +260,8 @@ for(jjj in dataresult){
     
     ##
   season <- rbind(season, dates) #season out, stacks everything together into one datatable, results from dates quantile
-  latitude <- rbind(latitude, data.frame(species=Bombycilla_cenjtroids[,c("species")],
-                                     year=y[jjj],
+  latitude <- rbind(latitude, data.frame(species=Bombycilla_centroids[,c("species")],
+                                     year=years[jjj],
                                      day=1:365,
                                      lat=prediction_lat))
   }
