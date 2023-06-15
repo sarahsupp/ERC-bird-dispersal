@@ -98,7 +98,7 @@ weight_waxwing <- weight_waxwing %>%
 #Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the #target species in a cell divided by the total number of eBirder records in a cell.
 
 #changed resolution to 5 because 6 looked too small on map
-dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
+dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 5)
 waxwing$cell <- dgGEO_to_SEQNUM(dgg, waxwing$x, waxwing$y)$seqnum
 waxwing$cell_lat <- dgSEQNUM_to_GEO(dgg, waxwing$cell)$lat_deg 
 waxwing$cell_lon <- dgSEQNUM_to_GEO(dgg, waxwing$cell)$lon_deg 
