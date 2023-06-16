@@ -1,0 +1,61 @@
+---
+title: "plot migration paths"
+author: "Maximilian Wisnefski"
+date: '2023-06-16'
+output: html_document
+---
+
+In this R Markdown, I am plotting the results of Migration-path-window.Rmd for every species
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(viridisLite)
+library(viridis)
+```
+
+
+```{r}
+dataresult <- readRDS("data_2023/migration_timing_2023.RDS")
+latitude <- readRDS("data_2023/daily_mean_lats_2023.RDS")
+```
+
+
+```{r}
+
+species <- unique(latitude$species)
+for (s in species){
+  df <- latitude[latitude$species == s, ]
+  move_dates <- dataresult[dataresult$species == s, ]
+  
+  print(ggplot(df, aes(x = day, y = lat, color = factor(year))) +
+    geom_smooth() +
+    ggtitle(s) +
+    labs(x = "day of year", y = "weighted mean latitude") +
+    scale_colour_viridis(option = "A", discrete = TRUE) +
+    #scale_color_continuous(discrete = TRUE) + 
+    geom_vline(xintercept = mean(move_dates$spring_beginning),lwd=1,colour="black", linetype = 3) +
+    geom_vline(xintercept = mean(move_dates$autumn_beginning),lwd=1,colour="black", linetype = 3) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    ylim(10,55))
+    
+}
+```
+
+
+```{r}
+for (s in species){
+  df <- latitude[latitude$species == s, ]
+  
+  print(ggplot(df, aes(x = day, y = lat, color = factor(year))) +
+    geom_smooth() +
+    ggtitle(s) +
+    labs(x = "day of year", y = "weighted mean latitude") +
+    scale_colour_viridis(option = "A", discrete=TRUE) +
+    #scale_color_continuous(discrete = TRUE) + 
+    #geom_vline(xintercept=0.5,lwd=1,colour="blue") +
+    theme(plot.title = element_text(hjust = 0.5)))
+    
+}
+```

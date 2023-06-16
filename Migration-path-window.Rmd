@@ -259,7 +259,6 @@ for(s in species){
 #### removes some of the extreme outliers
   dates <- data.frame(species= s, #Bombycilla_centroids[,c("species")],
                   year=years[jjj],
-                  # 1 is beginning 2 is middle, 3 is end, FIX LATER
                   spring_beginning=quantile(dates[is.finite(dates$spring_beginning),"spring_beginning"], 0.1, na.rm=TRUE), 
                   spring_middle=spring_max,
                   spring_end=quantile(dates[is.finite(dates$spring_end),"spring_end"], 0.9, na.rm=TRUE),
@@ -292,7 +291,11 @@ colnames(latitude)[4] <- "lat"
 
 
 ```{r}
-saveRDS(dataresult, file = "data_2023/migration_timing_2023.RDS") 
-saveRDS(latitude, file = "data_2023/daily_mean_lats_2023.RDS") 
+#saveRDS(dataresult, file = "data_2023/migration_timing_2023.RDS") 
+#saveRDS(latitude, file = "data_2023/daily_mean_lats_2023.RDS") 
+
+dataresult <- readRDS("data_2023/migration_timing_2023.RDS")
+latitude <- readRDS("data_2023/daily_mean_lats_2023.RDS")
 ```
+
 
