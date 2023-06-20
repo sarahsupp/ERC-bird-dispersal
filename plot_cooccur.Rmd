@@ -1,0 +1,99 @@
+---
+title: "plot cooccurrences"
+output: html_document
+date: "2023-06-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#library(cooccur)
+#not sure if we actually want this package
+```
+
+
+```{r}
+all_birds <- readRDS("data_2023/df_nvector_2023.rds")
+all_birds <- all_birds %>% filter(year == 2022)
+```
+
+
+```{r}
+n = nrow(all_birds)
+
+#weights all together
+weight <- all_birds %>%
+    mutate(day = as.numeric(day),
+         year = as.numeric(year)) %>%
+group_by(species, year, day) %>%
+  summarise(
+            numcells = n(), 
+            numobs = sum(count),
+            wtmean_lon = weighted.mean(x, count/effort), 
+            wtmean_lat = weighted.mean(y, count/effort), 
+            wtsd_lon = weighted.sd(x, count/effort),
+            wtsd_lat = weighted.sd(y, count/effort) 
+            ) %>%
+  ungroup()
+
+weight <- weight %>%
+  mutate(DAYm1 = day-1,
+         origin = paste0(year, "-01-01"),
+         DATE = as.Date(DAYm1, origin=origin), 
+         MONTH = month(DATE)) %>%
+  mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
+  arrange(species,DATE) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
+  dplyr::select(-DAYm1, -origin)
+
+## Calculates the count of observations within each cell, 
+#weighted by total eBirder effort on that day in a given cell. 
+#Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the #target species in a cell divided by the total number of eBirder records in a cell.
+
+dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 5)
+all_birds$cell <- dgGEO_to_SEQNUM(dgg, all_birds$x, all_birds$y)$seqnum
+all_birds$cell_lat <- dgSEQNUM_to_GEO(dgg, all_birds$cell)$lat_deg 
+all_birds$cell_lon <- dgSEQNUM_to_GEO(dgg, all_birds$cell)$lon_deg 
+
+#already has frequency column which is count/effort
+all_birds <- all_birds %>%
+  mutate(count_weighted = count/effort)
+
+spp_counts <- all_birds %>%
+  group_by(species, cell) %>% 
+  summarise(sum_weighted_count=sum(count_weighted),
+            mean_weighted_count=mean(count_weighted),
+            sum_count=sum(count))
+
+#Get the grid cell boundaries for cells which had bird observations
+grid <- dgcellstogrid(dgg, spp_counts$cell)#, frame=TRUE, wrapcells=TRUE)
+#Update the grid cells' properties to include the number of observations in each cell
+grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
+```
+
+
+should make nested for loop for each species to get percentage of cells where each pair cooccurs
+```{r}
+#NOT FINISHED YET
+species_list <- unique(weight$species)
+poly_list <- unique(grid$seqnum)
+tot_cells <- length(poly_list)
+
+for (s1 in species_list){
+  spec_df1 <- grid[grid$species == s1, ]
+  for (s2 in species_list){
+    num_cells = 0
+    spec_df2 <- grid[grid$species == s2, ]
+    
+    for (p in poly_list){
+      if (p %in% spec_df1$seqnum){
+        if (p %in% spec_df2$seqnum){
+          num_cells = num_cells + 1
+        }
+      }
+    }
+  }
+}
+```
+
+
