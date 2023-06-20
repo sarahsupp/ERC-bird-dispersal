@@ -6,8 +6,12 @@ date: "2023-06-20"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-#library(cooccur)
-#not sure if we actually want this package
+library(cooccur)
+library(ggplot2)
+library(tidyverse)
+library(dggridR)
+library(dplyr)
+library(radiant.data)
 ```
 
 
@@ -72,28 +76,83 @@ grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
 ```
 
 
-should make nested for loop for each species to get percentage of cells where each pair cooccurs
 ```{r}
-#NOT FINISHED YET
+#wrangling data to make it usable with cooccur package
 species_list <- unique(weight$species)
-poly_list <- unique(grid$seqnum)
-tot_cells <- length(poly_list)
+poly_list <- unique(as.character(grid$seqnum))
 
-for (s1 in species_list){
-  spec_df1 <- grid[grid$species == s1, ]
-  for (s2 in species_list){
-    num_cells = 0
-    spec_df2 <- grid[grid$species == s2, ]
-    
-    for (p in poly_list){
-      if (p %in% spec_df1$seqnum){
-        if (p %in% spec_df2$seqnum){
-          num_cells = num_cells + 1
-        }
-      }
+occur_df <- data.frame(species = species_list)
+
+for (p in poly_list){
+  occur_df <- occur_df %>%
+  add_column(p = NA)
+}
+
+occur_df <- occur_df %>% column_to_rownames(., var = "species")
+colnames(occur_df) <- poly_list
+
+
+for (i in 1:length(species_list)){
+  spec_df <- grid[grid$species == species_list[i], ]
+  for (p in 1:length(poly_list)){
+    #if species was found in a given polygon, give it a value of 1
+    if (poly_list[p] %in% spec_df$seqnum){
+      occur_df[[p]][[i]] <- 1
+    }
+    #otherwise, give it a value of 0
+    else{
+      occur_df[[p]][[i]] <- 0
     }
   }
 }
+
+#starting doing this but ended up doing it the above way instead
+#figured I would keep this for now, might be useful later
+#occur_df$"443"[[3]] <- 10
+
+#for (s1 in species_list){
+#  spec_df1 <- grid[grid$species == s1, ]
+#  for (s2 in species_list){
+#    num_cells = 0
+#    spec_df2 <- grid[grid$species == s2, ]
+    
+#    for (p in poly_list){
+#      if (p %in% spec_df1$seqnum){
+#        if (p %in% spec_df2$seqnum){
+#          num_cells = num_cells + 1
+#        }
+#      }
+#    }
+#  }
+#}
 ```
+
+
+```{r}
+cooccur_birds <- cooccur(occur_df, type = "spp_site", thresh = FALSE, spp_names = TRUE)
+
+summary(cooccur_birds)
+```
+
+
+
+```{r}
+#sp1_inc and sp2_inc represent number of polygons the bird appeared in 
+#p_lt and p_gt are the probabilities that the two species co-occur more or less frequently than expected.
+prob_table <- prob.table(cooccur_birds)
+```
+
+
+```{r}
+#was not expecting so many pairs species to have positive co-occurrence 
+#might change when I limit to ERC range and when we get data at res = 6
+plot(cooccur_birds)
+```
+
+
+```{r}
+waxwing_pairs <- pair(mod = cooccur_birds, spp = "Bombycilla cedrorum")
+```
+
 
 
