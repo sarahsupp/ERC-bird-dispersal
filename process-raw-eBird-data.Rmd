@@ -58,7 +58,7 @@ spfiles = list.files(path=here("data_2023/raw_eBird_data_2023/species/"), patter
 
 for (i in spfiles) {
   # These RData files have one object and it is named "dat2" 
-  load(paste0(here("data/raw_eBird_data_2023/species/"),(i)))
+  load(paste0(here("data_2023/raw_eBird_data_2023/species/"),(i)))
   
   #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
   dat_merged = merge(dat2, locs, by.x = "POLYFID", by.y = "POLYFID")
@@ -73,6 +73,6 @@ for (i in spfiles) {
   spname <- sub("\\.[[:alnum:]]+$", "", i)
   dat_effort$species <- spname
   # save file, also adding the species name, into a new folder with the species + effort merged datasets
-  saveRDS(dat_effort, file = paste0("data/effort-merged_data_2023/dat_effort_", spname, ".rds"))
+  saveRDS(dat_effort, file = paste0("data_2023/effort-merged_data_2023/dat_effort_", spname, ".rds"))
 }
 ```
