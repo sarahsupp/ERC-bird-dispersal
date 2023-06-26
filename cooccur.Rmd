@@ -16,16 +16,35 @@ library(radiant.data)
 
 
 ```{r}
-all_birds <- readRDS("data_2023/df_nvector_2023.rds")
-all_birds <- all_birds %>% filter(year == 2022)
+#all_birds <- readRDS("data_2023/df_nvector_2023.rds")
+all_birds <- readRDS("data_2023/dat_effort_2023.rds")
+birds_2022 <- all_birds %>% filter(year == 2022)
 ```
 
 
 ```{r}
-n = nrow(all_birds)
+#oct - mar
+df_list <- list()
+years <- seq.int(2009, 2022)
+for (t in years){
+  #274 is Oct 1 and 90 is Mar 30
+  year1 <- all_birds[which(all_birds$day >= 274 & all_birds$year == t-1),]
+  year2 <- all_birds[which(all_birds$day <= 90 & all_birds$year == t),]
+
+  winter <- rbind(year1, year2)
+  df_list <- append(df_list, list(winter))
+}
+
+#year_2022 <- data.frame(df_list[14])
+
+```
+
+
+```{r}
+n = nrow(birds_2022)
 
 #weights all together
-weight <- all_birds %>%
+weight <- birds_2022 %>%
     mutate(day = as.numeric(day),
          year = as.numeric(year)) %>%
 group_by(species, year, day) %>%
@@ -54,16 +73,16 @@ weight <- weight %>%
 #weighted by total eBirder effort on that day in a given cell. 
 #Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the #target species in a cell divided by the total number of eBirder records in a cell.
 
-dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 5)
-all_birds$cell <- dgGEO_to_SEQNUM(dgg, all_birds$x, all_birds$y)$seqnum
-all_birds$cell_lat <- dgSEQNUM_to_GEO(dgg, all_birds$cell)$lat_deg 
-all_birds$cell_lon <- dgSEQNUM_to_GEO(dgg, all_birds$cell)$lon_deg 
+dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
+birds_2022$cell <- dgGEO_to_SEQNUM(dgg, birds_2022$x, birds_2022$y)$seqnum
+birds_2022$cell_lat <- dgSEQNUM_to_GEO(dgg, birds_2022$cell)$lat_deg 
+birds_2022$cell_lon <- dgSEQNUM_to_GEO(dgg, birds_2022$cell)$lon_deg 
 
 #already has frequency column which is count/effort
-all_birds <- all_birds %>%
+birds_2022 <- birds_2022 %>%
   mutate(count_weighted = count/effort)
 
-spp_counts <- all_birds %>%
+spp_counts <- birds_2022 %>%
   group_by(species, cell) %>% 
   summarise(sum_weighted_count=sum(count_weighted),
             mean_weighted_count=mean(count_weighted),
@@ -145,7 +164,8 @@ prob_table <- prob.table(cooccur_birds)
 
 ```{r}
 #was not expecting so many pairs species to have positive co-occurrence 
-#might change when I limit to ERC range and when we get data at res = 6
+#might just be because of how much space each hexagon covers 
+#right now you are doing this for entire year, maybe try doing individual months in year
 plot(cooccur_birds)
 ```
 
@@ -153,6 +173,67 @@ plot(cooccur_birds)
 ```{r}
 waxwing_pairs <- pair(mod = cooccur_birds, spp = "Bombycilla cedrorum")
 ```
+
+
+```{r}
+poly_groups <- grid %>% group_by(geometry) %>% 
+  summarise(total_count=n(), .groups = 'drop') %>%
+  as.data.frame()
+
+poly_groups_sf = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+
+#BBL_sf <- st_as_sf(BBL, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+```
+
+
+```{r}
+#making the returnclass sf, so I can zoom in on it 
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
+state_prov <- st_crop(state_prov, xmin = -160, xmax = -50, ymin = 5, ymax = 75)
+```
+
+
+```{r}
+#do for loop instead of facet wrap so you can actually see the maps!!!
+species_list <- unique(grid$species)
+
+for (s in species_list){
+  one_species <- grid[grid$species == s, ]
+  print(
+    ggplot() + 
+      geom_sf(data=state_prov, colour="grey50", fill="white") + 
+      #geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") +
+      #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+      geom_sf(data = one_species, aes(fill = sum_weighted_count), color = NA) +
+      #geom_polygon(data=grid, aes(x=long, y=lat, group=seqnum, fill=mean_weighted_count), size=0.001)    +
+      #geom_path   (data=grid, aes(x=long, y=lat, group=seqnum), alpha=0.4, color=NA) +
+    #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
+      scale_fill_viridis(option = "D") +
+      ggtitle(s) +
+      #scale_fill_gradient(low="gray90", high="darkorchid4") + 
+      #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
+      theme_void() + 
+      theme(plot.title = element_text(hjust = 0.5)) 
+  )
+}
+```
+
+
+
+
+```{r}
+#October - March from 2008-2009 to 2022-2023 (think you filtered out 2023)
+#need to do maps for that are split up by month to avoid these kinds of results
+#right now this map has every observation from 2022
+ggplot() + 
+  geom_sf(data=state_prov, colour="grey50", fill="white") + 
+  geom_sf(data = poly_groups_sf, aes(fill = total_count), color = NA) +
+  scale_fill_viridis(option = "D") +
+  theme_void() 
+
+#count/effort for each species separately in each cell, take mean of those numbers for each cell 
+```
+
 
 
 
