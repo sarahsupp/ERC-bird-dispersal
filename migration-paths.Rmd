@@ -94,11 +94,11 @@ Note: If data has not been updated (~2022~.), then go straight to "weighted mean
 
 ```{r}
 # files = list.files(path=here(), recursive=T, pattern=glob2rx("dat_effort*.rds"))
-files = list.files(path=here("data/effort-merged_data_2023/"), pattern=glob2rx("dat_effort*.rds"))
+files = list.files(path=here("data_2023/effort-merged_data_2023/"), pattern=glob2rx("dat_effort*.rds"))
 
 spdata <- data.frame(POLYFID=0, year=0, day=0, count=0, x=0, y=0, effort=0, species="none")
 for (i in files) {
-  dat <- readRDS(paste0(here("data/effort-merged_data_2023/"),(i)))
+  dat <- readRDS(paste0(here("data_2023/effort-merged_data_2023/"),(i)))
   spdata <- bind_rows(spdata, dat)
 }
 spdata <- spdata %>% filter(year!="0")
@@ -152,6 +152,9 @@ dat_effort %>%
 # Figure for ESA 2021 poster
 
 ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
+
+#saving copy of data before doing nvector stuff
+saveRDS(dat_effort, "data_2023/dat_effort_2023.rds")
 ```
 
 
