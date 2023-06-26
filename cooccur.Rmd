@@ -12,18 +12,24 @@ library(tidyverse)
 library(dggridR)
 library(dplyr)
 library(radiant.data)
+library(sf)
+library(rnaturalearth)
+#devtools::install_github("ropensci/rnaturalearthhires")
+library(rnaturalearthhires)
+library(viridisLite)
+library(viridis)
 ```
 
 
 ```{r}
 #all_birds <- readRDS("data_2023/df_nvector_2023.rds")
 all_birds <- readRDS("data_2023/dat_effort_2023.rds")
-birds_2022 <- all_birds %>% filter(year == 2022)
+#birds_2022 <- all_birds %>% filter(year == 2022)
 ```
 
 
 ```{r}
-#oct - mar
+#creating a list of dataframes to split data up into Oct-Mar time frames 
 df_list <- list()
 years <- seq.int(2009, 2022)
 for (t in years){
@@ -41,116 +47,124 @@ for (t in years){
 
 
 ```{r}
-n = nrow(birds_2022)
+#making a list of 15 grids (one for each period of time we care about)
+#only 14 at the moment because I filtered out 2023 in previous .Rmd, will fix later
+grid_list <- list()
 
-#weights all together
-weight <- birds_2022 %>%
-    mutate(day = as.numeric(day),
-         year = as.numeric(year)) %>%
-group_by(species, year, day) %>%
-  summarise(
-            numcells = n(), 
-            numobs = sum(count),
-            wtmean_lon = weighted.mean(x, count/effort), 
-            wtmean_lat = weighted.mean(y, count/effort), 
-            wtsd_lon = weighted.sd(x, count/effort),
-            wtsd_lat = weighted.sd(y, count/effort) 
-            ) %>%
-  ungroup()
+#repeating this process once for every Oct-Mar between 2008 and 2023
+for (df in df_list){
+  n = nrow(df)
+  
+  #weights all together
+  weight <- df %>%
+      mutate(day = as.numeric(day),
+           year = as.numeric(year)) %>%
+  group_by(species, year, day) %>%
+    summarise(
+              numcells = n(), 
+              numobs = sum(count),
+              wtmean_lon = weighted.mean(x, count/effort), 
+              wtmean_lat = weighted.mean(y, count/effort), 
+              wtsd_lon = weighted.sd(x, count/effort),
+              wtsd_lat = weighted.sd(y, count/effort) 
+              ) %>%
+    ungroup()
+  
+  weight <- weight %>%
+    mutate(DAYm1 = day-1,
+           origin = paste0(year, "-01-01"),
+           DATE = as.Date(DAYm1, origin=origin), 
+           MONTH = month(DATE)) %>%
+    mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
+    arrange(species,DATE) %>%
+    ungroup() %>%
+    mutate(ID = row_number()) %>%
+    dplyr::select(-DAYm1, -origin)
+  
+  ## Calculates the count of observations within each cell, 
+  #weighted by total eBirder effort on that day in a given cell. 
+  #Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the #target species in a cell divided by the total number of eBirder records in a cell.
+  
+  dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
+  df$cell <- dgGEO_to_SEQNUM(dgg, df$x, df$y)$seqnum
+  df$cell_lat <- dgSEQNUM_to_GEO(dgg, df$cell)$lat_deg 
+  df$cell_lon <- dgSEQNUM_to_GEO(dgg, df$cell)$lon_deg 
+  
+  #already has frequency column which is count/effort
+  df <- df %>%
+    mutate(count_weighted = count/effort)
+  
+  spp_counts <- df %>%
+    group_by(species, cell) %>% 
+    summarise(sum_weighted_count=sum(count_weighted),
+              mean_weighted_count=mean(count_weighted),
+              sum_count=sum(count))
+  
+  #Get the grid cell boundaries for cells which had bird observations
+  grid <- dgcellstogrid(dgg, spp_counts$cell)#, frame=TRUE, wrapcells=TRUE)
+  #Update the grid cells' properties to include the number of observations in each cell
+  grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
+  
+  grid_list <- append(grid_list, list(grid))
+}
 
-weight <- weight %>%
-  mutate(DAYm1 = day-1,
-         origin = paste0(year, "-01-01"),
-         DATE = as.Date(DAYm1, origin=origin), 
-         MONTH = month(DATE)) %>%
-  mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
-  arrange(species,DATE) %>%
-  ungroup() %>%
-  mutate(ID = row_number()) %>%
-  dplyr::select(-DAYm1, -origin)
-
-## Calculates the count of observations within each cell, 
-#weighted by total eBirder effort on that day in a given cell. 
-#Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the #target species in a cell divided by the total number of eBirder records in a cell.
-
-dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
-birds_2022$cell <- dgGEO_to_SEQNUM(dgg, birds_2022$x, birds_2022$y)$seqnum
-birds_2022$cell_lat <- dgSEQNUM_to_GEO(dgg, birds_2022$cell)$lat_deg 
-birds_2022$cell_lon <- dgSEQNUM_to_GEO(dgg, birds_2022$cell)$lon_deg 
-
-#already has frequency column which is count/effort
-birds_2022 <- birds_2022 %>%
-  mutate(count_weighted = count/effort)
-
-spp_counts <- birds_2022 %>%
-  group_by(species, cell) %>% 
-  summarise(sum_weighted_count=sum(count_weighted),
-            mean_weighted_count=mean(count_weighted),
-            sum_count=sum(count))
-
-#Get the grid cell boundaries for cells which had bird observations
-grid <- dgcellstogrid(dgg, spp_counts$cell)#, frame=TRUE, wrapcells=TRUE)
-#Update the grid cells' properties to include the number of observations in each cell
-grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
+#grid_2022 <- data.frame(grid_list[14])
 ```
 
 
 ```{r}
 #wrangling data to make it usable with cooccur package
-species_list <- unique(weight$species)
-poly_list <- unique(as.character(grid$seqnum))
+species_list <- unique(all_birds$species)
+occur_list <- list()
 
-occur_df <- data.frame(species = species_list)
-
-for (p in poly_list){
-  occur_df <- occur_df %>%
-  add_column(p = NA)
-}
-
-occur_df <- occur_df %>% column_to_rownames(., var = "species")
-colnames(occur_df) <- poly_list
-
-
-for (i in 1:length(species_list)){
-  spec_df <- grid[grid$species == species_list[i], ]
-  for (p in 1:length(poly_list)){
-    #if species was found in a given polygon, give it a value of 1
-    if (poly_list[p] %in% spec_df$seqnum){
-      occur_df[[p]][[i]] <- 1
-    }
-    #otherwise, give it a value of 0
-    else{
-      occur_df[[p]][[i]] <- 0
+for (g in grid_list){
+  grid <- data.frame(g)
+  poly_list <- unique(as.character(grid$seqnum))
+  
+  occur_df <- data.frame(species = species_list)
+  
+  for (p in poly_list){
+    occur_df <- occur_df %>%
+    add_column(p = NA)
+  }
+  
+  occur_df <- occur_df %>% column_to_rownames(., var = "species")
+  colnames(occur_df) <- poly_list
+  
+  
+  for (i in 1:length(species_list)){
+    spec_df <- grid[grid$species == species_list[i], ]
+    for (p in 1:length(poly_list)){
+      #if species was found in a given polygon, give it a value of 1
+      if (poly_list[p] %in% spec_df$seqnum){
+        occur_df[[p]][[i]] <- 1
+      }
+      #otherwise, give it a value of 0
+      else{
+        occur_df[[p]][[i]] <- 0
+      }
     }
   }
+  occur_list <- append(occur_list, list(occur_df))
 }
 
-#starting doing this but ended up doing it the above way instead
-#figured I would keep this for now, might be useful later
-#occur_df$"443"[[3]] <- 10
-
-#for (s1 in species_list){
-#  spec_df1 <- grid[grid$species == s1, ]
-#  for (s2 in species_list){
-#    num_cells = 0
-#    spec_df2 <- grid[grid$species == s2, ]
-    
-#    for (p in poly_list){
-#      if (p %in% spec_df1$seqnum){
-#        if (p %in% spec_df2$seqnum){
-#          num_cells = num_cells + 1
-#        }
-#      }
-#    }
-#  }
-#}
+#occur_2022 <- data.frame(occur_list[14])
 ```
 
 
 ```{r}
-cooccur_birds <- cooccur(occur_df, type = "spp_site", thresh = FALSE, spp_names = TRUE)
+coocur_list <- list()
 
-summary(cooccur_birds)
+for (odf in occur_list){
+  occur_df <- data.frame(odf)
+  cooccur_birds <- cooccur(occur_df, type = "spp_site", thresh = FALSE, spp_names = TRUE)
+  print(plot(cooccur_birds))
+  prob_table <- prob.table(cooccur_birds)
+  coocur_list <- append(coocur_list, list(prob_table))
+}
+
+#cooccur_2022 <- data.frame(coocur_list[14])
+#summary(cooccur_birds)
 ```
 
 
@@ -158,7 +172,7 @@ summary(cooccur_birds)
 ```{r}
 #sp1_inc and sp2_inc represent number of polygons the bird appeared in 
 #p_lt and p_gt are the probabilities that the two species co-occur more or less frequently than expected.
-prob_table <- prob.table(cooccur_birds)
+#prob_table <- prob.table(cooccur_birds)
 ```
 
 
@@ -176,26 +190,48 @@ waxwing_pairs <- pair(mod = cooccur_birds, spp = "Bombycilla cedrorum")
 
 
 ```{r}
-poly_groups <- grid %>% group_by(geometry) %>% 
-  summarise(total_count=n(), .groups = 'drop') %>%
-  as.data.frame()
-
-poly_groups_sf = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
-
-#BBL_sf <- st_as_sf(BBL, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+poly_groups_list <- list()
+for (g in grid_list){
+  grid <- data.frame(g)
+  poly_groups <- grid %>% group_by(geometry) %>% 
+    summarise(total_count=n(), .groups = 'drop') %>%
+    as.data.frame()
+  
+  #poly_groups = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+  
+  poly_groups_list <- append(poly_groups_list, list(poly_groups))
+}
 ```
 
 
 ```{r}
 #making the returnclass sf, so I can zoom in on it 
 state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
-state_prov <- st_crop(state_prov, xmin = -160, xmax = -50, ymin = 5, ymax = 75)
+state_prov <- st_crop(state_prov, xmin = -110, xmax = -50, ymin = 5, ymax = 75)
 ```
 
 
 ```{r}
-#do for loop instead of facet wrap so you can actually see the maps!!!
-species_list <- unique(grid$species)
+#October - March from 2008-2009 to 2022-2023 (think you filtered out 2023)
+#need to do maps for that are split up by month to avoid these kinds of results
+#right now this map has every observation from 2022
+for (p in poly_groups_list){
+  poly_groups <- data.frame(p)
+  poly_groups = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+  print(
+    ggplot() + 
+      geom_sf(data=state_prov, colour="grey50", fill="white") + 
+      geom_sf(data = poly_groups, aes(fill = total_count), color = NA) +
+      scale_fill_viridis(option = "D") +
+      theme_void()
+  )
+}
+#count/effort for each species separately in each cell, take mean of those numbers for each cell 
+```
+
+
+```{r}
+#species_list <- unique(grid$species) 
 
 for (s in species_list){
   one_species <- grid[grid$species == s, ]
