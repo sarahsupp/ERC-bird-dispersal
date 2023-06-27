@@ -24,7 +24,7 @@ library(viridis)
 ```{r}
 #all_birds <- readRDS("data_2023/df_nvector_2023.rds")
 all_birds <- readRDS("data_2023/dat_effort_2023.rds")
-#birds_2022 <- all_birds %>% filter(year == 2022)
+birds_2022 <- all_birds %>% filter(year == 2022)
 ```
 
 
@@ -180,12 +180,28 @@ for (odf in occur_list){
 #was not expecting so many pairs species to have positive co-occurrence 
 #might just be because of how much space each hexagon covers 
 #right now you are doing this for entire year, maybe try doing individual months in year
-plot(cooccur_birds)
+#plot(cooccur_birds)
 ```
 
 
 ```{r}
-waxwing_pairs <- pair(mod = cooccur_birds, spp = "Bombycilla cedrorum")
+#waxwing_pairs <- pair(mod = cooccur_birds, spp = "Bombycilla cedrorum")
+```
+
+
+
+```{r}
+#species_groups_list <- list()
+#for (g in grid_list){
+# grid <- data.frame(g)
+#  species_groups <- grid %>% group_by(geometry)
+#}
+
+ spp_counts <- df %>%
+    group_by(species, cell) %>% 
+    summarise(sum_weighted_count=sum(count_weighted),
+              mean_weighted_count=mean(count_weighted),
+              sum_count=sum(count))
 ```
 
 
@@ -194,13 +210,18 @@ poly_groups_list <- list()
 for (g in grid_list){
   grid <- data.frame(g)
   poly_groups <- grid %>% group_by(geometry) %>% 
-    summarise(total_count=n(), .groups = 'drop') %>%
+    summarise(total_count=n(), 
+              mean_sum_count = mean(sum_weighted_count),
+              mean_mean_count = mean(mean_weighted_count),
+              .groups = 'drop') %>%
     as.data.frame()
   
   #poly_groups = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
   
   poly_groups_list <- append(poly_groups_list, list(poly_groups))
 }
+
+#poly_2022 <- data.frame(poly_groups_list[14])
 ```
 
 
@@ -213,8 +234,6 @@ state_prov <- st_crop(state_prov, xmin = -110, xmax = -50, ymin = 5, ymax = 75)
 
 ```{r}
 #October - March from 2008-2009 to 2022-2023 (think you filtered out 2023)
-#need to do maps for that are split up by month to avoid these kinds of results
-#right now this map has every observation from 2022
 for (p in poly_groups_list){
   poly_groups <- data.frame(p)
   poly_groups = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
@@ -223,11 +242,86 @@ for (p in poly_groups_list){
       geom_sf(data=state_prov, colour="grey50", fill="white") + 
       geom_sf(data = poly_groups, aes(fill = total_count), color = NA) +
       scale_fill_viridis(option = "D") +
+      #ggtitle(title = "number of species co-occurring in each cell") +
       theme_void()
   )
 }
-#count/effort for each species separately in each cell, take mean of those numbers for each cell 
 ```
+
+
+```{r}
+#count/effort for each species separately in each cell, plotting mean of those numbers for each cell 
+for (p in poly_groups_list){
+  poly_groups <- data.frame(p)
+  poly_groups = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+  print(
+    ggplot() + 
+      geom_sf(data=state_prov, colour="grey50", fill="white") + 
+      geom_sf(data = poly_groups, aes(fill = mean_sum_count), color = NA) +
+      scale_fill_viridis(option = "D") +
+      #ggtitle("") +
+      theme_void()
+  )
+}
+```
+
+
+
+
+```{r}
+n = nrow(birds_2022)
+  
+  #weights all together
+  weight <- birds_2022 %>%
+      mutate(day = as.numeric(day),
+           year = as.numeric(year)) %>%
+  group_by(species, year, day) %>%
+    summarise(
+              numcells = n(), 
+              numobs = sum(count),
+              wtmean_lon = weighted.mean(x, count/effort), 
+              wtmean_lat = weighted.mean(y, count/effort), 
+              wtsd_lon = weighted.sd(x, count/effort),
+              wtsd_lat = weighted.sd(y, count/effort) 
+              ) %>%
+    ungroup()
+  
+  weight <- weight %>%
+    mutate(DAYm1 = day-1,
+           origin = paste0(year, "-01-01"),
+           DATE = as.Date(DAYm1, origin=origin), 
+           MONTH = month(DATE)) %>%
+    mutate(winter = ifelse(MONTH %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
+    arrange(species,DATE) %>%
+    ungroup() %>%
+    mutate(ID = row_number()) %>%
+    dplyr::select(-DAYm1, -origin)
+  
+  ## Calculates the count of observations within each cell, 
+  #weighted by total eBirder effort on that day in a given cell. 
+  #Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the #target species in a cell divided by the total number of eBirder records in a cell.
+  
+  dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
+  birds_2022$cell <- dgGEO_to_SEQNUM(dgg, birds_2022$x, birds_2022$y)$seqnum
+  birds_2022$cell_lat <- dgSEQNUM_to_GEO(dgg, birds_2022$cell)$lat_deg 
+  birds_2022$cell_lon <- dgSEQNUM_to_GEO(dgg, birds_2022$cell)$lon_deg 
+  
+  #already has frequency column which is count/effort
+  birds_2022 <- birds_2022 %>%
+    mutate(count_weighted = count/effort)
+  
+  spp_counts <- birds_2022 %>%
+    group_by(species, cell) %>% 
+    summarise(sum_weighted_count=sum(count_weighted),
+              mean_weighted_count=mean(count_weighted),
+              sum_count=sum(count))
+  
+  #Get the grid cell boundaries for cells which had bird observations
+  grid <- dgcellstogrid(dgg, spp_counts$cell)#, frame=TRUE, wrapcells=TRUE)
+  #Update the grid cells' properties to include the number of observations in each cell
+  grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
+```
+
 
 
 ```{r}
@@ -257,18 +351,7 @@ for (s in species_list){
 
 
 
-```{r}
-#October - March from 2008-2009 to 2022-2023 (think you filtered out 2023)
-#need to do maps for that are split up by month to avoid these kinds of results
-#right now this map has every observation from 2022
-ggplot() + 
-  geom_sf(data=state_prov, colour="grey50", fill="white") + 
-  geom_sf(data = poly_groups_sf, aes(fill = total_count), color = NA) +
-  scale_fill_viridis(option = "D") +
-  theme_void() 
 
-#count/effort for each species separately in each cell, take mean of those numbers for each cell 
-```
 
 
 
