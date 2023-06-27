@@ -213,6 +213,7 @@ for (g in grid_list){
     summarise(total_count=n(), 
               mean_sum_count = mean(sum_weighted_count),
               mean_mean_count = mean(mean_weighted_count),
+              median_count = median(mean_weighted_count),
               .groups = 'drop') %>%
     as.data.frame()
   
@@ -221,7 +222,7 @@ for (g in grid_list){
   poly_groups_list <- append(poly_groups_list, list(poly_groups))
 }
 
-#poly_2022 <- data.frame(poly_groups_list[14])
+poly_2022 <- data.frame(poly_groups_list[14])
 ```
 
 
@@ -250,6 +251,13 @@ for (p in poly_groups_list){
 
 
 ```{r}
+ggplot() +
+  geom_point(data = poly_2022, aes(x = median_count, y = mean_mean_count))
+```
+
+
+
+```{r}
 #count/effort for each species separately in each cell, plotting mean of those numbers for each cell 
 for (p in poly_groups_list){
   poly_groups <- data.frame(p)
@@ -257,7 +265,7 @@ for (p in poly_groups_list){
   print(
     ggplot() + 
       geom_sf(data=state_prov, colour="grey50", fill="white") + 
-      geom_sf(data = poly_groups, aes(fill = mean_sum_count), color = NA) +
+      geom_sf(data = poly_groups, aes(fill = median_count), color = NA) +
       scale_fill_viridis(option = "D") +
       #ggtitle("") +
       theme_void()
