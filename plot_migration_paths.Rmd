@@ -47,6 +47,7 @@ for (s in species){
 ```{r}
 for (s in species){
   df <- latitude[latitude$species == s, ]
+  move_dates <- dataresult[dataresult$species == s, ]
   
   print(ggplot(df, aes(x = day, y = lat, color = factor(year))) +
     geom_smooth() +
