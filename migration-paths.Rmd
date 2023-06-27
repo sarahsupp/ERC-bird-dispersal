@@ -111,7 +111,7 @@ Note: After running "process-raw-eBrid-data" and re-run the *spdata*, the names 
 ```{r}
 # x = longitude 
 dat_effort <- spdata %>%
-  dplyr::filter(x >= -103)
+  dplyr::filter(x >= -143)
 
 num_obs <- nrow(dat_effort)
 
@@ -119,7 +119,7 @@ paste0("The total number of observations for all species is ", num_obs, ".")
 
 
 num_spobs <- dat_effort %>%
-  filter(year!=2023) %>%
+  #filter(year!=2023) %>%
   group_by(species) %>%
   summarise(nrow=n(),
             total=sum(count))
@@ -127,7 +127,7 @@ num_spobs <- dat_effort %>%
 num_spobs
 
 dat_effort %>%
-  filter(year!=2023) %>%
+  #filter(year!=2023) %>%
   group_by(species, year) %>%
   summarise(nrow=n(),
             total=sum(count)) %>%
@@ -135,7 +135,7 @@ dat_effort %>%
   geom_point(aes(shape=species)) + 
   geom_line() + 
   scale_y_log10() + 
-  scale_x_continuous(breaks=seq(2008, 2023, 3)) +
+  scale_x_continuous(breaks=seq(2008, 2024, 3)) +
   #  scale_x_discrete(limits=c("2008", "2012", "2016", "2019")) +
   xlab("Year") +
   ylab("checklist count") +
@@ -151,7 +151,7 @@ dat_effort %>%
 
 # Figure for ESA 2021 poster
 
-ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
+#ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
 
 #saving copy of data before doing nvector stuff
 saveRDS(dat_effort, "data_2023/dat_effort_2023.rds")
