@@ -45,12 +45,13 @@ for (s in species){
 
 
 ```{r}
+mig_plots <- list()
 for (s in species){
   df <- latitude[latitude$species == s, ]
   move_dates <- dataresult[dataresult$species == s, ]
   
   print(
-    ggplot(df, aes(x = day, y = lat, color = factor(year))) +
+    mig_plot <- ggplot(df, aes(x = day, y = lat, color = factor(year))) +
       geom_smooth() +
       ggtitle(s) +
       labs(x = "day of year", y = "weighted mean latitude") +
@@ -62,7 +63,25 @@ for (s in species){
       geom_vline(xintercept = mean(move_dates$spring_end),lwd=1,colour="black", linetype = 3) +
       geom_vline(xintercept = mean(move_dates$autumn_end),lwd=1,colour="black", linetype = 3) +
       theme_bw() +
+      labs(color = "year") +
       theme(plot.title = element_text(hjust = 0.5))
     )
+  mig_plots <- append(mig_plots, list(mig_plot))
+  #ggsave(paste0("figs/",s,"_migration_path.png"))
 }
 ```
+
+
+
+
+
+```{r}
+#trying to find nice way to arrange plots with ggarrange
+ggarrange(mig_plots[1][[1]], mig_plots[3][[1]], mig_plots[6][[1]], mig_plots[7][[1]],
+          mig_plots[8][[1]], mig_plots[10][[1]], mig_plots[13][[1]], mig_plots[15][[1]])
+```
+
+
+
+
+
