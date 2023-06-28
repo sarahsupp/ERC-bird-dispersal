@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(rgdal)
 library(sf)
+library(sfheaders)
 library(raster)
 library(terra)
 library(broom)
@@ -251,7 +252,7 @@ BBL_in_range <- cbind(BBL_in_range, latlon)
 
 ```{r}
 #going to repeat lat/lon filtering process with eBird data
-eBird_2023 <- readRDS("data_2023/df_nvector_2023.rds")
+eBird_2023 <- readRDS("data_2023/dat_effort_2023.rds")
 ```
 
 
@@ -283,14 +284,24 @@ BBL_in_range = BBL_sf %>%
 ```{r}
 #making lat/lon back into separate cols (still keeping geometry column in case it ends up being useful)
 #h <- head(BBL_in_range)
-latlon_eBird <- do.call(rbind, st_geometry(eBird_in_range)) %>% 
-    as_tibble() %>% setNames(c("lon","lat"))
-eBird_in_range <- cbind(eBird_in_range, latlon_eBird)
+#latlon_eBird <- do.call(rbind, st_geometry(eBird_in_range)) %>% 
+#    as_tibble() %>% setNames(c("x","y"))
+#eBird_in_range <- cbind(eBird_in_range, latlon_eBird)
 ```
 
 
 ```{r}
+#splitting the geometry column back into lat col and lon col by converting sf object back to df
+eBird_in_range <- sf_to_df(eBird_in_range, fill = TRUE )
+
+#removing useless columns created by above conversion
+eBird_in_range = subset(eBird_in_range, select = -c(sfg_id, point_id))
+```
+
+
+
+```{r}
 #export as .rds
-#saveRDS(eBird_in_range, "data_2023/df_nvectors_in_range_2023.rds")
+saveRDS(eBird_in_range, "data_2023/dat_effort_in_range_2023.rds")
 ```
 
