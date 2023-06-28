@@ -8,6 +8,7 @@ date: "2023-06-20"
 knitr::opts_chunk$set(echo = TRUE)
 library(cooccur)
 library(ggplot2)
+library(ggpubr)
 library(tidyverse)
 library(dggridR)
 library(dplyr)
@@ -22,18 +23,19 @@ library(viridis)
 
 
 ```{r}
-#all_birds <- readRDS("data_2023/df_nvector_2023.rds")
-all_birds <- readRDS("data_2023/dat_effort_2023.rds")
+#all_birds <- readRDS("data_2023/dat_effort_2023.rds")
+all_birds <- readRDS("data_2023/dat_effort_in_range_2023.rds")
 birds_2022 <- all_birds %>% filter(year == 2022)
 ```
 
 
 ```{r}
 #creating a list of dataframes to split data up into Oct-Mar time frames 
+#(i.e. oct 2008 - mar 2009, oct 2009 - mar - 2010, etc.)
 df_list <- list()
-years <- seq.int(2009, 2022)
+years <- seq.int(2009, 2023)
 for (t in years){
-  #274 is Oct 1 and 90 is Mar 30
+  #274 is Oct 1 and 90 is Mar 30 (julian days)
   year1 <- all_birds[which(all_birds$day >= 274 & all_birds$year == t-1),]
   year2 <- all_birds[which(all_birds$day <= 90 & all_birds$year == t),]
 
@@ -48,10 +50,9 @@ for (t in years){
 
 ```{r}
 #making a list of 15 grids (one for each period of time we care about)
-#only 14 at the moment because I filtered out 2023 in previous .Rmd, will fix later
 grid_list <- list()
 
-#repeating this process once for every Oct-Mar between 2008 and 2023
+#repeating this process once for every Oct-Mar (season) between 2008 and 2023
 for (df in df_list){
   n = nrow(df)
   
@@ -83,14 +84,13 @@ for (df in df_list){
   
   ## Calculates the count of observations within each cell, 
   #weighted by total eBirder effort on that day in a given cell. 
-  #Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the #target species in a cell divided by the total number of eBirder records in a cell.
+  #Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations    of the #target species in a cell divided by the total number of eBirder records in a cell.
   
   dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
   df$cell <- dgGEO_to_SEQNUM(dgg, df$x, df$y)$seqnum
   df$cell_lat <- dgSEQNUM_to_GEO(dgg, df$cell)$lat_deg 
   df$cell_lon <- dgSEQNUM_to_GEO(dgg, df$cell)$lon_deg 
   
-  #already has frequency column which is count/effort
   df <- df %>%
     mutate(count_weighted = count/effort)
   
@@ -117,6 +117,7 @@ for (df in df_list){
 species_list <- unique(all_birds$species)
 occur_list <- list()
 
+#iterating through all of the grids
 for (g in grid_list){
   grid <- data.frame(g)
   poly_list <- unique(as.character(grid$seqnum))
@@ -124,6 +125,7 @@ for (g in grid_list){
   occur_df <- data.frame(species = species_list)
   
   for (p in poly_list){
+    #adding a column for each polygon featured in the grid
     occur_df <- occur_df %>%
     add_column(p = NA)
   }
@@ -131,7 +133,7 @@ for (g in grid_list){
   occur_df <- occur_df %>% column_to_rownames(., var = "species")
   colnames(occur_df) <- poly_list
   
-  
+  #filling the rows of occur_df
   for (i in 1:length(species_list)){
     spec_df <- grid[grid$species == species_list[i], ]
     for (p in 1:length(poly_list)){
@@ -155,57 +157,30 @@ for (g in grid_list){
 ```{r}
 coocur_list <- list()
 
+#making a df of co-occurrence stats for each season we care about
+#also plotting co-occurrence matrices
 for (odf in occur_list){
   occur_df <- data.frame(odf)
-  cooccur_birds <- cooccur(occur_df, type = "spp_site", thresh = FALSE, spp_names = TRUE)
+  cooccur_birds <- cooccur(occur_df, type = "spp_site", thresh = TRUE, spp_names = TRUE)
   print(plot(cooccur_birds))
   prob_table <- prob.table(cooccur_birds)
   coocur_list <- append(coocur_list, list(prob_table))
 }
 
-#cooccur_2022 <- data.frame(coocur_list[14])
-#summary(cooccur_birds)
-```
-
-
-
-```{r}
 #sp1_inc and sp2_inc represent number of polygons the bird appeared in 
 #p_lt and p_gt are the probabilities that the two species co-occur more or less frequently than expected.
-#prob_table <- prob.table(cooccur_birds)
-```
 
+cooccur_2022 <- data.frame(coocur_list[14])
+#summary(cooccur_birds)
 
-```{r}
-#was not expecting so many pairs species to have positive co-occurrence 
-#might just be because of how much space each hexagon covers 
-#right now you are doing this for entire year, maybe try doing individual months in year
-#plot(cooccur_birds)
-```
-
-
-```{r}
+#how to look at co-occur info for individual species
 #waxwing_pairs <- pair(mod = cooccur_birds, spp = "Bombycilla cedrorum")
 ```
 
 
 
 ```{r}
-#species_groups_list <- list()
-#for (g in grid_list){
-# grid <- data.frame(g)
-#  species_groups <- grid %>% group_by(geometry)
-#}
-
- spp_counts <- df %>%
-    group_by(species, cell) %>% 
-    summarise(sum_weighted_count=sum(count_weighted),
-              mean_weighted_count=mean(count_weighted),
-              sum_count=sum(count))
-```
-
-
-```{r}
+#using grids to create new df's that show how many species were observed in any given cell for each period of time
 poly_groups_list <- list()
 for (g in grid_list){
   grid <- data.frame(g)
@@ -213,7 +188,9 @@ for (g in grid_list){
     summarise(total_count=n(), 
               mean_sum_count = mean(sum_weighted_count),
               mean_mean_count = mean(mean_weighted_count),
-              median_count = median(mean_weighted_count),
+              median_mean_count = median(mean_weighted_count),
+              min_mean_count = min(mean_weighted_count),
+              max_mean_count = max(mean_weighted_count),
               .groups = 'drop') %>%
     as.data.frame()
   
@@ -222,37 +199,51 @@ for (g in grid_list){
   poly_groups_list <- append(poly_groups_list, list(poly_groups))
 }
 
-poly_2022 <- data.frame(poly_groups_list[14])
+poly_2023 <- data.frame(poly_groups_list[15])
 ```
 
 
 ```{r}
 #making the returnclass sf, so I can zoom in on it 
 state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
-state_prov <- st_crop(state_prov, xmin = -110, xmax = -50, ymin = 5, ymax = 75)
+state_prov <- st_crop(state_prov, xmin = -110, xmax = -50, ymin = 20, ymax = 50)
 ```
 
 
 ```{r}
-#October - March from 2008-2009 to 2022-2023 (think you filtered out 2023)
-for (p in poly_groups_list){
-  poly_groups <- data.frame(p)
+#October - March from 2008-2009 to 2022-2023 
+#plotting every season from 2008/2009 through 2022/2023
+for (i in 1:length(poly_groups_list)){
+  poly_groups <- data.frame(poly_groups_list[i])
   poly_groups = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
   print(
     ggplot() + 
       geom_sf(data=state_prov, colour="grey50", fill="white") + 
       geom_sf(data = poly_groups, aes(fill = total_count), color = NA) +
       scale_fill_viridis(option = "D") +
-      #ggtitle(title = "number of species co-occurring in each cell") +
-      theme_void()
+      ggtitle(paste0(years[i] - 1," - " , years[i])) +
+      theme_void() +
+      theme(plot.title = element_text(hjust = 0.5)) + 
+      labs(fill = "species count")
   )
 }
 ```
 
 
 ```{r}
-ggplot() +
-  geom_point(data = poly_2022, aes(x = median_count, y = mean_mean_count))
+median_plot <- ggplot() +
+  geom_histogram(data = poly_2023, aes(x = median_mean_count)) +
+  theme_bw()
+
+min_plot <- ggplot() +
+  geom_histogram(data = poly_2023, aes(x = min_mean_count)) +
+  theme_bw()
+
+max_plot <- ggplot() +
+  geom_histogram(data = poly_2023, aes(x = max_mean_count)) +
+  theme_bw()
+
+ggarrange(median_plot, min_plot, max_plot, nrow = 1, labels = c('a', 'b', 'c'))
 ```
 
 
