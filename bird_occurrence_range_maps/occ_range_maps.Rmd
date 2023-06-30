@@ -17,10 +17,10 @@ library(rnaturalearthhires)
 ```
 
 
-This is just for the purpose of calculating migration distances for the avian traits table
+This is just for the purpose of calculating migration distances for the avian traits table. However, I also made some cool maps of the occurrence ranges.
 ```{r}
 #commenting these out since we can just use .rds with the info that we need
-#and because github repo doesn't actually have .gdb file on it (too big)
+#and because github repo doesn't actually have .gdb file on it (too big to push)
 #bird_occ_map <- st_read("BOTW.gdb", layer = "All_Species")
 
 #layers <- st_layers(dsn = "BOTW.gdb")
@@ -48,16 +48,19 @@ filt_birds <- birds[birds$seasonal %in% c(2, 3), ]
 
 ```{r}
 #sf_use_s2(TRUE)
+#calculating the centroid breeding/non-breeding ranges for every bird in df 
 filt_birds$centroid <- st_centroid(st_make_valid(filt_birds$Shape), of_largest_polygon = FALSE)
 ```
 
 
 ```{r}
-US_CAN_spdf <- readOGR(dsn = "../data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
+#was initially using this shapefile but the below chunk provides an easier way of getting a background map of north America
+#US_CAN_spdf <- readOGR(dsn = "../data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
 ```
 
 
 ```{r}
+#getting maps of North America and zooming in to desired lat/lon ranges
 state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
 state_prov <- st_crop(state_prov, xmin = -170, xmax = -50, ymin = 5, ymax = 70)
 ```
@@ -66,7 +69,7 @@ state_prov <- st_crop(state_prov, xmin = -170, xmax = -50, ymin = 5, ymax = 70)
 
 ```{r}
 #plotting breeding and non-breeding ranges of cedar waxwing
-#use col2rgb("color") to find right numbers for color you want
+#use col2rgb("color") to find right numbers for custom color you want
 mycol1 <- rgb(173, 216, 230, max = 255, alpha = 170, names = "color")
 mycol2 <- rgb(255, 165, 162, max = 255, alpha = 170, names = "color")
 

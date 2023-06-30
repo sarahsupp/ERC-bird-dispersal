@@ -82,6 +82,20 @@ ggarrange(mig_plots[1][[1]], mig_plots[3][[1]], mig_plots[6][[1]], mig_plots[7][
 ```
 
 
+```{r}
+#finding average migration start/end dates for each species
+mig_dates <- dataresult %>% group_by(species) %>%
+  summarise(avg_spr_beginning = mean(spring_beginning),
+            avg_spr_middle = mean(spring_middle),
+            avg_spr_end = mean(spring_end),
+            avg_aut_beginning = mean(autumn_beginning),
+            avg_aut_middle = mean(autumn_middle),
+            avg_aut_end = mean(autumn_end))
+  
+  
+
+
+```
 
 
 

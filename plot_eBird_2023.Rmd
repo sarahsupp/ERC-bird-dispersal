@@ -22,7 +22,7 @@ library(viridisLite)
 library(viridis) 
 ```
 
-I need to write some better comments on here. Will do later. Also, running into issues with mapping 
+Might just delete this file from repo, since everything I do here, I also do in cooccur.Rmd (in addition to a bunch of other stuff)
 
 ```{r}
 #eBird <- readRDS("data_2023/df_nvector_2023.rds")

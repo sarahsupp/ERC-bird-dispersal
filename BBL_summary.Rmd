@@ -35,7 +35,7 @@ BBL_all$species_name <-tolower(BBL_all$species_name)
 
 ```{r}
 #filtering to just banding events, not encounters (since encounters all overlap with bandings)
-#BBL_all <- BBL_all[BBL_all$event_type == 'B',]
+#rows with event type B also have consistent names for the different species
 just_banding <- BBL_all[BBL_all$event_type == 'B',]
 ```
 
@@ -43,7 +43,6 @@ just_banding <- BBL_all[BBL_all$event_type == 'B',]
 
 ```{r}
 #getting counts for each bird
-#probably could have just used a groupby, but this was the first way I thought to do it
 birds <- unique(just_banding$species_name)
 #also making list of scientific names
 sci_birds <- unique(just_banding$species_scientific_name)
@@ -68,12 +67,11 @@ ggplot(bird_df, aes(x=species_name, y=count)) +
 ```{r}
 #should probably also get rid of 2022 since there is not data for full year
 BBL_recent <- BBL_all[BBL_all$event_year >= 2008,]
-#BBL_recent <- BBL[BBL$event_year >= 2008,]
-
+just_banding_recent <- just_banding[just_banding$event_year >= 2008, ]
 
 #getting counts for each bird
 #probably could have just used a groupby, but this was the first way I thought to do it
-birds <- unique(BBL_recent$species_name)
+birds <- unique(just_banding$species_name)
 bird_counts <- list()
 for (b in birds){
   count <- length(which(BBL_recent$species_name == b))
@@ -96,8 +94,7 @@ ggplot(bird_df_recent, aes(x=species_name, y=count)) +
 ```{r}
 #used a groupby this time
 #grouping by year and species
-#come back and fix issue with geometry column later!
-BBL_year_count <- BBL_all %>% group_by(species_name, event_year) %>% 
+BBL_year_count <- just_banding %>% group_by(species_name, event_year) %>% 
   summarise(total_count=n(),.groups = 'drop') %>%
   as.data.frame()
 ```
@@ -107,14 +104,15 @@ BBL_year_count <- BBL_all %>% group_by(species_name, event_year) %>%
 ggplot(BBL_year_count, aes(x = event_year, y = total_count)) + 
   geom_line(aes(color = species_name)) + 
   #scale_color_manual(values = c()) +   #might change line colors later  
-  ggtitle("Change in number of species records each year (1960-2022)")
+  ggtitle("Change in number of species records each year (1960-2022)") +
+  xlim(1960, 2021)
 ```
 
 
 ```{r}
 #grouping by year and species for just more recent years
-#come back and fix issue with geometry column later!
-BBL_year_count_recent <- BBL_recent %>% group_by(species_name, event_year) %>% 
+#using just_banding_recent because it has consistent names for all species, so the groupby actually works
+BBL_year_count_recent <- just_banding_recent %>% group_by(species_name, event_year) %>% 
   summarise(total_count=n(),.groups = 'drop') %>%
   as.data.frame()
 ```
@@ -124,7 +122,8 @@ BBL_year_count_recent <- BBL_recent %>% group_by(species_name, event_year) %>%
 ggplot(BBL_year_count_recent, aes(x = event_year, y = total_count)) + 
   geom_line(aes(color = species_name)) + 
   #scale_color_manual(values = c()) +   #might change line colors later  
-  ggtitle("Change in number of species records each year (2003-2022)")
+  ggtitle("Change in number of species records each year (2008-2022)") +
+  xlim(2008, 2021)
 ```
 
 
@@ -145,7 +144,7 @@ BBL_unique_recent <- BBL_recent %>% group_by(species_name, original_band) %>%
   summarise(total_count=n(), .groups = 'drop') %>%
   as.data.frame()
 
-#filtering for just unique birds that were found more than once 
+#filtering for just unique birds that were captured more than once 
 unique_mult_recent <- BBL_unique_recent[BBL_unique_recent$total_count >= 2, ]
 
 #getting list of original bands that have 2 or more captures
@@ -157,6 +156,8 @@ BBL_unique_mult_recent <- BBL_recent[BBL_recent$original_band %in% capture_mult,
 
 
 ```{r}
+#getting number of recaptures per month for each species
+#also includes original capture 
 for (b in birds){
   df <- BBL_unique_mult_recent[BBL_unique_mult_recent$species_name == b, ]
   #df$event_month<-as.factor(df$event_month)
@@ -169,9 +170,6 @@ for (b in birds){
 }
 ```
 
-
-
-Each bird with more than one capture was captured in the exact same place every time according to the data. The captures are, however, on different dates. This prevents me from doing any calculations about distance traveled, as unique birds only ever seem to get captured at the same location every time, at least according to the original_band column. 
 
 
 ```{r}
@@ -188,7 +186,7 @@ list_locs <- as.list(locs$original_band)
 recap_diff_locs <- BBL_recent[BBL_recent$original_band %in% list_locs, ]
 ```
 
-^ this shows that there are, in fact, some recaptures that happen at different locations than the original, but as far as I can tell, all of these recaptures are still really close to each other
+^ this shows that there are, in fact, some recaptures that happen at different locations than the original, but as far as I can tell, many of these recaptures are still really close to each other
 
 
 ```{r}
@@ -201,6 +199,7 @@ state_prov <- st_crop(state_prov, xmin = -140, xmax = -50, ymin = 5, ymax = 60)
 
 
 ```{r}
+#mapping the movements of recpatured individuals 
 i = 1 
 for (b in sci_birds){
   #these next two lines are so I can also include common name on map
@@ -209,6 +208,8 @@ for (b in sci_birds){
 
   df <- recap_diff_locs[recap_diff_locs$species_scientific_name == b, ]
   df <- df[df$lat != 0.0, ] 
+  
+  #setting color to original_band because each original band represents an individual bird
   print(ggplot() + 
     geom_sf(data=state_prov, colour="grey50", fill="white") + 
     geom_path(data = df, aes(x = lon, y = lat, color = original_band), 
