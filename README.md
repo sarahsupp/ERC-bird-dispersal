@@ -46,11 +46,20 @@ Old files (some of these are in oldcode file):
 
 Data: 
 * Bombycilla_cedorum.Rdata - Cedar Waxwing counts by hexagonal polygon grid
+* effort-merged_data_2023 - a folder that contains .rds files for each bird (species counts by hexagonal polygon grid)
 * effort.Rdata - Total eBirder count of activity by hexagonal polygon grid
+* effort-cout_2023.Rdata - same thing, just updated with most recent data
 * locs.Rdata - latitude and longitude locations of hexagonal polygon grid cells
-* dat_effort.Rdata - merged datafile, created using the three files above in the migration-paths.Rmd file.
+* locs_2023.Rdata - same thing, just updated with most recent data
+* dat_effort.Rdata - merged datafile, created using the files above in the migration-paths.Rmd file.
+* dat_effort_2023.rds - same thing, just updated with most recent data
+* dat_effort_in_range_2023 - only includes observations from dat_effort_2023.rds that fall within the ERC range
+* df_nvector_2023.rds - same as dat_effort_2023.rds, but this also includes lats/lons as n-vector representation
+* migration_timing_2023.rds - for every species and for each year, this dataframe shows the average start, middle, and end dates for autumn and spring migration 
+* daily_mean_lats_2023.rds - for every day from 2009 to 2022, this dataframe shows the average latitude of each species on that day 
 * occurrence_maps.rds - bird species ranges (breeding, non-breeding, etc.), see Metadata_BirdLife_HBW_Bird_Maps_2022.2.docx for more information
 * BBL2022.rds - Bird Banding Laboratory data with all captures/recaptures from 1964 - 2022, see NABBP_metadata_2022 for more information
+* ERC_shapefile_2023 - updated shapefile for ERC range (just one polygon)
 * BBL_in_range_2022.rds - only includes observations from BBL2022.rds that fall within the ERC range (not needed?)
 * gadm36_CAN_0_sp.rds - map files for Canada (not needed?)
 * gadm36_MEX_0_sp.rds - map files for Mexico (not needed?)
