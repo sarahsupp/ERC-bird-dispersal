@@ -4,7 +4,7 @@
 Evaluate abundance and distribution of potential birds dispersing Eastern Red Cedar seeds.
 Project is currently under development (2020).
 
-**Authors:** Sarah Supp, Jessy Niu, Kairuo Yan, Esther Lee (Denison University)
+**Authors:** Sarah Supp, Jessy Niu, Kairuo Yan, Esther Lee, Maximilian Wisnefski (Denison University)
 
 **Email:** supps@denison.edu
 
@@ -24,7 +24,14 @@ Files:
 * movement-ecology-paper.Rmd - This file creates an example data visual for Supp et al. 2021 (in revision) Movement Ecology Review manuscript (it is not part of the main repository/project analysis)
 * ERC-range.Rmd - This file is used to examine aspects of the ERC tree range and set boundaries for species-level data or aggregation
 * three-locations.Rmd - This file was to assess ERC seed disperser presences for Kaitlin Schvach's field locations (related project at Kent State Univ.)
-* waxwing_exploratory.Rmd - This file takes eBird data as input and outputs a figure used for the NSF proposal (2019) This is not a main file we are continuing to work with.
+* waxwing_exploratory.Rmd - This file takes eBird data as input and outputs a figure used for the NSF proposal (2019) This is not a main file we are continuing to work with. 
+* BBL_summary.Rmd - This file takes data from Bird Banding Laboratory (BBL) as input and uses it to create maps depicting the movements of individual banded birds (that were captured more than once) for each species
+* cooccur.Rmd - This file uses eBird data (that has been filtered to fall within the range of the ERC) in order to calculate species co-occurrence for the 15 species of interest
+* ERC_shapefile_basics.Rmd - This file uses a shapefile of the ERC's range to filter eBird data to only include observations that fall within that range
+* Migration-path-window.Rmd - This file uses GAMs to calculate the yearly migration paths for the 15 species of interest, as well as the start/end dates of those migrations for the 15 species of interest
+* plot_migration_paths.Rmd - This file uses the results from Migration-path-window.Rmd to plot the migration paths for all 15 species
+* occ_range_maps.Rmd - This file uses occurrence range data from BirdLife International and Handbook of the Birds of the World to calculate the distance between the breeding and non-breeding ranges for each migratory bird species of interest. This file also uses the data to make occurrence range maps for each migratory species
+
 
 
 Old files (some of these are in oldcode file): 
@@ -42,6 +49,9 @@ Data:
 * effort.Rdata - Total eBirder count of activity by hexagonal polygon grid
 * locs.Rdata - latitude and longitude locations of hexagonal polygon grid cells
 * dat_effort.Rdata - merged datafile, created using the three files above in the migration-paths.Rmd file.
+* occurrence_maps.rds - bird species ranges (breeding, non-breeding, etc.), see Metadata_BirdLife_HBW_Bird_Maps_2022.2.docx for more information
+* BBL2022.rds - Bird Banding Laboratory data with all captures/recaptures from 1964 - 2022, see NABBP_metadata_2022 for more information
+* BBL_in_range_2022.rds - only includes observations from BBL2022.rds that fall within the ERC range (not needed?)
 * gadm36_CAN_0_sp.rds - map files for Canada (not needed?)
 * gadm36_MEX_0_sp.rds - map files for Mexico (not needed?)
 * gadm36_USA_0_sp.rds - map files for United States (not needed?)
