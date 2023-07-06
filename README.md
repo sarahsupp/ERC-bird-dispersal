@@ -16,7 +16,7 @@ If you want to use or modify the code developed in this repository, please read 
 ### Prerequisites
 This software requires Program R version 4.3 or greater. R can be downloaded for free <https://www.r-project.org/>.
 
-Several specialized packages are used in the software and will need to be installed or updated. Below, we provide the sessionInfo() from July 6, 20223.
+Several specialized packages are used in the software and will need to be installed or updated. Below, we provide the sessionInfo() from July 6, 2023.
 
 
 <img width="825" alt="session_info_230706"
