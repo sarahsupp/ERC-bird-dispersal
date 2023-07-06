@@ -18,25 +18,45 @@ This software requires Program R version 4.3 or greater. R can be downloaded for
 
 Several specialized packages are used in the software and will need to be installed or updated. Below, we provide the sessionInfo() from July 6, 20223.
 
-![Session Info July 2023](/images/session_info_23-706.png)
-
 <img width="825" alt="session_info_230706" src="https://github.com/sarahsupp/ERC-bird-dispersal/assets/1189512/6b1bc039-6850-429a-8a33-69cf16e35fe4">
 
 
 ---
-### Data: 
+### Data
+This project requires data from multiple different sources, all of which are freely available to request online by the original data providers. We provide here our queried versions of the raw data, for replication purposes.
+
+The updated data used for drafting the multi-species disperser network manuscript is stored in the folder `data_2023` and comes from three main sources.
+
+#### eBird
+This data can be queried directly from eBird using their website or using the `auk` package in R. We worked directly with collaborator La Sorte to query the raw eBird data for 15 target species (listed above) and to assign locations into equal-area icosahedron cells (hexagonal grid) at resolution=5 for analysis. We also queried the total number of eBird records (including non-target species) for each icosahedron cell.
+
+| file name and location | description| data wrangling |
+| ------------- | ------------- | ------------- |
+| raw_eBird_data_2023/species/[species name].RData | counts for each target species  | raw data  |
+| raw_eBird_data_2023/effort-cout_2023.Rdata  | total number of eBird records submitted, for any species, for each grid cell  | raw data  |
+| raw_eBird_data_2023/locs_2023.Rdata  | latitude and longitude locations of hexagonal polygon grid cells  | raw data  |
+| effort-merged_data_2023/dat_effort_[species name].rds  | partly processed files that merge the species occurrences with the effort datasets for analysis  | merged data  |
+| dat_effort_2023.rds  | merged datafile with all species, created using the files above in migration-paths.Rmd  | merged data  |
+| dat_effort_in_range_2023  | filters observations from dat_effort_2023.rds that fall within the ERC range  | processed data  |
+| df_nvector_2023.rds  | adds lats/lons as n-vector representation to dat_effort_2023.rds | processed data  |
+| migration_timing_2023.rds  | for every species and for each year, this dataframe shows the average start, middle, and end dates for autumn and spring migration  | output data  |
+| daily_mean_lats_2023.rds  | for every day from 2009 to 2022, this dataframe shows the average latitude of each species on that day  | output data  |
+| ContentCell  | ContentCell  | ContentCell  |
+| ContentCell  | ContentCell  | ContentCell  |
+| ContentCell  | ContentCell  | ContentCell  |
+| ContentCell  | ContentCell  | ContentCell  |
+| ContentCell  | ContentCell  | ContentCell  |
+| ContentCell  | ContentCell  | ContentCell  |
+
+
+
 * Bombycilla_cedorum.Rdata - Cedar Waxwing counts by hexagonal polygon grid
 * effort-merged_data_2023 - a folder that contains .rds files for each bird (species counts by hexagonal polygon grid)
 * effort.Rdata - Total eBirder count of activity by hexagonal polygon grid
-* effort-cout_2023.Rdata - same thing, just updated with most recent data
 * locs.Rdata - latitude and longitude locations of hexagonal polygon grid cells
-* locs_2023.Rdata - same thing, just updated with most recent data
 * dat_effort.Rdata - merged datafile, created using the files above in the migration-paths.Rmd file.
-* dat_effort_2023.rds - same thing, just updated with most recent data
-* dat_effort_in_range_2023 - only includes observations from dat_effort_2023.rds that fall within the ERC range
-* df_nvector_2023.rds - same as dat_effort_2023.rds, but this also includes lats/lons as n-vector representation
-* migration_timing_2023.rds - for every species and for each year, this dataframe shows the average start, middle, and end dates for autumn and spring migration 
-* daily_mean_lats_2023.rds - for every day from 2009 to 2022, this dataframe shows the average latitude of each species on that day 
+  
+
 * occurrence_maps.rds - bird species ranges (breeding, non-breeding, etc.), see Metadata_BirdLife_HBW_Bird_Maps_2022.2.docx for more information
 * BBL2022.rds - Bird Banding Laboratory data with all captures/recaptures from 1960 - 2022, see NABBP_metadata_2022 for more information
 * ERC_shapefile_2023 - updated shapefile for ERC range (just one polygon)
