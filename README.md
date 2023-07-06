@@ -58,7 +58,7 @@ Data:
 * migration_timing_2023.rds - for every species and for each year, this dataframe shows the average start, middle, and end dates for autumn and spring migration 
 * daily_mean_lats_2023.rds - for every day from 2009 to 2022, this dataframe shows the average latitude of each species on that day 
 * occurrence_maps.rds - bird species ranges (breeding, non-breeding, etc.), see Metadata_BirdLife_HBW_Bird_Maps_2022.2.docx for more information
-* BBL2022.rds - Bird Banding Laboratory data with all captures/recaptures from 1964 - 2022, see NABBP_metadata_2022 for more information
+* BBL2022.rds - Bird Banding Laboratory data with all captures/recaptures from 1960 - 2022, see NABBP_metadata_2022 for more information
 * ERC_shapefile_2023 - updated shapefile for ERC range (just one polygon)
 * BBL_in_range_2022.rds - only includes observations from BBL2022.rds that fall within the ERC range (not needed?)
 * gadm36_CAN_0_sp.rds - map files for Canada (not needed?)
