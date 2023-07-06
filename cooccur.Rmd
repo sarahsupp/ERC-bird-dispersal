@@ -262,6 +262,7 @@ for (p in unique_poly){
   #new_row = c(id = 33, pages=50, name = "java")
   # = rbind(df,new_row)
   
+  #adding a new row
   lm_results[nrow(lm_results) + 1,] <- list(cell, slope, p_val)
 }
 
@@ -273,6 +274,28 @@ for (p in unique_poly){
 
 
 ```{r}
+#adding columns to say whether or not slope was significant 
+#and whether or not slope was positive
+lm_results <- transform(lm_results, significant = ifelse(p < .05, TRUE, FALSE))
+lm_results <- transform(lm_results, pos_neg = ifelse(slope >= 0, "positive", "negative"))
+```
+
+
+```{r}
+lm_signif <- lm_results[lm_results$significant == TRUE, ]
+
+#of the 233 regression models that were run (one for each cell), 82 of them had statistically significant p values (<0.05). Of those 82, all of them had a positive (but very small) slope
+
+ggplot(lm_signif, aes(x = slope)) +
+  geom_histogram() +
+  theme_bw() +
+  ggtitle("distribution of slope values", "(for statistically significant slopes only)") +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+```
+
+
+
+```{r}
 #linear regression for all cells, instead of 1 cell at a time (probably won't use this)
 summary(lm(total_count ~ start_year, data = all_poly_groups))
 ```
@@ -280,19 +303,20 @@ summary(lm(total_count ~ start_year, data = all_poly_groups))
 
 
 ```{r}
-median_plot <- ggplot() +
-  geom_histogram(data = poly_2023, aes(x = median_mean_count)) +
-  theme_bw()
+#not needed 
+#median_plot <- ggplot() +
+#  geom_histogram(data = poly_2023, aes(x = median_mean_count)) +
+#  theme_bw()
 
-min_plot <- ggplot() +
-  geom_histogram(data = poly_2023, aes(x = min_mean_count)) +
-  theme_bw()
+#min_plot <- ggplot() +
+#  geom_histogram(data = poly_2023, aes(x = min_mean_count)) +
+#  theme_bw()
 
-max_plot <- ggplot() +
-  geom_histogram(data = poly_2023, aes(x = max_mean_count)) +
-  theme_bw()
+#max_plot <- ggplot() +
+#  geom_histogram(data = poly_2023, aes(x = max_mean_count)) +
+#  theme_bw()
 
-ggarrange(median_plot, min_plot, max_plot, nrow = 1, labels = c('a', 'b', 'c'))
+#ggarrange(median_plot, min_plot, max_plot, nrow = 1, labels = c('a', 'b', 'c'))
 ```
 
 
