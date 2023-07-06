@@ -37,7 +37,7 @@ This is just for the purpose of calculating migration distances for the avian tr
 
 ```{r}
 #saveRDS(filt_birds, "occurrence_map.rds")
-birds <- readRDS("occurrence_map.rds")
+birds <- readRDS("data_2023/bird_occurrence_range_maps/occurrence_map.rds")
 ```
 
 ```{r}
