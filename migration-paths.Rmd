@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ##Code for cedar waxwing project, modified from eBird migration project (Supp et al. 2015)
-(c) 2022, Niu and Supp and Lee
+(c) 2020-2023, Niu, Lee, Wisnefski, and Supp (PI)
 supps@denison.edu
 Denison University
 Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2)
