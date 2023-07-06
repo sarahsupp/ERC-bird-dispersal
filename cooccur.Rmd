@@ -182,9 +182,10 @@ cooccur_2022 <- data.frame(coocur_list[14])
 ```{r}
 #using grids to create new df's that show how many species were observed in any given cell for each period of time
 poly_groups_list <- list()
+year = 2008
 for (g in grid_list){
   grid <- data.frame(g)
-  poly_groups <- grid %>% group_by(geometry) %>% 
+  poly_groups <- grid %>% group_by(geometry, seqnum) %>% 
     summarise(total_count=n(), 
               mean_sum_count = mean(sum_weighted_count),
               mean_mean_count = mean(mean_weighted_count),
@@ -193,6 +194,9 @@ for (g in grid_list){
               max_mean_count = max(mean_weighted_count),
               .groups = 'drop') %>%
     as.data.frame()
+  
+  poly_groups$start_year = year
+  year = year + 1
   
   #poly_groups = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
   
@@ -231,6 +235,51 @@ for (i in 1:length(poly_groups_list)){
 
 
 ```{r}
+#binding all of the poly_groups dataframes into one dataframe
+all_poly_groups <- data.frame(poly_groups_list[1])
+for (i in 2:length(poly_groups_list)){
+  all_poly_groups <- rbind(all_poly_groups, data.frame(poly_groups_list[i]))
+  }
+```
+
+
+```{r}
+#running simple linear regression for each polygon to see change over time of co-occurrence
+columns= c("cell","slope","p")
+lm_results = data.frame(matrix(nrow = 0, ncol = length(columns)))
+colnames(lm_results) = columns
+
+unique_poly <- unique(all_poly_groups$seqnum)
+lm_list <- list()
+for (p in unique_poly){
+  pol <- all_poly_groups[all_poly_groups$seqnum == p, ]
+  lm_cooccur <- lm(total_count ~ start_year, data = pol) 
+  lm_list <- append(lm_list, list(lm_cooccur))
+  
+  cell <- p
+  slope <- summary(lm_cooccur)$coefficients[2]
+  p_val <- summary(lm_cooccur)$coefficients[8]
+  #new_row = c(id = 33, pages=50, name = "java")
+  # = rbind(df,new_row)
+  
+  lm_results[nrow(lm_results) + 1,] <- list(cell, slope, p_val)
+}
+
+
+#summary(lm_list[[233]])$coefficients
+#summary(lm_cooccur)$coefficients
+
+```
+
+
+```{r}
+#linear regression for all cells, instead of 1 cell at a time (probably won't use this)
+summary(lm(total_count ~ start_year, data = all_poly_groups))
+```
+
+
+
+```{r}
 median_plot <- ggplot() +
   geom_histogram(data = poly_2023, aes(x = median_mean_count)) +
   theme_bw()
@@ -256,7 +305,7 @@ for (p in poly_groups_list){
   print(
     ggplot() + 
       geom_sf(data=state_prov, colour="grey50", fill="white") + 
-      geom_sf(data = poly_groups, aes(fill = median_count), color = NA) +
+      geom_sf(data = poly_groups, aes(fill = median_mean_count), color = NA) +
       scale_fill_viridis(option = "D") +
       #ggtitle("") +
       theme_void()
