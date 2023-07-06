@@ -19,6 +19,7 @@ This software requires Program R version 4.3 or greater. R can be downloaded for
 Several specialized packages are used in the software and will need to be installed or updated. Below, we provide the sessionInfo() from July 6, 20223.
 
 <img width="825" alt="session_info_230706" src="https://github.com/sarahsupp/ERC-bird-dispersal/assets/1189512/6b1bc039-6850-429a-8a33-69cf16e35fe4">
+![session_info_230706](https://github.com/sarahsupp/ERC-bird-dispersal/assets/97928692/4ff74b31-c8aa-4842-ae41-e01381c7d4bd)
 
 
 ---
