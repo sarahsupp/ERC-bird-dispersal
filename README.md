@@ -51,24 +51,46 @@ This data can be queried directly from eBird using their website or using the `a
 | ContentCell  | ContentCell  | ContentCell  |
 
 
+#### USGS Bird Banding Lab (BBL) data
+Brief description of the data and the data source.
 
+| file name and location | description| data wrangling |
+| ------------- | ------------- | ------------- |
+| BBL_data/NABBP_metadata_2022  | contains files and information about the BBL data  | metadata  |
+| BBL_data/BBL2022.rds  |  Bird Banding Laboratory data with captures/recaptures 1960 - 2022 | raw data  |
+| ContentCell  | ContentCell  | ContentCell  |
+
+
+#### Shapefiles and Range Maps
+Brief description of the data and data sources.
+
+| file name and location | description| data wrangling |
+| ------------- | ------------- | ------------- |
+| bird_occurrence_range_maps/Medatadata_BirdLife_HBW_Bird_Maps_2022.2.docx  | information about Bird Life International range maps  | metadata  |
+| bird_occurrence_range_maps/occurrence_map.rds  | bird species ranges (breeding, non-breeding, etc.)  | processed data  |
+| ERC_shapefile_2023/junivirg.*  | shapefiles for eastern redcedar range polygon  | processed data  |
+
+
+**old files, SRS may move or delete if no longer needed**
 * Bombycilla_cedorum.Rdata - Cedar Waxwing counts by hexagonal polygon grid
 * effort-merged_data_2023 - a folder that contains .rds files for each bird (species counts by hexagonal polygon grid)
 * effort.Rdata - Total eBirder count of activity by hexagonal polygon grid
 * locs.Rdata - latitude and longitude locations of hexagonal polygon grid cells
 * dat_effort.Rdata - merged datafile, created using the files above in the migration-paths.Rmd file.
-  
-
-* occurrence_maps.rds - bird species ranges (breeding, non-breeding, etc.), see Metadata_BirdLife_HBW_Bird_Maps_2022.2.docx for more information
-* BBL2022.rds - Bird Banding Laboratory data with all captures/recaptures from 1960 - 2022, see NABBP_metadata_2022 for more information
-* ERC_shapefile_2023 - updated shapefile for ERC range (just one polygon)
-* BBL_in_range_2022.rds - only includes observations from BBL2022.rds that fall within the ERC range (not needed?)
 * gadm36_CAN_0_sp.rds - map files for Canada (not needed?)
 * gadm36_MEX_0_sp.rds - map files for Mexico (not needed?)
 * gadm36_USA_0_sp.rds - map files for United States (not needed?)
 
 
 ### Files:
+
+| file name and location | description| data wrangling |
+| ------------- | ------------- | ------------- |
+| content | content | content |
+| content | content | content |
+| content | content | content |
+
+
 * process-raw-eBird-data.Rmd - This file takes in original files from FAL eBird (effort, locations, polyFID) and merges them together into a species-level .rds file for later analysis. 
 * migration-paths.Rmd - This file is used analyze ebird data across multiple species. It creates average migration pathway, identifies start and end of migration seasons, and peak latitude (summer), and identifies linear trends in migration dates (onset, end) through time, where they exist. 
 * movement-ecology-paper.Rmd - This file creates an example data visual for Supp et al. 2021 (in revision) Movement Ecology Review manuscript (it is not part of the main repository/project analysis)
