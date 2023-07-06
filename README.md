@@ -1,14 +1,29 @@
 
 [![NSF-0000000](https://img.shields.io/badge/NSF-1915913-blue.svg)](https://nsf.gov/awardsearch/showAward?AWD_ID=1915913)
 # ERC-bird-dispersal
-Evaluate abundance and distribution of potential birds dispersing Eastern Red Cedar seeds.
-Project is currently under development (2020).
+Evaluate abundance and distribution of a multi-species avian seed dispersal network for Eastern Red Cedar trees. The code and data in this repository support the NSF award #1915913 (2019-2024), part of a Multi-Institution Collaborative award that includes researchers at Denison University, Kent State University, Ohio State University, and Holden Arboretum. The results of this analysis partly support a spatially explicit model for eastern red cedar range expansion (lead author, Gil Bohrer, Ohio State University) and a scientific paper about the spatial and temporal distribution and co-occurence of 15 bird species known to forage on and spread eastern redcedar fruits.
+This project is currently under development (2020).
 
 **Code Authors and Contributors:** Sarah Supp, Jessy Niu, Kairuo Yan, Esther Lee, Maximilian Wisnefski (Denison University), Frank A. La Sorte (Cornell University)
 
 **Contact Email:** supps@denison.edu
 
+---
 
+## Getting Started
+If you want to use or modify the code developed in this repository, please read the following steps to help with your setup and implementation.
+
+### Prerequisites
+This software requires Program R version 4.3 or greater. R can be downloaded for free <https://www.r-project.org/>.
+
+Several specialized packages are used in the software and will need to be installed or updated. Below, we provide the sessionInfo() from July 6, 20223.
+
+![Session Info July 2023](/images/session_info_23-706.png)
+
+<img width="825" alt="session_info_230706" src="https://github.com/sarahsupp/ERC-bird-dispersal/assets/1189512/6b1bc039-6850-429a-8a33-69cf16e35fe4">
+
+
+---
 ### Data: 
 * Bombycilla_cedorum.Rdata - Cedar Waxwing counts by hexagonal polygon grid
 * effort-merged_data_2023 - a folder that contains .rds files for each bird (species counts by hexagonal polygon grid)
