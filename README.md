@@ -81,20 +81,22 @@ Brief description of the data and data sources.
 Several code files represent small calculations, exploration, or side analyses for related projects.
 | file name and location | description| analysis stage |
 | ------------- | ------------- | ------------- |
-| content | content | content |
-| content | content | content |
-| content | content | content |
-| content | content | content |
-* movement-ecology-paper.Rmd - This file creates an example data visual for Supp et al. 2021 (in revision) Movement Ecology Review manuscript (it is not part of the main repository/project analysis)
-* ERC-range.Rmd - This file is used to examine aspects of the ERC tree range and set boundaries for species-level data or aggregation
-* three-locations.Rmd - This file was to assess ERC seed disperser presences for Kaitlin Schvach's field locations (related project at Kent State Univ.)
-* waxwing_exploratory.Rmd - This file takes eBird data as input and outputs a figure used for the NSF proposal (2019) This is not a main file we are continuing to work with. 
-
+| movement-ecology-paper.Rmd | creates an example data visual for [Supp et al. 2021](https://movementecologyjournal.biomedcentral.com/articles/10.1186/s40462-021-00294-2) article (not part of the main project) | outputs figures |
+  
 ---
 
 ### Old files (some of these are in oldcode file): 
 **old files, SRS may move or delete if no longer needed**
-Most of these files have been moved into the old-code-data folder for now
+Most of these files have been moved into the old-code-data folder for now, will decide if keeping or archiving elsewhere prior to publication.
+
+| file name and location | description| analysis stage |
+| ------------- | ------------- | ------------- |
+| movement-ecology-paper.Rmd | creates an example data visual for [Supp et al. 2021](https://movementecologyjournal.biomedcentral.com/articles/10.1186/s40462-021-00294-2) article (not part of the main project) | outputs figures |
+| ERC-range.Rmd | examine aspects of the ERC tree range and set boundaries for species-level data or aggregation | does not complete |
+| three-locations.Rmd | assess ERC seed disperser presences for K. Schvach field locations (related project at Kent State Univ.) | does not complete |
+| waxwing_exploratory.Rmd | takes eBird data as input and outputs a figure used for the NSF proposal (2019) This is not a main file we are continuing to work with. | no longer needed |
+
+
 * Bombycilla_cedorum.Rdata - Cedar Waxwing counts by hexagonal polygon grid
 * effort-merged_data_2023 - a folder that contains .rds files for each bird (species counts by hexagonal polygon grid)
 * effort.Rdata - Total eBirder count of activity by hexagonal polygon grid
