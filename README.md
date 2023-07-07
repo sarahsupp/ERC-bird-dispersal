@@ -46,7 +46,7 @@ This data can be queried directly from eBird using their website or using the `a
 
 
 #### USGS Bird Banding Lab (BBL) data
-Brief description of the data and the data source.
+This data can be requested directly from the USGS Bird Banding Lab web interface [https://www.usgs.gov/labs/bird-banding-laboratory](https://www.usgs.gov/labs/bird-banding-laboratory). We queried data from 1960-2022 for our 15 target species. These data represent individually marked birds and their (re)capture locations.
 
 | file name and location | description| data wrangling |
 | ------------- | ------------- | ------------- |
