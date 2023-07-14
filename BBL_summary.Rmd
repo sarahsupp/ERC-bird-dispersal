@@ -71,13 +71,15 @@ banding_count <- just_banding %>%
 
 Visualize the species counts, ordered from most to least observed
 ```{r}
-ggplot(bird_count, aes(x=reorder(species_scientific_name, -count), y=count)) +
+plotyrcounts <- ggplot(bird_count, aes(x=reorder(species_scientific_name, -count), y=count)) +
   geom_bar(stat="identity") + 
   labs(title = "Number of individuals banded or encountered (1960-2022)",
        x = "") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
         plot.title = element_text(hjust = 0.5))
+
+plotyrcounts
 ```
 ### data subset for 2008-2022
 Let's also make a subset of the data that represents the same years as the recent eBird occurrences, just for a more direct comparison
@@ -117,7 +119,7 @@ year_count <- BBL_all %>%
     summarise(count=n(),.groups = 'drop')
 
 #make the line plot
-ggplot(year_count, aes(x = event_year, y = count, 
+plotyrs <- ggplot(year_count, aes(x = event_year, y = count, 
                        group = species_scientific_name, color = species_scientific_name)) + 
   geom_line() + 
   scale_colour_discrete(guide = 'none') +
@@ -129,7 +131,17 @@ ggplot(year_count, aes(x = event_year, y = count,
   labs(title = "Number of records 1960-2022",
        x = "year") +
   xlim(1950, 2021)  
+
+plotyrs
 ```
+
+OK let's make a nifty panel gird
+```{r}
+ggarrange(plotyrcounts, plotyrs, ncol=1)
+
+ggsave("results/BBL-data-years.png", height=15, width=7)
+```
+
 
 Let's look at this again, but just with the most recent years, 2008-2022.
 ```{r}
@@ -202,13 +214,6 @@ table(BBL_recaptures$event_month)
 
 BBL_recaptures <- BBL_recaptures %>%
   filter(event_month %in% seq(1:12))
-
-ggplot(BBL_recaptures, aes(x=event_month)) +
-  geom_histogram(binwidth=1) +
-  scale_x_continuous(breaks= pretty_breaks()) +
-  labs(x="Month observed") +
-  theme_bw() +
-  facet_wrap(~species_scientific_name)
 ```
 
 
@@ -244,10 +249,25 @@ BBL_recaptures <- BBL_recaptures %>%
 
 ^ this shows that there are, in fact, some recaptures that happen at different locations than the original, but as far as I can tell, many of these recaptures are still really close to each other
 
+
 Now that we have a much smaller dataest, let's look one more time at the amount of data we really have per species
 ```{r}
 table(BBL_recaptures$species_scientific_name)
 table(BBL_recaptures$event_year)
+
+ggplot(BBL_recaptures, aes(x=event_month)) +
+  geom_histogram(binwidth=1) +
+  scale_x_continuous(breaks= pretty_breaks()) +
+  labs(x="Month observed") +
+  theme_bw() +
+  facet_wrap(~species_scientific_name)
+
+ggplot(BBL_recaptures, aes(x=event_year)) +
+  geom_histogram(binwidth=1) +
+  scale_x_continuous(breaks= pretty_breaks()) +
+  labs(x="Month observed") +
+  theme_bw() +
+  facet_wrap(~species_scientific_name)
 ```
 
 
