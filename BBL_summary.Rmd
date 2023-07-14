@@ -17,7 +17,12 @@ library(rnaturalearth)
 library(rnaturalearthhires)
 ```
 
+
+## Introduction and read in the Bird Banding Laboratory datasets
+
 In this .rmd, I am using the filtered BBL data to learn about the movement of individual banded birds for the 15 species of interest. I'm also making some basic visuals describing the data.
+
+Here, we read in the data and filter out non-target species and subspecies
 
 ```{r}
 #this data has been filtered using lats/lons of ERC shapefile
@@ -30,31 +35,34 @@ BBL_all <- readRDS("data_2023/BBL_data/BBL2022.rds")
 #BBL_all <- sf_to_df(BBL_all, fill = TRUE, unlist = NULL)
 #BBL_all = subset(BBL_all, select = -c(sfg_id,x,y) )
 BBL_all$species_name <-tolower(BBL_all$species_name)
+
+#check the species names
+unique(BBL_all$species_scientific_name)
+
+#remove western subspecies and an incorrect species
+BBL_all <- BBL_all %>%
+  filter(!species_scientific_name %in% c("Junco hyemalis oreganus", "Setophaga coronata auduboni", "Setophaga petechia"))
 ```
 
-
+In the next step, we create a subset of the data that only includes banding events.
 ```{r}
 #filtering to just banding events, not encounters (since encounters all overlap with bandings)
 #rows with event type B also have consistent names for the different species
 just_banding <- BBL_all[BBL_all$event_type == 'B',]
 ```
 
-
-
+Let's count all the individual birds that were banded
 ```{r}
-#getting counts for each bird
-birds <- unique(just_banding$species_name)
-#also making list of scientific names
-sci_birds <- unique(just_banding$species_scientific_name)
+# check that all the species appear to be present in this dataset, and create a vector of names
+birds <- unique(just_banding$species_scientific_name)
 
-bird_counts <- list()
-for (b in birds){
-  count <- length(which(BBL_all$species_name == b))
-  bird_counts <- append(bird_counts, count)
-}
+# let's look at it as a table to see the counts
+table(just_banding$species_scientific_name)
 
-bird_df = data.frame(unlist(birds),unlist(bird_counts))
-names(bird_df) = c("species_name","count")
+# summarize the counts in a table
+bird_count <- BBL_all %>%
+  group_by(species_scientific_name) %>%
+  summarize(n())
 ```
 
 ```{r}
