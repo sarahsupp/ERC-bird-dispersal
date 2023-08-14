@@ -159,12 +159,15 @@ coocur_list <- list()
 
 #making a df of co-occurrence stats for each season we care about
 #also plotting co-occurrence matrices
+n = 1
 for (odf in occur_list){
   occur_df <- data.frame(odf)
   cooccur_birds <- cooccur(occur_df, type = "spp_site", thresh = TRUE, spp_names = TRUE)
   print(plot(cooccur_birds))
   prob_table <- prob.table(cooccur_birds)
   coocur_list <- append(coocur_list, list(prob_table))
+  ggsave(paste0("figs/cooccur_matrcies/co_matrix",n,".png"))
+  n = n + 1
 }
 
 #sp1_inc and sp2_inc represent number of polygons the bird appeared in 
@@ -175,6 +178,7 @@ cooccur_2022 <- data.frame(coocur_list[14])
 
 #how to look at co-occur info for individual species
 #waxwing_pairs <- pair(mod = cooccur_birds, spp = "Bombycilla cedrorum")
+ggsave("../test_co_matrix.png", bg = "white", height = 10, width = 15)
 ```
 
 
@@ -217,12 +221,14 @@ state_prov <- st_crop(state_prov, xmin = -110, xmax = -50, ymin = 20, ymax = 50)
 ```{r}
 #October - March from 2008-2009 to 2022-2023 
 #plotting every season from 2008/2009 through 2022/2023
+co_maps <- list()
+
 for (i in 1:length(poly_groups_list)){
   poly_groups <- data.frame(poly_groups_list[i])
   poly_groups = st_as_sf(poly_groups, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
   print(
-    ggplot() + 
-      geom_sf(data=state_prov, colour="grey50", fill="white") + 
+    co_map <- ggplot(data=state_prov, colour="grey") + 
+      geom_sf(fill = "white") + 
       geom_sf(data = poly_groups, aes(fill = total_count), color = NA) +
       scale_fill_viridis(option = "D") +
       ggtitle(paste0(years[i] - 1," - " , years[i])) +
@@ -230,8 +236,34 @@ for (i in 1:length(poly_groups_list)){
       theme(plot.title = element_text(hjust = 0.5)) + 
       labs(fill = "species count")
   )
+  co_maps <- append(co_maps, list(co_map))
 }
 ```
+
+
+```{r}
+#trying to find nice way to arrange plots with ggarrange
+#including all years
+ggarrange(co_maps[1][[1]], co_maps[2][[1]], co_maps[3][[1]], co_maps[4][[1]], co_maps[5][[1]], 
+          co_maps[6][[1]], co_maps[7][[1]], co_maps[8][[1]], co_maps[9][[1]], co_maps[10][[1]], 
+          co_maps[11][[1]], co_maps[12][[1]], co_maps[13][[1]], co_maps[14][[1]], co_maps[15][[1]], 
+          ncol = 3, nrow = 5, common.legend = TRUE, legend = "right")
+
+#ggsave("../test_ggarrange.png", bg = "white", height = 15, width = 10)
+```
+
+
+```{r}
+#trying to find nice way to arrange plots with ggarrange
+#including every other year
+ggarrange(co_maps[1][[1]], co_maps[3][[1]], co_maps[5][[1]], co_maps[7][[1]], co_maps[9][[1]], 
+          co_maps[11][[1]], co_maps[13][[1]], co_maps[15][[1]], 
+          common.legend = TRUE, legend = "right")
+
+#ggsave("../test_ggarrange.png", bg = "white", height = 10, width = 10)
+```
+
+
 
 
 ```{r}

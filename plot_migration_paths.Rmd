@@ -13,6 +13,7 @@ library(dplyr)
 library(ggplot2)
 library(viridisLite)
 library(viridis)
+library(ggpubr)
 ```
 
 
@@ -78,7 +79,10 @@ for (s in species){
 ```{r}
 #trying to find nice way to arrange plots with ggarrange
 ggarrange(mig_plots[1][[1]], mig_plots[3][[1]], mig_plots[6][[1]], mig_plots[7][[1]],
-          mig_plots[8][[1]], mig_plots[10][[1]], mig_plots[13][[1]], mig_plots[15][[1]])
+          mig_plots[8][[1]], mig_plots[10][[1]], mig_plots[13][[1]], mig_plots[15][[1]], 
+          common.legend = TRUE, legend = "right")
+
+#ggsave("../test_ggarrange.png", bg = "transparent", height = 10, width = 10)
 ```
 
 
@@ -91,10 +95,6 @@ mig_dates <- dataresult %>% group_by(species) %>%
             avg_aut_beginning = mean(autumn_beginning),
             avg_aut_middle = mean(autumn_middle),
             avg_aut_end = mean(autumn_end))
-  
-  
-
-
 ```
 
 
