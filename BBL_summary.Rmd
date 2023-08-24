@@ -81,6 +81,7 @@ plotyrcounts <- ggplot(bird_count, aes(x=reorder(species_scientific_name, -count
 
 plotyrcounts
 ```
+
 ### data subset for 2008-2022
 Let's also make a subset of the data that represents the same years as the recent eBird occurrences, just for a more direct comparison
 ```{r}
@@ -286,12 +287,13 @@ This code loops through all species to make maps
 ```{r}
 #mapping the movements of recpatured individuals 
 i = 1 
+birds <- unique(just_banding$species_scientific_name)
 for (b in birds){
   #these next two lines are so I can also include common name on map
   name = birds[i]
   i = i + 1
 
-  df <- recap_diff_locs[recap_diff_locs$species_scientific_name == b, ]
+  df <- BBL_recaptures[BBL_recaptures$species_scientific_name == b, ]
   df <- df[df$lat != 0.0, ] 
   
   #setting color to original_band because each original band represents an individual bird
@@ -313,6 +315,46 @@ for (b in birds){
 }
 
 ```
+
+
+
+This code does the same thing as the previous chunk. However, it only focuses on data from 2008 or later
+```{r}
+#filtering recapture data to only include 2008 and later 
+BBL_recaptures_recent <- BBL_recaptures[BBL_recaptures$event_year >= 2008,]
+
+#mapping the movements of recpatured individuals 
+i = 1 
+for (b in birds){
+  #these next two lines are so I can also include common name on map
+  name = birds[i]
+  i = i + 1
+
+  df <- BBL_recaptures_recent[BBL_recaptures_recent$species_scientific_name == b, ]
+  df <- df[df$lat != 0.0, ] 
+  
+  #setting color to original_band because each original band represents an individual bird
+  print(ggplot() + 
+    geom_sf(data=state_prov, colour="grey50", fill="white") + 
+    geom_path(data = df, aes(x = lon, y = lat, col=original_band), 
+              linewidth = 0.5, lineend = "round") +
+    labs(x = "", y = "", title = b) +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(hjust = 0.5), 
+          plot.subtitle = element_text(hjust = 0.5)) +
+    theme(axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank() 
+          ) +
+      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+    )
+  #ggsave(paste0("figs/BBL_", b, ".png"), bg = "transparent", height = 5, width = 7.5)
+
+}
+
+```
+
 
 FIXME: The last bits to do are to 
 * calculate the distance moved between subsequent recaptures

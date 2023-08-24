@@ -79,7 +79,7 @@ for (s in species){
 ```{r}
 #trying to find nice way to arrange plots with ggarrange
 ggarrange(mig_plots[1][[1]], mig_plots[3][[1]], mig_plots[6][[1]], mig_plots[7][[1]],
-          mig_plots[8][[1]], mig_plots[10][[1]], mig_plots[13][[1]], mig_plots[15][[1]], 
+          mig_plots[8][[1]], mig_plots[10][[1]], mig_plots[11][[1]], mig_plots[13][[1]], mig_plots[15][[1]], 
           common.legend = TRUE, legend = "right")
 
 #ggsave("../test_ggarrange.png", bg = "transparent", height = 10, width = 10)
