@@ -20,6 +20,8 @@ library(s2)
 library(tidyr)
 library(dplyr)
 library(lwgeom)
+library(rnaturalearth)
+library(rnaturalearthhires)
 ```
 
 
@@ -40,7 +42,7 @@ link: https://www.sciencebase.gov/catalog/item/51bf5940e4b0eb321c798ec9
 
 ```{r}
 #spdf is short for spatial polygon dataframe
-US_CAN_spdf <- readOGR(dsn = "data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
+US_CAN_spdf <- readOGR(dsn = "old-code-data/data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
 my_spdf <- readOGR(dsn = "data_2023/ERC_shapefile_2023", layer = "junivirg")
 ```
 ^I'm not sure why I am getting these warnings. I'm using both the sf and terra packages. 
@@ -128,6 +130,30 @@ plot(spdf_latlon,
      col = mycol,
      add = TRUE)
 ```
+
+
+### Mapping ERC range on US map with ggplot
+
+```{r}
+#making the returnclass sf, so I can zoom in on it 
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
+state_prov <- st_crop(state_prov, xmin = -110, xmax = -50, ymin = 20, ymax = 50)
+```
+
+
+```{r}
+range_sf = st_as_sf(spdf_latlon, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+
+ggplot(data=state_prov, colour="grey") + 
+  geom_sf(fill = "white") + 
+  geom_sf(data = range_sf, fill = mycol) +
+  theme_void() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#ggsave("../ERC_range.png", bg = "transparent", height = 10, width = 15)
+```
+
+
 
 ### Mapping ERC range in leaflet
 
