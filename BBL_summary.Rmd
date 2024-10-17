@@ -9,21 +9,34 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(directlabels)
+library(geosphere)
+library(ggpubr)
 library(grid)
 library(scales)
 library(sf)
 library(sfheaders)
 library(rnaturalearth)
-#devtools::install_github("ropensci/rnaturalearthhires")
+#devtools::install_github("ropensci/rnaturalearthhires") #use if need to install pkg
 library(rnaturalearthhires)
 ```
 
+code author: M. Wisnefski
+code editor/reviewer: S. Supp
 
 ## Introduction and read in the Bird Banding Laboratory datasets
 
-In this .rmd, I am using the filtered BBL data to learn about the movement of individual banded birds for the 15 species of interest. I'm also making some basic visuals describing the data.
+In this code notebook, I am using the filtered BBL data to learn about the movement of individual banded birds for the 15 species of interest. I'm also making some basic visuals describing the data.
 
-Here, we read in the data and filter out non-target species and subspecies
+### Data filtering
+In the below sections, we will filter for: 
+
+* the correct species
+* rows that represent banding events
+* months that range 1:12
+* individuals captured 2 or more times (recaptures, using original band)
+* individuals captured in 2 or more locations (to help identify movement)
+
+Here, we read in the data and filter out non-target species and subspecies.
 
 ```{r}
 #this data has been filtered using lats/lons of ERC shapefile
@@ -49,15 +62,12 @@ In the next step, we create a subset of the data that only includes banding even
 just_banding <- BBL_all[BBL_all$event_type == 'B',]
 ```
 
-Let's count all the individual birds that were banded
+Let's count all the individual birds that were banded.
 ```{r}
-# check that all the species appear to be present in this dataset, and create a vector of names
+# check that all the species appear to be present and create a vector of names
 birds <- unique(just_banding$species_scientific_name)
 
-# let's look at it as a table to see the counts
-table(just_banding$species_scientific_name)
-
-# summarize the counts in a table for the whole dataset
+# summarize the counts in a table for the whole dataset (before filtering to banding events only)
 bird_count <- BBL_all %>%
   group_by(species_scientific_name) %>%
   summarize(count = n())
@@ -68,6 +78,153 @@ banding_count <- just_banding %>%
   summarize(count = n())
 ```
 
+Remove months that appear to be typos or represent something else (i.e., >12)
+```{r}
+#Some months are >12. We will filter that data out as it could be invalid and we aren't sure what it represents. This represents only a small amount of the observations (n=890)
+table(BBL_all$event_month)
+
+# filter to keep only months in the range 1:12
+BBL_all <- BBL_all %>%
+  filter(event_month %in% seq(1:12))
+```
+
+Now, what we need to know is which of the banded individuals were captured more than one time, and we can filter the dataset to only include "recaptured" individuals.
+```{r}
+#grouping by original band and species for all years (BBL_unique_1960)
+recaptures <- BBL_all %>% 
+  group_by(species_scientific_name, original_band) %>% 
+  summarise(recaptures=n(), .groups = 'drop')
+
+# get the five number summary
+summary(recaptures$recaptures)
+```
+
+Keep only the individuals that were captured more than once.
+```{r}
+recaptures <- recaptures %>%
+  filter(recaptures >= 2)
+```
+This filter step took our original number of bands from 4,512,246 to just 44,610 records.
+
+
+Keep only the individually banded birds that were recaptured 2 or more times.
+```{r}
+BBL_recaptures <- BBL_all %>%
+  filter(original_band %in% recaptures$original_band)
+```
+This filter step reduced the total number of observations from 4,565,131 to 97,495.
+
+```{r}
+#grouping previous df by unique lons and lats, as well as original id
+#trying to see if any of these birds are being recaptured at different locations
+unique_loc <- BBL_recaptures %>% 
+  group_by(original_band, lon, lat) %>% 
+  summarise(count=n(), .groups = 'drop')
+
+#this should represent the bands that have more than one unique lat-lon. 
+# sum lets us know if these are different for both. Values == 1 mean same lat and lon. Values with .5 in them mean the lat or the lon could have been the same, but the other was different.
+unique_locs <- BBL_recaptures %>%
+  group_by(original_band) %>%
+  summarize(lats = n_distinct(lat), lons = n_distinct(lon), sum = sum(lats+lons)/2)
+
+table(unique_locs$sum)
+
+# now let's keep just the ones where lats > 1 and/or lons > 1
+unique_locs <- unique_locs %>%
+  filter(lats > 1 | lons >1)
+
+# last, let's filter the recaptures dataset to include the individuals captured in 2 or more locations
+BBL_recaptures <- BBL_recaptures %>%
+  filter(original_band %in% unique_locs$original_band)
+```
+
+The filter above shows that there are, in fact, some recaptures that happen at different locations than the original, but many of these recaptures are still really close to each other.
+
+For our final filtered data set, let's look one more time at the spread of data across the species and the timeframe (by year).
+```{r}
+table(BBL_recaptures$species_scientific_name)
+table(BBL_recaptures$event_year)
+```
+
+
+#-----------------------------------------------
+### Analyze movement
+
+This loop creates a new dataframe that collects these measures: 
+* total distance (m) moved between subsequent recaptures (note that recaptures may be close or very far in time)
+* East-West distance (m)
+* North-South distance (m)
+* whether the movement crossed 103 degrees longitude, which we're using as the division between east-west flyways
+
+```{r}
+# sort the dataset first to ensure dates are in consecutive order
+BBL_recaptures <- BBL_recaptures %>%
+  arrange(species_scientific_name, original_band, event_date)
+
+# create empty data frame to store results
+results <- data.frame(
+  species_scientific_name = character(), orignal_band = character(), 
+  date_from = character(), date_to = character(), 
+  distance_m = numeric(), north_south_m = numeric(), east_west_m = numeric(), 
+  crossed_103_lon = logical(),
+  stringsAsFactors=FALSE
+)
+
+#loop through the data by original band
+for (id in unique(BBL_recaptures$original_band)) {
+  # filter data for the original band (id code)
+  id_data <- BBL_recaptures %>% filter(original_band == id)
+  spname <- id_data$species_scientific_name[1]
+  
+  # loop through consecutive rows
+  for (i in 1:(nrow(id_data) - 1)) {
+    #coordinates of the two consecutive points
+    lat1 <- id_data$lat[i]
+    lat2 <- id_data$lat[i+1]
+    lon1 <- id_data$lon[i]
+    lon2 <- id_data$lon[i+1]
+    
+    #calculate great-circle distance
+    point1 <- c(lon1, lat1)
+    point2 <- c(lon2, lat2)
+    distance <- distHaversine(point1, point2)
+    
+    #FIXME: double check that these calculations are accurate and up to date.
+    #calculate North-South movement in meters
+    lat_diff <- (lat2 - lat1)*111320 #1 degree latitude ~= 111.32 km
+    # calculate East-West movement in meters
+    lon_diff <- (lon2 - lon1)*111320*cos(lat1*pi/180) #adjust for Earth curvature
+    
+    #check if the movement crossed 103 degrees longitude
+    crossed_103 <- (lon1 < 103 & lon2 > 103) | (lon1 > 103 & lon2 < 103)
+
+    # add to results
+    results <- rbind(results, data.frame(
+      species_scientific_name = spname, original_band = id, 
+      date_from = id_data$event_date[i], 
+      date_to = id_data$event_date[i+1], 
+      distance_m = distance, north_south_m = lat_diff, east_west_m = lon_diff,
+      crossed_103_lon = crossed_103
+    ))
+  }
+}
+
+head(results)
+
+
+```
+
+
+#Work still to do: 
+FIXME: The last bits to do are to 
+* calculate the distance moved between subsequent recaptures
+* make a histogram of these movements for each species
+* calculate the fivenumber summary for these movements
+* decompose movement into longitudinal distancce (EW) and latitudinal distance (NS)
+* identify the number of movements that cross 103 degrees longitude, as a signal of major westward movement and crossing flyways (thus also mixing habitats/landscapes)
+
+#-----------------------------------------------
+### Data visualization
 
 Visualize the species counts, ordered from most to least observed
 ```{r}
@@ -78,9 +235,133 @@ plotyrcounts <- ggplot(bird_count, aes(x=reorder(species_scientific_name, -count
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
         plot.title = element_text(hjust = 0.5))
-
-plotyrcounts
 ```
+
+Visualize the distribution of the species observations by years.
+```{r}
+# group data by species and year
+year_count <- BBL_all %>% 
+    group_by(species_scientific_name, event_year) %>% 
+    summarise(count=n(),.groups = 'drop')
+
+#make the line plot
+plotyrs <- ggplot(year_count, 
+                  aes(x = event_year, y = count, 
+                      group = species_scientific_name, 
+                      color = species_scientific_name)) + 
+  geom_line() + 
+  scale_colour_discrete(guide = 'none') +
+  scale_x_discrete(expand=c(0, 1)) +
+  geom_dl(aes(label = species_scientific_name), 
+          method = list(dl.trans(x = x - 0.2), "first.points", cex = 0.6)) +
+  theme_bw() + 
+  labs(title = "Number of records 1960-2022", x = "year") +
+  xlim(1950, 2021)  
+```
+
+OK let's make a nifty panel gird of the two previous plots, and save it.
+```{r}
+ggarrange(plotyrcounts, plotyrs, ncol=1)
+
+ggsave("results/BBL-data-years.png", height=15, width=7)
+```
+
+Visualize the number of times individuals of each species were captured, using a histogram. Most were captured only 1-2 times. 
+```{r}
+# because of the distribution, we'll use a log10 y-scale to show and compare.
+ggplot(recaptures, aes(x=recaptures)) +
+  geom_histogram(binwidth=1) +
+  scale_y_log10() +
+  theme_bw() +
+  facet_wrap(~species_scientific_name)
+```
+What we can see in the above plot is that for most species, most banded individuals are captures fewer than 10 times, with the majority only being captured once.
+Mean = 1.012
+Median = 1
+Range = 1-28
+
+
+Visualize the number of times birds changed locations
+```{r}
+ggplot(unique_locs, aes(x=sum)) + 
+  geom_histogram(binwidth=1) + 
+  scale_y_log10() +
+  labs(x="number of unique locations") +
+  theme_bw()
+```
+
+
+Visualze the months and the years that individuals were captured in the final filtered dataset
+```{r}
+ggplot(BBL_recaptures, aes(x=event_month)) +
+  geom_histogram(binwidth=1) +
+  scale_x_continuous(breaks= pretty_breaks()) +
+  labs(x="Month observed") +
+  theme_bw() +
+  facet_wrap(~species_scientific_name)
+
+ggplot(BBL_recaptures, aes(x=event_year)) +
+  geom_histogram(binwidth=1) +
+  scale_x_continuous(breaks= pretty_breaks()) +
+  labs(x="Month observed") +
+  theme_bw() +
+  facet_wrap(~species_scientific_name)
+```
+
+
+### Creating maps to visualize individual movement and recapture data
+
+Let's get the underlying shapefiles for country boundaries
+```{r}
+#making map of range that I am interested in
+state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
+#state_prov <- st_crop(state_prov, xmin = -115, xmax = -50, ymin = 5, ymax = 50)
+state_prov <- st_crop(state_prov, xmin = -140, xmax = -50, ymin = 5, ymax = 60)
+```
+
+This code loops through all species for 1960-2022 to make lines between their recapture locations. This provides a very coarse look at the movement directions individuals may take within their lifetimes.
+```{r}
+#mapping the movements of recaptured individuals 
+i = 1 
+birds <- unique(just_banding$species_scientific_name)
+for (b in birds){
+  #these next two lines are so I can also include common name on map
+  name = birds[i]
+  i = i + 1
+
+  df <- BBL_recaptures[BBL_recaptures$species_scientific_name == b, ]
+  df <- df[df$lat != 0.0, ] 
+  
+  #setting color to original_band because each original band represents an individual bird
+  print(ggplot() + 
+    geom_sf(data=state_prov, colour="grey50", fill="white") + 
+    geom_path(data = df, aes(x = lon, y = lat, col=event_year), 
+              linewidth = 0.25, lineend = "round", alpha=0.25) +
+    labs(x = "", y = "", title = b) +
+    theme_minimal() +
+    theme(legend.position = "none", plot.title = element_text(hjust = 0.5), 
+          plot.subtitle = element_text(hjust = 0.5)) +
+    theme(axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank() 
+          ) +
+      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+    )
+}
+
+```
+
+
+
+
+
+
+
+
+#---------------------------------------
+
+## Analysis only for recent data (2008-2022). This was done as part of the summer study, but we used all data (1960-2022) for the main manuscript.
 
 ### data subset for 2008-2022
 Let's also make a subset of the data that represents the same years as the recent eBird occurrences, just for a more direct comparison
@@ -96,6 +377,7 @@ recent_count <- BBL_recent %>%
   summarize(count = n())
 ```
 
+### show number of individuals for each recent year
 Let's also make the plot for the recent years of data, for comparison
 ```{r}
 ggplot(bird_count, aes(x=reorder(species_scientific_name, -count), y=count)) +
@@ -107,43 +389,7 @@ ggplot(bird_count, aes(x=reorder(species_scientific_name, -count), y=count)) +
         plot.title = element_text(hjust = 0.5))
 ```
 
-# data collected across years
-
-We may also want to check the distribution of the data across years.
-
-Plot number of bands/encounters by year.
-This plot is a bit messy and the labels aren't perfect, but help to see the overall pattern.
-```{r}
-# group data by species and year
-year_count <- BBL_all %>% 
-    group_by(species_scientific_name, event_year) %>% 
-    summarise(count=n(),.groups = 'drop')
-
-#make the line plot
-plotyrs <- ggplot(year_count, aes(x = event_year, y = count, 
-                       group = species_scientific_name, color = species_scientific_name)) + 
-  geom_line() + 
-  scale_colour_discrete(guide = 'none') +
-  scale_x_discrete(expand=c(0, 1)) +
- # geom_dl(aes(label = species_scientific_name), method = list(dl.combine("first.points", "last.points")), cex = 0.8) +
-  #geom_dl(aes(label = species_scientific_name), method = list(dl.trans(x = x + 0.1), "last.points", cex = 0.8)) +
-  geom_dl(aes(label = species_scientific_name), method = list(dl.trans(x = x - 0.2), "first.points", cex = 0.6)) +
-   theme_bw() + 
-  labs(title = "Number of records 1960-2022",
-       x = "year") +
-  xlim(1950, 2021)  
-
-plotyrs
-```
-
-OK let's make a nifty panel gird
-```{r}
-ggarrange(plotyrcounts, plotyrs, ncol=1)
-
-ggsave("results/BBL-data-years.png", height=15, width=7)
-```
-
-
+### look at how counts by species change in the recent years
 Let's look at this again, but just with the most recent years, 2008-2022.
 ```{r}
 #grouping by year and species for just more recent years
@@ -167,158 +413,7 @@ ggplot(year_count_recent, aes(x = event_year, y = count,
   xlim(2005, 2021)  
 ```
 
-Now, what we need to know is which of the banded individuals were captured more than one time
-```{r}
-#grouping by original band and species for all years (BBL_unique_1960)
-recaptures <- BBL_all %>% 
-  group_by(species_scientific_name, original_band) %>% 
-  summarise(recaptures=n(), .groups = 'drop')
-
-# because of the distribution, even with a log10 y-scale, histograms are going to be beter here than uing boxplots to visualize the distribution and compare.
-ggplot(recaptures, aes(x=recaptures)) +
-  geom_histogram(binwidth=1) +
-  scale_y_log10() +
-  theme_bw() +
-  facet_wrap(~species_scientific_name)
-
-# get the five number summary
-summary(recaptures$recaptures)
-```
-
-What we can see in the above plot is that for most species, most banded individuals are captures fewer than 10 times, with the majority only being captured once.
-Mean = 1.012
-Median = 1
-Range = 1-28
-
-For our movement analysis, we really just want to keep the individuals that were captured more than once.
-```{r}
-recaptures <- recaptures %>%
-  filter(recaptures >= 2)
-```
-
-This filter step took our original number of bands from 4,512,770 to just 44,972 records.
-
-Now, let's filter the main dataset to only include these ones that were recaptures multiple times
-```{r}
-BBL_recaptures <- BBL_all %>%
-  filter(original_band %in% recaptures$original_band)
-```
-
-FIXME: If we want this just for recent years, now we can simply filter the BBL_recaptures dataset for 2008-2022. I don't think there's a problem with just using all the years though.
-
-
-Let's take a quick look at the seasonal dynamics of recaptures, by looking at months
-```{r}
-#let's look at the months
-table(BBL_recaptures$event_month)
-#FIXME: some months are >12. Check if this is a typo or if it means anything. For now, we will filter that data out as it could be invalid
-
-BBL_recaptures <- BBL_recaptures %>%
-  filter(event_month %in% seq(1:12))
-```
-
-
-```{r}
-#grouping previous df by unique lons and lats, as well as original id
-#trying to see if any of these birds are being recaptured at different locations
-unique_loc <- BBL_recaptures %>% 
-  group_by(original_band, lon, lat) %>% 
-  summarise(count=n(), .groups = 'drop')
-
-#this should represent the bands that have more than one unique lat-lon. 
-# sum lets us know if these are different for both. Values == 1 mean same lat and lon. Values with .5 in them mean the lat or the lon could have been the same, but the other was different.
-unique_locs <- BBL_recaptures %>%
-  group_by(original_band) %>%
-  summarize(lats = n_distinct(lat), lons = n_distinct(lon), sum = sum(lats+lons)/2)
-
-ggplot(unique_locs, aes(x=sum)) + 
-  geom_histogram(binwidth=1) + 
-  scale_y_log10() +
-  labs(x="number of unique locations") +
-  theme_bw()
-
-table(unique_locs$sum)
-
-# now let's keep just the ones where lats > 1 and/or lons > 1
-unique_locs <- unique_locs %>%
-  filter(lats > 1 | lons >1)
-
-# last, let's filter the recaptures dataset down to just these ones.
-BBL_recaptures <- BBL_recaptures %>%
-  filter(original_band %in% unique_locs$original_band)
-```
-
-^ this shows that there are, in fact, some recaptures that happen at different locations than the original, but as far as I can tell, many of these recaptures are still really close to each other
-
-
-Now that we have a much smaller dataest, let's look one more time at the amount of data we really have per species
-```{r}
-table(BBL_recaptures$species_scientific_name)
-table(BBL_recaptures$event_year)
-
-ggplot(BBL_recaptures, aes(x=event_month)) +
-  geom_histogram(binwidth=1) +
-  scale_x_continuous(breaks= pretty_breaks()) +
-  labs(x="Month observed") +
-  theme_bw() +
-  facet_wrap(~species_scientific_name)
-
-ggplot(BBL_recaptures, aes(x=event_year)) +
-  geom_histogram(binwidth=1) +
-  scale_x_continuous(breaks= pretty_breaks()) +
-  labs(x="Month observed") +
-  theme_bw() +
-  facet_wrap(~species_scientific_name)
-```
-
-
-
-### Creating maps to visualize individual movement and recapture data
-
-Let's get the underlying shapefiles for country boundaries
-```{r}
-#making map of range that I am interested in
-state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
-#state_prov <- st_crop(state_prov, xmin = -115, xmax = -50, ymin = 5, ymax = 50)
-state_prov <- st_crop(state_prov, xmin = -140, xmax = -50, ymin = 5, ymax = 60)
-```
-
-This code loops through all species to make maps
-```{r}
-#mapping the movements of recpatured individuals 
-i = 1 
-birds <- unique(just_banding$species_scientific_name)
-for (b in birds){
-  #these next two lines are so I can also include common name on map
-  name = birds[i]
-  i = i + 1
-
-  df <- BBL_recaptures[BBL_recaptures$species_scientific_name == b, ]
-  df <- df[df$lat != 0.0, ] 
-  
-  #setting color to original_band because each original band represents an individual bird
-  print(ggplot() + 
-    geom_sf(data=state_prov, colour="grey50", fill="white") + 
-    geom_path(data = df, aes(x = lon, y = lat, col=original_band), 
-              linewidth = 0.5, lineend = "round") +
-    labs(x = "", y = "", title = b) +
-    theme_minimal() +
-    theme(legend.position = "none", plot.title = element_text(hjust = 0.5), 
-          plot.subtitle = element_text(hjust = 0.5)) +
-    theme(axis.text.x=element_blank(),
-          axis.ticks.x=element_blank(),
-          axis.text.y=element_blank(),
-          axis.ticks.y=element_blank() 
-          ) +
-      theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-    )
-}
-
-```
-
-
-
-This code does the same thing as the previous chunk. However, it only focuses on data from 2008 or later
+This code focuses on data from 2008 or later for maps showing movement between locations.
 ```{r}
 #filtering recapture data to only include 2008 and later 
 BBL_recaptures_recent <- BBL_recaptures[BBL_recaptures$event_year >= 2008,]
@@ -354,23 +449,3 @@ for (b in birds){
 }
 
 ```
-
-
-FIXME: The last bits to do are to 
-* calculate the distance moved between subsequent recaptures
-* make a histogram of these movements for each species
-* calculate the fivenumber summary for these movements
-* decompose movement into longitudinal distancce (EW) and latitudinal distance (NS)
-* identify the number of movements that cross 103 degrees longitude, as a signal of major westward movement and crossing flyways (thus also mixing habitats/landscapes)
-
-
-FIXME: I'm not sure what this last part achieves?
-```{r}
-#calculating the earliest and latest month that each species was encountered within the ERC range
-#earliest month is mostly Jan and latest is mostly Dec. 
-#(results could be different for eBird data)
-min_months <- aggregate(BBL_recent$event_month, list(BBL_recent$species_scientific_name), FUN = min)
-max_months <- aggregate(BBL_recent$event_month, list(BBL_recent$species_scientific_name), FUN = max)
-```
-
-
