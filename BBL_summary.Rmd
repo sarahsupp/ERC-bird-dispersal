@@ -196,7 +196,7 @@ for (id in unique(BBL_recaptures$original_band)) {
     lon_diff <- (lon2 - lon1)*111320*cos(lat1*pi/180) #adjust for Earth curvature
     
     # #check if the movement crossed 103 degrees longitude
-    crossed_103 <- (lon1 < 103 & lon2 > 103) | (lon1 > 103 & lon2 < 103)
+    crossed_103 <- (lon1 < -103 & lon2 > -103) | (lon1 > -103 & lon2 < -103)
 
     # add to results
     results <- rbind(results, data.frame(
@@ -210,18 +210,36 @@ for (id in unique(BBL_recaptures$original_band)) {
 }
 
 head(results)
+```
 
-# there are some zero entries above because of a few individuals that had recapture events in locations very close together, such that some dates were the exact same location, and others were just slightly different. Since we want to say something about movement, let's set a lower threshold for filtering. Let's set it at 5 m, which should remove most of the really small movements that could be within the standard of error for a typical gps unit anyway.
+there are some zero entries above because of a few individuals that had recapture events in locations very close together, such that some dates were the exact same location, and others were just slightly different. Since we want to say something about movement, let's set a lower threshold for filtering. Let's set it at 5 m, which should remove most of the really small movements that could be within the standard of error for a typical gps unit anyway.
 
+```{r}
 results <- results %>%
   filter(distance_m > 5)
 
 species_summaries <- results%>%
   group_by(species_scientific_name) %>%
-  summarize(mean(distance_m), median(distance_m), min(distance_m), max(distance_m))
+  summarize(mean(distance_m), median(distance_m), min(distance_m), max(distance_m),
+            median(abs(east_west_m)), mean(abs(east_west_m)))
 
 species_summaries
 ```
+
+Show the ew vs ns movement in a scatterplot
+```{r}
+ggplot(results, aes(x=(abs(east_west_m/1000)), y=(abs(north_south_m/1000)))) + 
+  geom_point(aes(col = ifelse(abs(north_south_m/1000)>abs(east_west_m/1000), 
+                              "n-s", "e-w")), alpha=0.4) + 
+  geom_abline(intercept=0, slope=1, linetype='dashed') +
+  scale_color_manual(values = c("n-s" = "skyblue4", "e-w" = "orange3")) +
+  facet_wrap(~species_scientific_name) + 
+  xlab("east-west movement (km)") + 
+  ylab("north-south movement (km)") +
+  theme_bw() + 
+  theme(legend.position = "none")
+```
+
 
 
 #Work still to do: 
@@ -346,7 +364,7 @@ for (b in birds){
     geom_sf(data=state_prov, colour="grey50", fill="white") + 
     geom_path(data = df, aes(x = lon, y = lat, group=original_band), 
               col = "olivedrab",
-              linewidth = 0.25, lineend = "round", alpha=0.25) +
+              linewidth = 0.25, lineend = "round", alpha=0.4) +
     labs(x = "", y = "", title = b) +
     theme_minimal() +
     theme(legend.position = "none", plot.title = element_text(hjust = 0.5), 
