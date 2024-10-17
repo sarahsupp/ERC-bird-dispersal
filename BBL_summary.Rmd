@@ -195,7 +195,7 @@ for (id in unique(BBL_recaptures$original_band)) {
     # calculate East-West movement in meters
     lon_diff <- (lon2 - lon1)*111320*cos(lat1*pi/180) #adjust for Earth curvature
     
-    #check if the movement crossed 103 degrees longitude
+    # #check if the movement crossed 103 degrees longitude
     crossed_103 <- (lon1 < 103 & lon2 > 103) | (lon1 > 103 & lon2 < 103)
 
     # add to results
@@ -211,7 +211,16 @@ for (id in unique(BBL_recaptures$original_band)) {
 
 head(results)
 
+# there are some zero entries above because of a few individuals that had recapture events in locations very close together, such that some dates were the exact same location, and others were just slightly different. Since we want to say something about movement, let's set a lower threshold for filtering. Let's set it at 5 m, which should remove most of the really small movements that could be within the standard of error for a typical gps unit anyway.
 
+results <- results %>%
+  filter(distance_m > 5)
+
+species_summaries <- results%>%
+  group_by(species_scientific_name) %>%
+  summarize(mean(distance_m), median(distance_m), min(distance_m), max(distance_m))
+
+species_summaries
 ```
 
 
@@ -335,7 +344,8 @@ for (b in birds){
   #setting color to original_band because each original band represents an individual bird
   print(ggplot() + 
     geom_sf(data=state_prov, colour="grey50", fill="white") + 
-    geom_path(data = df, aes(x = lon, y = lat, col=event_year), 
+    geom_path(data = df, aes(x = lon, y = lat, group=original_band), 
+              col = "olivedrab",
               linewidth = 0.25, lineend = "round", alpha=0.25) +
     labs(x = "", y = "", title = b) +
     theme_minimal() +
