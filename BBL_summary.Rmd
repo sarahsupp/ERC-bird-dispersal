@@ -159,6 +159,7 @@ BBL_recaptures %>%
 
 This loop creates a new dataframe that collects these measures: 
 * total distance (m) moved between subsequent recaptures (note that recaptures may be close or very far in time)
+* bearing from point1 to point 2 (measured in degrees, proxy for n-s to e-w heading)
 * East-West distance (m)
 * North-South distance (m)
 * whether the movement crossed 103 degrees longitude, which we're using as the division between east-west flyways
@@ -172,7 +173,8 @@ BBL_recaptures <- BBL_recaptures %>%
 results <- data.frame(
   species_scientific_name = character(), orignal_band = character(), 
   date_from = character(), date_to = character(), 
-  distance_m = numeric(), north_south_m = numeric(), east_west_m = numeric(), 
+  distance_m = numeric(), bearing = numeric(),
+  north_south_m = numeric(), east_west_m = numeric(), 
   crossed_103_lon = logical(),
   stringsAsFactors=FALSE
 )
@@ -196,6 +198,9 @@ for (id in unique(BBL_recaptures$original_band)) {
     point2 <- c(lon2, lat2)
     distance <- distHaversine(point1, point2)
     
+    # calculate bearing, using geosphere package
+    bearing_deg <- bearing(point1, point2)
+    
     #FIXME: double check that these calculations are accurate and up to date.
     #calculate North-South movement in meters
     lat_diff <- (lat2 - lat1)*111320 #1 degree latitude ~= 111.32 km
@@ -210,7 +215,8 @@ for (id in unique(BBL_recaptures$original_band)) {
       species_scientific_name = spname, original_band = id, 
       date_from = id_data$event_date[i], 
       date_to = id_data$event_date[i+1], 
-      distance_m = distance, north_south_m = lat_diff, east_west_m = lon_diff,
+      distance_m = distance, bearing = bearing_deg,
+      north_south_m = lat_diff, east_west_m = lon_diff,
       crossed_103_lon = crossed_103
     ))
   }
@@ -221,41 +227,27 @@ head(results)
 
 there are some zero entries above because of a few individuals that had recapture events in locations very close together, such that some dates were the exact same location, and others were just slightly different. Since we want to say something about movement, let's set a lower threshold for filtering. Let's set it at 5 m, which should remove most of the really small movements that could be within the standard of error for a typical gps unit anyway.
 
+Below we create a table with summaries for distance and bearing. Report median and iqr in paper, because the distributions are not normal.
 ```{r}
 results <- results %>%
   filter(distance_m > 5)
 
 species_summaries <- results%>%
   group_by(species_scientific_name) %>%
-  summarize(mean(distance_m), median(distance_m), min(distance_m), max(distance_m),
-            median(abs(east_west_m)), mean(abs(east_west_m)))
+  summarize(mean(distance_m), median(distance_m), sd(distance_m), IQR(distance_m),
+            mean(bearing), median(bearing), sd(bearing), IQR(bearing),
+            median(abs(east_west_m)), mean(abs(east_west_m)), 
+            sd(abs(east_west_m)), IQR(abs(east_west_m))
+            )
 
 species_summaries
 ```
 
-Show the ew vs ns movement in a scatterplot
+count how often the observed locations cross 103 degrees longitude (indication of crossing flyways)
 ```{r}
-ggplot(results, aes(x=(abs(east_west_m/1000)), y=(abs(north_south_m/1000)))) + 
-  geom_point(aes(col = ifelse(abs(north_south_m/1000)>abs(east_west_m/1000), 
-                              "n-s", "e-w")), alpha=0.4) + 
-  geom_abline(intercept=0, slope=1, linetype='dashed') +
-  scale_color_manual(values = c("n-s" = "skyblue4", "e-w" = "orange3")) +
-  facet_wrap(~species_scientific_name) + 
-  xlab("east-west movement (km)") + 
-  ylab("north-south movement (km)") +
-  theme_bw() + 
-  theme(legend.position = "none")
+table(results$species_scientific_name, results$crossed_103_lon)
 ```
 
-
-
-#Work still to do: 
-FIXME: The last bits to do are to 
-* calculate the distance moved between subsequent recaptures
-* make a histogram of these movements for each species
-* calculate the fivenumber summary for these movements
-* decompose movement into longitudinal distancce (EW) and latitudinal distance (NS)
-* identify the number of movements that cross 103 degrees longitude, as a signal of major westward movement and crossing flyways (thus also mixing habitats/landscapes)
 
 #-----------------------------------------------
 ### Data visualization
@@ -387,7 +379,31 @@ for (b in birds){
 
 ```
 
+Show the ew vs ns movement in a scatterplot
+```{r}
+ggplot(results, aes(x=(abs(east_west_m/1000)), y=(abs(north_south_m/1000)))) + 
+  geom_point(aes(col = ifelse(abs(north_south_m/1000)>abs(east_west_m/1000), 
+                              "n-s", "e-w")), alpha=0.4) + 
+  geom_abline(intercept=0, slope=1, linetype='dashed') +
+  scale_color_manual(values = c("n-s" = "skyblue4", "e-w" = "orange3")) +
+  facet_wrap(~species_scientific_name) + 
+  xlab("east-west movement (km)") + 
+  ylab("north-south movement (km)") +
+  theme_bw() + 
+  theme(legend.position = "none")
+```
 
+Show the bearings (degree) in a histogram
+```{r}
+ggplot(results, aes(x=bearing)) + 
+  geom_histogram(binwidth=20) + 
+  facet_wrap(~species_scientific_name) +
+  xlim(-180, 180) + 
+  geom_vline(xintercept = c(0, -90, 90), linetype="dashed") +
+  theme_bw()
+
+ggsave("results/BBL_bearing.png")
+```
 
 
 
