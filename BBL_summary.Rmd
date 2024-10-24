@@ -55,15 +55,13 @@ BBL_all <- BBL_all %>%
            c("Junco hyemalis oreganus", "Setophaga coronata auduboni", "Setophaga petechia"))
 ```
 
-In the next step, we create a subset of the data that only includes banding events.
+In the next step, we create a subset of the data that only includes banding events, and count the number of rows (this tells us how many individual bands are in the dataset).
 ```{r}
-#filtering to just banding events, not encounters (since encounters all overlap with bandings)
+#filtering to just banding events (B), not encounters
+#    since encounters all overlap with bandings
 #rows with event type B also have consistent names for the different species
 just_banding <- BBL_all[BBL_all$event_type == 'B',]
-```
 
-Let's count all the individual birds that were banded.
-```{r}
 # check that all the species appear to be present and create a vector of names
 birds <- unique(just_banding$species_scientific_name)
 
@@ -76,9 +74,11 @@ bird_count <- BBL_all %>%
 banding_count <- just_banding %>%
   group_by(species_scientific_name) %>%
   summarize(count = n())
+
+banding_count
 ```
 
-Remove months that appear to be typos or represent something else (i.e., >12)
+Using the BBL_all data, remove months that appear to be typos or represent something else (i.e., >12)
 ```{r}
 #Some months are >12. We will filter that data out as it could be invalid and we aren't sure what it represents. This represents only a small amount of the observations (n=890)
 table(BBL_all$event_month)
@@ -144,6 +144,13 @@ For our final filtered data set, let's look one more time at the spread of data 
 ```{r}
 table(BBL_recaptures$species_scientific_name)
 table(BBL_recaptures$event_year)
+
+# for table in manuscript, describing the BBL dataset used for plotting and summaries
+BBL_recaptures %>%
+  group_by(species_scientific_name) %>%
+  summarize(indiv_count = n_distinct(original_band), 
+            num_rows = n())
+
 ```
 
 
@@ -387,7 +394,7 @@ for (b in birds){
 
 
 
-#---------------------------------------
+#--------------------------------------- NOT PART OF THE MAIN MANUSCRIPT
 
 ## Analysis only for recent data (2008-2022). This was done as part of the summer study, but we used all data (1960-2022) for the main manuscript.
 
