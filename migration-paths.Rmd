@@ -119,15 +119,15 @@ dat_effort <- spdata %>%
   dplyr::filter(x >= -103) #set filter to only include occurrences within eastern and central flyway (-103 Longitude)
 
 num_obs <- nrow(dat_effort)
-
 paste0("The total number of observations for all species is ", num_obs, ".")
 
-
+#print total number of observations (rows) and checklists by species
 num_spobs <- dat_effort %>%
   #filter(year!=2023) %>%
   group_by(species) %>%
   summarise(nrow=n(),
-            total=sum(count))
+            total_checklists=sum(count))
+num_spobs
 
 dat_effort %>%
   group_by(species, year) %>%
@@ -162,10 +162,13 @@ saveRDS(dat_effort, "data_2023/dat_effort_2023.rds")
 
 
 # Weight mean locations 
+## WARNING: the below code chunk takes a lot of time to run.
+##    If df_nvector_2023 already exists, do not run it again.
+## FIXME: Would it make sense to reorganize this code so it doesn't run in this RMD doc but is in a separate file?
 Weight species counts by eBirder effort counts for each cell
 
-Note: After running "process-raw-eBrid-data", then load the 'df_nvector.rds'. 
-If the data was updated then start the whole code chunck. (converting 6369952 rows into n-vectors roughly takes 21hours). 
+Note: After running "process-raw-eBird-data", then load the 'df_nvector.rds'. 
+If the data was updated then start the whole code chunk. (converting 6369952 rows into n-vectors roughly takes 21hours). 
 Made an copy of original file just to be safe. "dat_effort = df"
 
 ```{r} 
@@ -186,19 +189,21 @@ for (i in 1:nrow(df)){
   df[i,"newy"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[2]
   df[i,"newz"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[3]
 }
-```
-
-
-```{r}
 
 # #Save to RDS file
 #saveRDS(df, "df_nvector_2023.rds")
-
-# #Loading RDS file 
-df <- readRDS("df_nvector_2023.rds")
 ```
 
 
+## If df_nvector_2023.rds already exists, JUMP TO THIS CODE CHUNK.
+Loads the processed data
+```{r}
+# #Loading RDS file 
+df <- readRDS("data_2023/df_nvector_2023.rds")
+```
+
+Using the nvector dataset, estimate the location centroid for each species on a given day (as a weighted mean)
+*as a note, this code chunk also takes several minutes to run.
 ```{r}
 #Putting species, year, and days into list in order
 species_list <- unique(df$species)
@@ -208,26 +213,18 @@ day_list <- unique(df$day)
 #For each species of a given year and day, converting newx, newy, newz back into decimal meanx and meany
 weighted_mean_locs <- NULL
 for (i in 1:length(species_list)){
-  
   species_df <- df[df$species==species_list[i],]
   
   for (j in 1:length(year_list)){
-  
     year_df <- species_df[species_df$year==year_list[j],]
   
     for(k in 1:length(unique(year_df$day))){
-    
         day_list <- sort(unique(year_df$day))
-  
         day_df <- year_df[year_df$day==day_list[k],]
-
         mean_cal <- c(weighted.mean(day_df$newx, day_df$freq),
                       weighted.mean(day_df$newy, day_df$freq),
                       weighted.mean(day_df$newz, day_df$freq))
-
-
         mean_cal <- deg(n_E2lat_lon(mean_cal)) #degree func
-        
         weighted_mean_locs <- rbind(weighted_mean_locs, data.frame(day=day_list[k], 
                                      weighted_lon=mean_cal[2], 
                                      weighted_lat=mean_cal[1],
@@ -238,7 +235,6 @@ for (i in 1:length(species_list)){
 }  
 
 
-
 sample <- df %>% group_by(species, year, day) %>% summarise(numcells = n(), numobs = sum(count))
 
 weighted_mean_locs <- cbind(weighted_mean_locs, sample[c("numcells", "numobs")])
@@ -246,15 +242,23 @@ weighted_mean_locs <- cbind(weighted_mean_locs, sample[c("numcells", "numobs")])
 #Reordering the colunmns
 weighted_mean_locs <- weighted_mean_locs[,c(5,4,1,2,3,6,7)]
   
-#plot the weighted standard deviations by species, just to check
-ggplot(weighted_mean_locs, aes(weighted_lon)) + geom_histogram() + facet_wrap(~species)
-ggplot(weighted_mean_locs, aes(weighted_lat)) + geom_histogram() + facet_wrap(~species)
+#plot the weighted lons and lats by species, just to check
+ggplot(weighted_mean_locs, aes(weighted_lon)) + 
+  geom_histogram() + 
+  facet_wrap(~species) + 
+  theme_bw()
+
+ggplot(weighted_mean_locs, aes(weighted_lat)) + 
+  geom_histogram() + 
+  facet_wrap(~species) + 
+  theme_bw()
 
 #check if weighted sd differs by time of the year (expect to be higher during migration, lower during breeding)
-ggplot(weighted_mean_locs, aes(day, weighted_lon)) + geom_point(alpha=0.10) + facet_wrap(~species)
-#ggsave(filename = "figs/15_species_mean_locs_lon.png", height = 11, width=8)
-ggplot(weighted_mean_locs, aes(day, weighted_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
-#ggsave(filename = "figs/15_species_mean_locs_lat.png", height = 11, width=8)
+ggplot(weighted_mean_locs, aes(day, weighted_lon)) + geom_point(alpha=0.10) + facet_wrap(~species, ncol=3) + theme_bw()
+ggsave(filename = "figs/15_species_mean_locs_lon.png", height = 10, width=8)
+
+ggplot(weighted_mean_locs, aes(day, weighted_lat)) + geom_point(alpha=0.10) + facet_wrap(~species, ncol=3) + theme_bw()
+ggsave(filename = "figs/15_species_mean_locs_lat.png", height = 10, width=8)
 
 
 #Dr.supp old code
