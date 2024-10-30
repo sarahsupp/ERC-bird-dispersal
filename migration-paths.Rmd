@@ -60,11 +60,12 @@ library(nvctr)
 library(radiant.data)
 library(raster)
 library(RColorBrewer)
-library(rgdal)
-library(rgeos)
+#library(rgdal) #FIXME: rgdal was removed from CRAN. Is it needed for this code? Check, and remove if not
+#library(rgeos) #FIXME: rgeos was removed from CRAN. Is it needed for this code? Check, and remove if not
 library(rnaturalearth)
 #devtools::install_github("ropensci/rnaturalearthhires")
 library(rnaturalearthhires)
+#devtools::install_github("r-spatial/sf") #C compiler error on mac
 library(sf)
 #library(sjPlot)
 library(sjmisc)
@@ -73,8 +74,7 @@ library(stargazer)
 library(sp)
 #install.packages('remotes')
 #remotes::install_version('SDMTools','1.1-221')
-library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
-#devtools::install_github("r-spatial/sf") #C compiler error on mac
+# library(SDMTools)#FIXME: SDMTools removed from CRAN. Is it needed for this code? Check, and remove if not
 ```
 
 If starting from scratch, input the three raw data files and merge together.
