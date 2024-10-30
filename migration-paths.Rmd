@@ -9,7 +9,7 @@ output: html_document
 (c) 2020-2023, Niu, Lee, Wisnefski, and Supp (PI)
 supps@denison.edu
 Denison University
-Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2)
+Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2025)
 modified from previous code developed for Supp et al. 2015 hummingbird paper (Ecography)
 
 Birds evaluated include: 
@@ -29,53 +29,52 @@ Birds evaluated include:
 * Dark-eyed Junco (DAJU) _Junco hyemalis_
 * American Crow (AMCR) _Corvus brachyrhynchos_
 
+
+##FIXME: check which of these libraries is  used, and remove ones that are not needed
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(echo = TRUE)
 #remove.packages(rlang)
 #install.packages("rlang")
+library(tidyverse)
 library(here)
 library(data.table)
 #library(devtools)
+#devtools::install_github('r-barnes/dggridR', vignette=TRUE, force = TRUE)
+library(dggridR)
+library(fields)
+library(gamm4) 
+library(gapminder)
+library(geojsonio)
+library(geosphere)
 #devtools::install_github("dkahle/ggmap")
-library(ggplot2)
 library(ggmap)
 library(ggpubr)
+#install.packages("kableExtra")
+library(kableExtra)
 library(lubridate)
-library(sp)
-library(maptools)
-library(fields)
-library(raster)
-library(rgdal)
-library(rgeos)
-library(sf)
 library(maps)
 library(mapdata)
 library(mgcv)
-library(gamm4) 
-library(ggpubr)
-#devtools::install_github('r-barnes/dggridR', vignette=TRUE, force = TRUE)
-library(dggridR)
-library(RColorBrewer)
-library(geosphere)
+library(maptools)
+library(nvctr)
 library(radiant.data)
+library(raster)
+library(RColorBrewer)
+library(rgdal)
+library(rgeos)
 library(rnaturalearth)
 #devtools::install_github("ropensci/rnaturalearthhires")
 library(rnaturalearthhires)
-#install.packages('remotes')
-#remotes::install_version('SDMTools','1.1-221')
-library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
-#devtools::install_github("r-spatial/sf") #C compiler error on mac
-library(geojsonio)
-library(dplyr)
-library(tidyverse)
-library(nvctr)
-library(gapminder)
+library(sf)
 #library(sjPlot)
 library(sjmisc)
 library(sjlabelled)
 library(stargazer)
-install.packages("kableExtra")
-library(kableExtra)
+library(sp)
+#install.packages('remotes')
+#remotes::install_version('SDMTools','1.1-221')
+library(SDMTools)#FIXME: package ‘SDMTools’ is not available (for R version 3.6.2)
+#devtools::install_github("r-spatial/sf") #C compiler error on mac
 ```
 
 If starting from scratch, input the three raw data files and merge together.
