@@ -92,18 +92,23 @@ Note: If data has not been updated (~2022~.), then go straight to "weighted mean
 
 
 ```{r}
-# files = list.files(path=here(), recursive=T, pattern=glob2rx("dat_effort*.rds"))
+# list prepared .rds files for each of the species
 files = list.files(path=here("data_2023/effort-merged_data_2023/"), pattern=glob2rx("dat_effort*.rds"))
 
-spdata <- data.frame(POLYFID=0, year=0, day=0, count=0, x=0, y=0, effort=0, species="none")
+# initialize empty dataframe
+spdata <- data.frame(POLYFID=integer(), year=integer(), day=integer(),
+                     count=integer(), x=numeric(), y=numeric(),
+                     effort=numeric(), species=character())
+
+# loop through each file to create one merged dataframe with all species
 for (i in files) {
+ # dat <- readRDS(i)
   dat <- readRDS(paste0(here("data_2023/effort-merged_data_2023/"),(i)))
   spdata <- bind_rows(spdata, dat)
 }
-spdata <- spdata %>% filter(year!="0")
 ```
 
-[La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<103 longitude).
+[La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<-103 longitude).
 
 Note: After running "process-raw-eBrid-data" and re-run the *spdata*, the names of the variables (columns names) are changed. For example, in num_spobs function, count.x is not found in dat_effort. YEAR and DAYS have to be change into lower case letter. 
 
