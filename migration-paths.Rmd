@@ -260,30 +260,6 @@ ggsave(filename = "figs/15_species_mean_locs_lon.png", height = 10, width=8)
 ggplot(weighted_mean_locs, aes(day, weighted_lat)) + geom_point(alpha=0.10) + facet_wrap(~species, ncol=3) + theme_bw()
 ggsave(filename = "figs/15_species_mean_locs_lat.png", height = 10, width=8)
 
-
-#Dr.supp old code
-# weighted_mean_locs <- dat_effort %>%
-#     mutate(day = as.numeric(day),
-#          year = as.numeric(year)) %>%
-# group_by(species, year, day) %>%
-#   summarise(
-#             numcells = n(), 
-#             numobs = sum(count.x),
-#             wtmean_lon = weighted.mean(lon, count.x/count.y), 
-#             wtmean_lat = weighted.mean(lat, count.x/count.y), 
-#             wtsd_lon = weighted.sd(lon, count.x/count.y),
-#             wtsd_lat = weighted.sd(lat, count.x/count.y) 
-#             ) %>%
-#   ungroup()
-
-
-# #plot the weighted standard deviations by species, just to check
-# ggplot(weighted_mean_locs, aes(wtsd_lon)) + geom_histogram() + facet_wrap(~species)
-# ggplot(weighted_mean_locs, aes(wtsd_lat)) + geom_histogram() + facet_wrap(~species)
-# 
-# #check if weighted sd differs by time of the year (expect to be higher during migration, lower during breeding)
-# ggplot(weighted_mean_locs, aes(DAY, wtsd_lon)) + geom_point(alpha=0.10) + facet_wrap(~species)
-# ggplot(weighted_mean_locs, aes(DAY, wtsd_lat)) + geom_point(alpha=0.10) + facet_wrap(~species)
 ```
 
 
