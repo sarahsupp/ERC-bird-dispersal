@@ -267,6 +267,8 @@ ggsave(filename = "figs/15_species_mean_locs_lat.png", height = 10, width=8)
 A DATE and MONTH formatted column to mean_daily_locs dataframe.
 An ID column is also added, which is an integer of each of the dates in order, 1-4383.
 **It is important to note when converting to Dates that for this data type only (why!?!) R uses a 0 based index. This means Day 1 is 0. So to convert our "day of year" integers to a Year-Month-Day format, we need to use DAY-1 and YEAR.**
+
+Note that this code defines the "winter" season as October-March. This is to label the time of year important for eastern redcedar cone production.
 ```{r}
 weighted_mean_locs <- weighted_mean_locs %>%
   mutate(DAYm1 = day-1,
