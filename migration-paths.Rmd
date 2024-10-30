@@ -110,12 +110,13 @@ for (i in files) {
 
 [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<-103 longitude).
 
+# FIXME: After checking the process-raw-eBird-data.Rmd file, can probably delete this note. 
 Note: After running "process-raw-eBrid-data" and re-run the *spdata*, the names of the variables (columns names) are changed. For example, in num_spobs function, count.x is not found in dat_effort. YEAR and DAYS have to be change into lower case letter. 
 
 ```{r}
 # x = longitude 
 dat_effort <- spdata %>%
-  dplyr::filter(x >= -143)
+  dplyr::filter(x >= -103) #set filter to only include occurrences within eastern and central flyway (-103 Longitude)
 
 num_obs <- nrow(dat_effort)
 
@@ -128,38 +129,36 @@ num_spobs <- dat_effort %>%
   summarise(nrow=n(),
             total=sum(count))
 
-num_spobs
-
 dat_effort %>%
-  #filter(year!=2023) %>%
   group_by(species, year) %>%
   summarise(nrow=n(),
             total=sum(count)) %>%
   ggplot(aes(as.numeric(year), total, group=species)) + 
-  geom_point(aes(shape=species)) + 
+  geom_point() + 
   geom_line() + 
   scale_y_log10() + 
   scale_x_continuous(breaks=seq(2008, 2024, 3)) +
-  #  scale_x_discrete(limits=c("2008", "2012", "2016", "2019")) +
   xlab("Year") +
   ylab("checklist count") +
   theme(legend.position=("none")) +
-  facet_wrap(~species, ncol=1) + 
-    # set transparency
-    theme(
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank(),
-        panel.background = element_rect(fill = "transparent",colour = NA),
-        plot.background = element_rect(fill = "transparent",colour = NA)
-        ) 
+  facet_wrap(~species, ncol=3) + 
+  theme_bw()
+    # # set transparency
+    # theme(
+    #     panel.grid.major = element_blank(), 
+    #     panel.grid.minor = element_blank(),
+    #     #panel.background = element_rect(fill = "transparent",colour = NA),
+    #     #plot.background = element_rect(fill = "transparent",colour = NA)
+    #     ) 
 
-# Figure for ESA 2021 poster
-
-#ggsave("figs/checklist_counts.png", bg="transparent", height=8, width=3)
+# Figure for ESA 2021 poster was saved with transparency
+# Figure for manuscript was made with white background
+ggsave("figs/checklist_counts.png", height=10, width=8) #if want the background to be transparent, use: bg="transparent"
 
 #saving copy of data before doing nvector stuff
 saveRDS(dat_effort, "data_2023/dat_effort_2023.rds")
 ```
+*Note that the total number of observations decreases for 2023 because the data was downloaded through May 23, 2023, so it is not a complete calendar year.
 
 
 # Weight mean locations 

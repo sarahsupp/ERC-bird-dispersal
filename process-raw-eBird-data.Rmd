@@ -9,7 +9,7 @@ output: html_document
 (c) 2020, Niu and Supp
 supps@denison.edu
 Denison University
-Code is under development, part of NSF Multi-Institution Collaborative Award (2019-22)
+Code is under development, part of NSF Multi-Institution Collaborative Award (2019-25)
 
 Birds evaluated include: 
 * Cedar Waxwing (CEWA) _Bombycilla cedrorum_
