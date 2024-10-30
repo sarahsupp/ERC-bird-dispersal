@@ -1,5 +1,5 @@
 ---
-title: "Migratin-path-window"
+title: "Migration-path-window"
 output: html_document
 date: '2022-10-19'
 ---
