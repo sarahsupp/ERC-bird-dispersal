@@ -284,7 +284,7 @@ weighted_mean_locs <- weighted_mean_locs %>%
 #saveRDS(weighted_mean_locs, "weighted_mean_locs_2023.rds")
 ```
 
-
+## If you are starting here, can upload the .rds file directly rather than running the previous code up to this point.
 ```{r}
 # #Loading RDS file 
 weighted_mean_locs <- readRDS("weighted_mean_locs_2023.rds")
