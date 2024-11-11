@@ -524,35 +524,6 @@ spp7max_speed
 # grid.table(spp7max_speed)
 # dev.off()
 
-
-# # function to estimate the maximum speed of migration (km/day)
-# EstimateMaxSpeed = function(dat) {
-#   dat <- dat %>%
-#   filter(day != 1)
-#   years <- c(2008:2022)
-#   species <- unique(dat$species)
-#   df_maxspeed <- data.frame(species = "none", year = 0, max_speed = 0)
-#   for (s in species){
-#     for (i in years){
-#    sub_dailylocs <- 
-#        dailylocs %>%
-#        filter(year == i & species == s)
-#   
-#     median <- median(tail(sort(sub_dailylocs$distance),5))
-#   
-#     maximum_speed <-  data.frame(species = s, year = i, max_speed = median)
-#   
-#     df_maxspeed <- data.frame(bind_rows(df_maxspeed, maximum_speed))
-#   
-#     }
-#   }
-#   df_maxspeed = df_maxspeed[-1,]
-# return(df_maxspeed)
-# }
-# 
-# #estimate the maximum migration speed for each year
-# spp7max_speed <- EstimateMaxSpeed(spp7dailylocs)
-
 spp7speeds <- spp7max_speed %>%
   group_by(species) %>%
   summarise(
