@@ -327,7 +327,7 @@ Estimatedailylocs = function(dat) {
   x <- c(2008:2022)
   spp <- unique(dat$species)
 
-  df_dailylocs <- data.frame(species = "none", day = 0, year =0, month = 0, winter = "not", lon = 0, lat = 0, lon_se = 0, lat_se = 0)
+  df_dailylocs <- data.frame(species=character(), day=integer(), year=integer(), month=integer(), winter=character(), lon=numeric(), lat=numeric(), lon_se=numeric(), lat_se=numeric()) #initialize empty dataframe
 
   for (s in spp){
     for (i in x) {
@@ -347,7 +347,6 @@ Estimatedailylocs = function(dat) {
       df_dailylocs <- data.frame(bind_rows(df_dailylocs, preds))
     }
   }
-  df_dailylocs = df_dailylocs[-1,]
   return(df_dailylocs)
 }
 
@@ -482,22 +481,20 @@ EstimateMaxSpeed = function(dat) {
   filter(day != 1)
   years <- c(2008:2022)
   species <- unique(dat$species)
-  df_maxspeed <- data.frame(species = "none", year = 0, max_speed = 0)
-  for (s in species){
+  # initialize empty dataframe
+  df_maxspeed <- data.frame(species=character(), year=integer(), max_speed=integer())
+ 
+   for (s in species){
     for (i in years){
    sub_dailylocs <- 
        spp7dailylocs %>%
        filter(year == i & species == s)
   
     median <- median(tail(sort(sub_dailylocs$distance),5))
-  
     maximum_speed <-  data.frame(species = s, year = i, max_speed = median)
-  
     df_maxspeed <- data.frame(bind_rows(df_maxspeed, maximum_speed))
-  
     }
   }
-  df_maxspeed = df_maxspeed[-1,]
 return(df_maxspeed)
 }
 
@@ -681,7 +678,7 @@ Est3MigrationDates = function(dat){
   filter(day != 1)
   year <- c(2008:2022)
   species <- unique(dat$species)
-  df_dates <- data.frame(species="none", year=0, spring = 0, maxlat = 0, fall = 0)
+  df_dates <- data.frame(species=character(), year=integer(), spring=numeric(), maxlat=numeric(), fall=numeric()) #initialize empty dataframe
   for (s in species) {
     for (y in year){
       dat_subset <- 
@@ -739,15 +736,12 @@ Est3MigrationDates = function(dat){
     }
     fall_end <- fall_index2 - 1
     
-    # find center of the season, maximum latitude (e.g. population is no longer moving further north; breeding)
+    # find center of the season, max latitude (e.g. population no longer moving north; breeding)
     max_lat = dat_subset[dat_subset$lat == max(dat_subset$lat),]$day
-    
     dates = data.frame(species = s, year = y, spring = spring_begin, maxlat = max_lat, fall = fall_end)
-    
     df_dates <- data.frame(bind_rows(df_dates, dates))
     }
   }
-  df_dates = df_dates[-1,]
 return(df_dates)
 }
 
@@ -1077,7 +1071,7 @@ Calculate the slopes of species richness change across years, within cells. Plot
 
 cells <- unique(sppR_mo$cell)
 months <- c(10, 11, 12, 1, 2, 3)
-df_sppR <- data.frame(cell=0, month=0, n=0, slope=0, pVal=0, cell_lat=0, cell_lon=0)
+df_sppR <- data.frame(cell=numeric(), month=integer(), n=integer(), slope=numeric(), pVal=numeric(), cell_lat=numeric(), cell_lon=numeric()) #initialize empty dataframe
 
 for (c in cells){
   dat <- sppR_mo %>% filter(cell == c)
@@ -1095,11 +1089,9 @@ for (c in cells){
     }
   }
 }
-#remove the zero placeholder row and the NA values
+#remove the NA values
 #FIXME: are we dropping all the rows that has NA values? does sig = pValue? 
-df_sppR <- df_sppR %>% 
-  filter(n!=0) %>%
-  #filter(!is.na(sig)) 
+  # previously had this filter: filter(!is.na(sig)); FIXME: delete if no longer need this note
 na.omit(df_sppR )
   
 # adding factor names and levels to month, ordered by winter season, not calendar year
