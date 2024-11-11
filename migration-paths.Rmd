@@ -56,7 +56,7 @@ library(maps)
 library(mapdata)
 library(mgcv)
 library(maptools)
-library(nvctr)
+#library(nvctr) #won't need once I move nvector method to a new Rmd file. Want to keep this file for analysis
 library(radiant.data)
 library(raster)
 library(RColorBrewer)
@@ -77,16 +77,28 @@ library(sp)
 # library(SDMTools)#FIXME: SDMTools removed from CRAN. Is it needed for this code? Check, and remove if not
 ```
 
-If starting from scratch, input the three raw data files and merge together.
-You need to bring in: 
-1. a file with the bird observations (ebrd2.c)
-2. a file with the total eBirder "effort" (eft.c)
-3. a file with all the center locations for the POLYFID grid cells (locs)
+For this code chunk, you need to already have processed the raw eBird data files (process-raw-eBird-data.Rmd) and generated the daily centroids using the nvector method and weighted means (daily-nvector-centroids.Rmd). If you have not yet run these steps or generated the .rds output files, please go back and run those two files in that order first. The files are listed below, so you can check if they exist in the folder structor before proceeding.
 
-*Please go to the file* called "process-raw-eBird-data.Rmd" to do this, if you don't already have the files named with the pattern dat_effort_****.RData".
+Species files from process-raw-eBird-data.Rmd: 
+* dat_effort_Bombycilla cedrorum.rds
+* dat_effort_Cardinalis cardinalis.rds
+* dat_effort_Corvus brachyrhynchos.rds
+* dat_effort_Cyanocitta cristata.rds
+* dat_effort_Dryobates pubescens.rds
+* dat_effort_Haemorhous purpureus.rds 
+* dat_effort_Hylocichla mustelina.rds
+* dat_effort_Junco hyemalis.rds
+* dat_effort_Mimus polyglottos.rds  
+* dat_effort_Setophaga coronata.rds
+* dat_effort_Sialia sialis.rds
+* dat_effort_Sitta carolinensis.rds  
+* dat_effort_Sturnella magna.rds
+* dat_effort_Sturnus vulgaris.rds
+* dat_effort_Turdus migratorius.rds"  
 
-**If you have already completed the initial steps** and have saved out the effort file, start here instead, with loading it.
-Each species has it's own merged data file, and will be brought into one species data (spdata) file to work through the results.
+Centroid file from daily-nvector-centroids.Rmd
+- df_nvector.rds
+
 
 Note: If data has not been updated (~2022~.), then go straight to "weighted mean location" chunk and load "df_nvector.rds" file. If the data has been updated then have to start from the beginning (loading spdata)
 
@@ -108,189 +120,21 @@ for (i in files) {
 }
 ```
 
-[La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<-103 longitude).
-
-# FIXME: After checking the process-raw-eBird-data.Rmd file, can probably delete this note. 
-Note: After running "process-raw-eBird-data" and re-run the *spdata*, the names of the variables (columns names) are changed. For example, in num_spobs function, count.x is not found in dat_effort. YEAR and DAYS have to be change into lower case letter. 
-
-```{r}
-# x = longitude 
-dat_effort <- spdata %>%
-  dplyr::filter(x >= -103) #set filter to only include occurrences within eastern and central flyway (-103 Longitude)
-
-num_obs <- nrow(dat_effort)
-paste0("The total number of observations for all species is ", num_obs, ".")
-
-#print total number of observations (rows) and checklists by species
-num_spobs <- dat_effort %>%
-  #filter(year!=2023) %>%
-  group_by(species) %>%
-  summarise(nrow=n(),
-            total_checklists=sum(count))
-num_spobs
-
-dat_effort %>%
-  group_by(species, year) %>%
-  summarise(nrow=n(),
-            total=sum(count)) %>%
-  ggplot(aes(as.numeric(year), total, group=species)) + 
-  geom_point() + 
-  geom_line() + 
-  scale_y_log10() + 
-  scale_x_continuous(breaks=seq(2008, 2024, 3)) +
-  xlab("Year") +
-  ylab("checklist count") +
-  theme(legend.position=("none")) +
-  facet_wrap(~species, ncol=3) + 
-  theme_bw()
-    # # set transparency
-    # theme(
-    #     panel.grid.major = element_blank(), 
-    #     panel.grid.minor = element_blank(),
-    #     #panel.background = element_rect(fill = "transparent",colour = NA),
-    #     #plot.background = element_rect(fill = "transparent",colour = NA)
-    #     ) 
-
-# Figure for ESA 2021 poster was saved with transparency
-# Figure for manuscript was made with white background
-ggsave("figs/checklist_counts.png", height=10, width=8) #if want the background to be transparent, use: bg="transparent"
-
-#saving copy of data before doing nvector stuff
-saveRDS(dat_effort, "data_2023/dat_effort_2023.rds")
-```
-*Note that the total number of observations decreases for 2023 because the data was downloaded through May 23, 2023, so it is not a complete calendar year.
+[La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, and use processed data that excludes western occurrences (<-103 longitude).
 
 
-# Weight mean locations 
-## WARNING: the below code chunk takes a lot of time to run.
-##    If df_nvector_2023 already exists, do not run it again.
-## FIXME: Would it make sense to reorganize this code so it doesn't run in this RMD doc but is in a separate file?
-Weight species counts by eBirder effort counts for each cell
+## Load the data files for the species, the nvector locations, and the weighted mean daily centroids
+These files are generated by the code "daily-nvector-centroid.Rmd".
 
-Note: After running "process-raw-eBird-data", then load the 'df_nvector.rds'. 
-If the data was updated then start the whole code chunk. (converting 6369952 rows into n-vectors roughly takes 21hours). 
-Made an copy of original file just to be safe. "dat_effort = df"
-
-```{r} 
-#copying the raw data(dat_effort)
-copy <- data.frame(dat_effort)
-copy <- copy[c(order(copy$year, copy$day)),]
-df <- data.frame(copy)
-df$freq <- df$count/df$effort
-
-#creating a columns for newx, newy, newz with NA values to store values of 3 vectors
-df$newx <- NA
-df$newy <- NA
-df$newz <- NA
-
-#For each species of a given year and day, converting x and y to newx, newy, newz(radius)
-for (i in 1:nrow(df)){
-  df[i,"newx"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[1]
-  df[i,"newy"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[2]
-  df[i,"newz"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[3]
-}
-
-# #Save to RDS file
-#saveRDS(df, "df_nvector_2023.rds")
-```
-
-
-## If df_nvector_2023.rds already exists, JUMP TO THIS CODE CHUNK.
 Loads the processed data
 ```{r}
 # #Loading RDS file 
-df <- readRDS("data_2023/df_nvector_2023.rds")
-```
-
-Using the nvector dataset, estimate the location centroid for each species on a given day (as a weighted mean)
-*as a note, this code chunk also takes several minutes to run.
-```{r}
-#Putting species, year, and days into list in order
-species_list <- unique(df$species)
-year_list <- unique(df$year)
-day_list <- unique(df$day)
-
-#For each species of a given year and day, converting newx, newy, newz back into decimal meanx and meany
-weighted_mean_locs <- NULL
-for (i in 1:length(species_list)){
-  species_df <- df[df$species==species_list[i],]
-  
-  for (j in 1:length(year_list)){
-    year_df <- species_df[species_df$year==year_list[j],]
-  
-    for(k in 1:length(unique(year_df$day))){
-        day_list <- sort(unique(year_df$day))
-        day_df <- year_df[year_df$day==day_list[k],]
-        mean_cal <- c(weighted.mean(day_df$newx, day_df$freq),
-                      weighted.mean(day_df$newy, day_df$freq),
-                      weighted.mean(day_df$newz, day_df$freq))
-        mean_cal <- deg(n_E2lat_lon(mean_cal)) #degree func
-        weighted_mean_locs <- rbind(weighted_mean_locs, data.frame(day=day_list[k], 
-                                     weighted_lon=mean_cal[2], 
-                                     weighted_lat=mean_cal[1],
-                                     year=year_list[j],
-                                     species=species_list[i]))
-    }
-  }
-}  
-
-
-sample <- df %>% group_by(species, year, day) %>% summarise(numcells = n(), numobs = sum(count))
-
-weighted_mean_locs <- cbind(weighted_mean_locs, sample[c("numcells", "numobs")])
-
-#Reordering the colunmns
-weighted_mean_locs <- weighted_mean_locs[,c(5,4,1,2,3,6,7)]
-  
-#plot the weighted lons and lats by species, just to check
-ggplot(weighted_mean_locs, aes(weighted_lon)) + 
-  geom_histogram() + 
-  facet_wrap(~species) + 
-  theme_bw()
-
-ggplot(weighted_mean_locs, aes(weighted_lat)) + 
-  geom_histogram() + 
-  facet_wrap(~species) + 
-  theme_bw()
-
-#check if weighted sd differs by time of the year (expect to be higher during migration, lower during breeding)
-ggplot(weighted_mean_locs, aes(day, weighted_lon)) + geom_point(alpha=0.10) + facet_wrap(~species, ncol=3) + theme_bw()
-ggsave(filename = "figs/15_species_mean_locs_lon.png", height = 10, width=8)
-
-ggplot(weighted_mean_locs, aes(day, weighted_lat)) + geom_point(alpha=0.10) + facet_wrap(~species, ncol=3) + theme_bw()
-ggsave(filename = "figs/15_species_mean_locs_lat.png", height = 10, width=8)
-
-```
-
-
-## Add more detail to dates in the weighted mean location dataframe
-A DATE and MONTH formatted column to mean_daily_locs dataframe.
-An ID column is also added, which is an integer of each of the dates in order, 1-4383.
-**It is important to note when converting to Dates that for this data type only (why!?!) R uses a 0 based index. This means Day 1 is 0. So to convert our "day of year" integers to a Year-Month-Day format, we need to use DAY-1 and YEAR.**
-
-Note that this code defines the "winter" season as October-March. This is to label the time of year important for eastern redcedar cone production.
-```{r}
-weighted_mean_locs <- weighted_mean_locs %>%
-  mutate(DAYm1 = day-1,
-         origin = paste0(year, "-01-01"),
-         date = as.Date(DAYm1, origin=origin), 
-         month = month(date)) %>%
-  mutate(winter = ifelse(month %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
-  arrange(species,date) %>%
-  ungroup() %>%
-  mutate(ID = row_number()) %>%
-  dplyr::select(-DAYm1, -origin)
-
-#saveRDS(weighted_mean_locs, "weighted_mean_locs_2023.rds")
-```
-
-## If you are starting here, can upload the .rds file directly rather than running the previous code up to this point.
-```{r}
-# #Loading RDS file 
+dat_effort <- readRDS("data_2023/dat_effort_2023.rds")
+df_nvector <- readRDS("data_2023/df_nvector_2023.rds") #previously called "df" in code: FIXME: delete this note once all is checked
 weighted_mean_locs <- readRDS("weighted_mean_locs_2023.rds")
 ```
 
-
+##START HERE
 Count number of records by year *for 2020 NSF report*
 ```{r}
 #count total number of records across the years. (increasing strongly)
