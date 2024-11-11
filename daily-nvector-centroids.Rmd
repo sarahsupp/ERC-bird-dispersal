@@ -36,6 +36,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(here)
 library(tidyverse)
 library(nvctr)
+library(geosphere) #FIXME: Check if needed, or loaded in the background with nvctr
 
 ```
 
@@ -61,7 +62,6 @@ spdata <- data.frame(POLYFID=integer(), year=integer(), day=integer(),
 
 # loop through each file to create one merged dataframe with all species
 for (i in files) {
- # dat <- readRDS(i)
   dat <- readRDS(paste0(here("data_2023/effort-merged_data_2023/"),(i)))
   spdata <- bind_rows(spdata, dat)
 }
