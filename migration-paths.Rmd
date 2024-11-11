@@ -5,12 +5,14 @@ date: "2/10/2020"
 output: html_document
 ---
 
-##Code for cedar waxwing project, modified from eBird migration project (Supp et al. 2015)
+# INTRODUCTION
+
+## Code for cedar waxwing project, modified from eBird migration project (Supp et al. 2015)
 (c) 2020-2023, Niu, Lee, Wisnefski, and Supp (PI)
 supps@denison.edu
 Denison University
 Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2025)
-modified from previous code developed for Supp et al. 2015 hummingbird paper (Ecography)
+modified from previous code developed for Supp et al. 2015 hummingbird paper (Ecosphere)
 
 Birds evaluated include: 
 * Cedar Waxwing (CEWA) _Bombycilla cedrorum_
@@ -33,104 +35,80 @@ Birds evaluated include:
 ##FIXME: check which of these libraries is  used, and remove ones that are not needed
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(echo = TRUE)
-#remove.packages(rlang)
-#install.packages("rlang")
+
 library(tidyverse)
 library(here)
-library(data.table)
+library(broom)
+#library(data.table) #FIXME: check, but I don't think this is used, remove if not
 #library(devtools)
 #devtools::install_github('r-barnes/dggridR', vignette=TRUE, force = TRUE)
 library(dggridR)
-library(fields)
+library(fields) #FIXME: Test if this is needed or already loaded in background with sf or sp
 library(gamm4) 
-library(gapminder)
-library(geojsonio)
-library(geosphere)
+#library(gapminder)
+#library(geojsonio) #FIXME: Test if this is needed. Delete if not.
 #devtools::install_github("dkahle/ggmap")
 library(ggmap)
 library(ggpubr)
-#install.packages("kableExtra")
-library(kableExtra)
+#library(kableExtra)
 library(lubridate)
-library(maps)
-library(mapdata)
+#library(maps) #FIXME: Test if these are needed or already loaded in background with ggplot2 and ggmap
+#library(mapdata) #FIXME: remove if not needed
 library(mgcv)
 library(maptools)
-#library(nvctr) #won't need once I move nvector method to a new Rmd file. Want to keep this file for analysis
-library(radiant.data)
-library(raster)
+library(purrr)
+#library(radiant.data)
+#library(raster) FIXME: Check if I need to load this; may not if relying mainly on sf and not manipulating raster datasets directly.
 library(RColorBrewer)
-library(rnaturalearth)
+library(rnaturalearth) 
+#FIXME: do I need both naturalearth packages?
 #devtools::install_github("ropensci/rnaturalearthhires")
-library(rnaturalearthhires)
+#library(rnaturalearthhires) #is this just a higher resolution version of rnaturalearth?
 #devtools::install_github("r-spatial/sf") #C compiler error on mac
 library(sf)
 #library(sjPlot)
-library(sjmisc)
-library(sjlabelled)
+#library(sjmisc)
+#library(sjlabelled)
 library(stargazer)
-library(sp)
-#install.packages('remotes')
-#library(rgdal) #FIXME: rgdal was removed from CRAN. Is it needed for this code? Check, and remove if not
-#library(rgeos) #FIXME: rgeos was removed from CRAN. Is it needed for this code? Check, and remove if not
-#remotes::install_version('SDMTools','1.1-221')
-# library(SDMTools)#FIXME: SDMTools removed from CRAN. Is it needed for this code? Check, and remove if not
+#library(sp) #FIXME: This would be the "old" way of handling spatial data; not as compatible with tidyvers. Test and remove if not needed, in favor of keeping sf only.
 ```
 
 For this code chunk, you need to already have processed the raw eBird data files (process-raw-eBird-data.Rmd) and generated the daily centroids using the nvector method and weighted means (daily-nvector-centroids.Rmd). If you have not yet run these steps or generated the .rds output files, please go back and run those two files in that order first. The files are listed below, so you can check if they exist in the folder structor before proceeding.
 
-Species files from process-raw-eBird-data.Rmd: 
+Species files from *process-raw-eBird-data.Rmd*: 
 * dat_effort_Bombycilla cedrorum.rds
 * dat_effort_Cardinalis cardinalis.rds
 * dat_effort_Corvus brachyrhynchos.rds
 * dat_effort_Cyanocitta cristata.rds
 * dat_effort_Dryobates pubescens.rds
-* dat_effort_Haemorhous purpureus.rds 
+* dat_effort_Haemorhous purpureus.rds
 * dat_effort_Hylocichla mustelina.rds
 * dat_effort_Junco hyemalis.rds
-* dat_effort_Mimus polyglottos.rds  
+* dat_effort_Mimus polyglottos.rds
 * dat_effort_Setophaga coronata.rds
 * dat_effort_Sialia sialis.rds
-* dat_effort_Sitta carolinensis.rds  
+* dat_effort_Sitta carolinensis.rds
 * dat_effort_Sturnella magna.rds
 * dat_effort_Sturnus vulgaris.rds
-* dat_effort_Turdus migratorius.rds"  
+* dat_effort_Turdus migratorius.rds 
 
-Centroid file from daily-nvector-centroids.Rmd
-- df_nvector.rds
+Files from *daily-nvector-centroids.Rmd*:
+- dat_effort_2023.rds
+- df_nvector_2023.rds
+- weighted_mean_locs_2023.rds
 
-
-Note: If data has not been updated (~2022~.), then go straight to "weighted mean location" chunk and load "df_nvector.rds" file. If the data has been updated then have to start from the beginning (loading spdata)
-
-
-```{r}
-# list prepared .rds files for each of the species
-files = list.files(path=here("data_2023/effort-merged_data_2023/"), pattern=glob2rx("dat_effort*.rds"))
-
-# initialize empty dataframe
-spdata <- data.frame(POLYFID=integer(), year=integer(), day=integer(),
-                     count=integer(), x=numeric(), y=numeric(),
-                     effort=numeric(), species=character())
-
-# loop through each file to create one merged dataframe with all species
-for (i in files) {
- # dat <- readRDS(i)
-  dat <- readRDS(paste0(here("data_2023/effort-merged_data_2023/"),(i)))
-  spdata <- bind_rows(spdata, dat)
-}
-```
-
-[La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, and use processed data that excludes western occurrences (<-103 longitude).
+**Note:** dat_effort and the weighted mean files have already been **filtered to the eastern flyway**. [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, and use processed data that excludes western occurrences (<-103 longitude). *If you want to include occurrences from broader locations, will need to use the individual species files that are generated by the process-eBird-data.Rmd file and brought in at the beginning of the code in daily-nvector-centroids.Rmd to make the merged spdata dataframe.*
 
 
-## Load the data files for the species, the nvector locations, and the weighted mean daily centroids
+## Load the data 
+#### Includes files for: merged species, nvector locations, and the weighted mean daily centroids
 These files are generated by the code "daily-nvector-centroid.Rmd".
 
 Loads the processed data
 ```{r}
 # #Loading RDS file 
 dat_effort <- readRDS("data_2023/dat_effort_2023.rds")
-df_nvector <- readRDS("data_2023/df_nvector_2023.rds") #previously called "df" in code: FIXME: delete this note once all is checked
+df <- readRDS("data_2023/df_nvector_2023.rds") #FIXME: Give this a better name? Would need to replace downstream.
 weighted_mean_locs <- readRDS("weighted_mean_locs_2023.rds")
 ```
 
@@ -377,7 +355,7 @@ Estimatedailylocs = function(dat) {
 dailylocs <- Estimatedailylocs(weighted_mean_locs)
 
 #filtering only the migratory species (9 species)
-  #Sturnella magna and Sturnus vulgaris are not working (magna not working in 2017, vulgaris not working in 2008)
+  #Sturnella magna and Sturnus vulgaris are not working (magna not working in 2017, vulgaris not working in 2008) #FIXME: check this note and delete once fixed.
   #Only using 7 species 
 spp7dailylocs <- dailylocs %>% filter (species %in% c("Bombycilla cedrorum", "Haemorhous purpureus", "Hylocichla mustelina", "Junco hyemalis", "Setophaga coronata", "Turdus migratorius", "Sialia sialis"))
 
@@ -496,7 +474,7 @@ ggsave(filename = "figs/7species_distances_2023.png", height = 5, width=8)
 First, remove all values for Day = 1. Because each GAM was calculated separately by year, distance between Dec 31 and Jan 1 will not be valid. 
 Use the median of the top 5 migration speeds for each year separately, as the estimated maximum migration speed (km/day) for the species. 
 ```{r}
-#originallly dailylocs has 9 colums and spp7dailylcs has 10 columns. In order to run the function, we need to have the same column. 
+#originally dailylocs has 9 colums and spp7dailylcs has 10 columns. In order to run the function, we need to have the same column. 
 
 # function to estimate the maximum speed of migration (km/day)
 EstimateMaxSpeed = function(dat) {
@@ -761,7 +739,7 @@ Est3MigrationDates = function(dat){
     }
     fall_end <- fall_index2 - 1
     
-    # find center of the season, maximum latitute (e.g. population is no longer moving further north; breeding)
+    # find center of the season, maximum latitude (e.g. population is no longer moving further north; breeding)
     max_lat = dat_subset[dat_subset$lat == max(dat_subset$lat),]$day
     
     dates = data.frame(species = s, year = y, spring = spring_begin, maxlat = max_lat, fall = fall_end)
@@ -793,7 +771,7 @@ begin <- ggplot(spp7MigrationDates, aes(year, fall)) +
   geom_smooth(method="lm") +
   #geom_hline(yintercept = begin_winter, linetype="dashed", col="hotpink") +
   theme_bw() + xlab("Year") + ylab("Winter begin date") + 
-  theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) + 
+  theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
   scale_x_continuous(breaks=seq(2008, 2021, 2)) +
  # annotate(geom="text", x= 2012, y= 340, label=paste0("median doy = ", round(begin_winter,2)))
   facet_wrap(~species)
@@ -815,6 +793,40 @@ ggarrange(begin, end,
 ggsave(filename = "figs/7spp_MigrationDates_2023.png", height = 10, width=10)
 ```
 
+Look at linear trends for dates of the 7 migratory species to see if there is a significant directional trend, or not.
+```{r}
+# Function to extract relevant statistics from linear regression object
+extract_lm_stats <- function(model) {
+  summary_model <- summary(model)
+  
+  tidy_model <- broom::tidy(model) %>% 
+    filter(term == "year")
+  
+  tibble(r2 = summary_model$r.squared,
+    estimate = tidy_model$estimate,
+    conf_low = tidy_model$conf.low,
+    conf_high = tidy_model$conf.high,
+    pvalue = tidy_model$p.value)
+}
+
+
+# Apply the function to each species for spring and fall, separately
+date_results <- spp7MigrationDates %>%
+  group_by(species) %>%
+  summarize( spring_lm = list(lm(spring ~ year, data = cur_data())),
+    fall_lm = list(lm(fall ~ year, data = cur_data())) ) %>%
+  mutate( spring_stats = map(spring_lm, extract_lm_stats),
+    fall_stats = map(fall_lm, extract_lm_stats) ) %>%
+  select(-spring_lm, -fall_lm) %>% # Remove the models if not needed
+  unnest(cols = c(spring_stats, fall_stats))
+
+# View results
+date_results
+
+```
+
+
+# FIXME: apply lm and save results in a more cohesive way: if the above chunk works, can delete this below chunk
 Looking at the linear trends of these dates for each 7 migratory species to see if there are any significance. 
 ```{r}
 cedrorum <- spp7MigrationDates %>%
@@ -828,10 +840,6 @@ cedrorum_spring <- lm(spring ~ year, data=cedrorum)
 cedrorum_fall <- lm(fall ~ year, data=cedrorum)
 #summary(cedrorum_fall)
 
-# #anova 
-# anova(mod1_spring)
-# anova(mod1_fall)
-
 purpureus <- spp7MigrationDates %>%
   filter(species=="Haemorhous purpureus")
 
@@ -840,10 +848,6 @@ purpureus_spring <- lm(spring ~ year, data=purpureus)
 
 purpureus_fall <- lm(fall ~ year, data=purpureus)
 #summary(purpureus_fall)
-
-# #anova 
-# anova(mod2_spring)
-# anova(mod2_fall)
 
 mustelina <- spp7MigrationDates %>%
   filter(species=="Hylocichla mustelina")
@@ -854,10 +858,6 @@ mustelina_spring <- lm(spring ~ year, data=mustelina)
 mustelina_fall <- lm(fall ~ year, data=mustelina)
 #summary(mustelina_fall)
 
-# #anova
-# anova(mod3_spring)
-# anova(mod3_fall)
-
 hyemalis <- spp7MigrationDates %>%
   filter(species=="Junco hyemalis")
 
@@ -866,10 +866,6 @@ hyemalis_spring <- lm(spring ~ year, data=hyemalis)
 
 hyemalis_fall <- lm(fall ~ year, data=hyemalis)
 #summary(hyemalis_fall)
-
-# #anova 
-# anova(mod4_spring)
-# anova(mod4_fall)
 
 coronata <- spp7MigrationDates %>%
   filter(species=="Setophaga coronata")
@@ -880,10 +876,6 @@ coronata_spring <- lm(spring ~ year, data=coronata)
 coronata_fall <- lm(fall ~ year, data=coronata)
 #summary(coronata_fall)
 
-# #anova
-# anova(mod5_spring)
-# anova(mod5_fall)
-
 sialis <- spp7MigrationDates %>%
   filter(species=="Sialia sialis")
 
@@ -893,10 +885,6 @@ sialis_spring <- lm(spring ~ year, data=sialis)
 sialis_fall <- lm(fall ~ year, data=sialis)
 #summary(sialis_fall)
 
-# #anova
-# anova(mod6_spring)
-# anova(mod6_fall)
-
 migratorius <- spp7MigrationDates %>%
   filter(species=="Turdus migratorius")
 
@@ -905,12 +893,9 @@ migratorius_spring <- lm(spring ~ year, data=migratorius)
 
 migratorius_fall <- lm(fall ~ year, data=migratorius)
 summary(migratorius_fall)
-
-# #anova
-# anova(mod7_spring)
-# anova(mod7_fall)
 ```
 
+#FIXME: If the above chunk works, then can delete these two also, or modify to use on date_results df
 ```{r}
 #making linear regression result table for fall 
 stargazer(cedrorum_fall, coronata_fall, migratorius_fall, mustelina_fall, purpureus_fall, hyemalis_fall, sialis_fall, type = "text",  
