@@ -69,8 +69,8 @@ Brief description of the data and data sources.
 
 | file name and location | description| analysis stage |
 | ------------- | ------------- | ------------- |
-| process-raw-eBird-data.Rmd | This file takes in original files from FAL eBird (effort, locations, polyFID) and merges them together into a species-level .rds file for later analysis. | aggregates data |
-| migration-paths.Rmd | This file is used analyze ebird data across multiple species. It creates average migration pathway, identifies start and end of migration seasons, and peak latitude (summer), and identifies linear trends in migration dates (onset, end) through time, where they exist. | outputs figures and results |
+| process-raw-eBird-data.Rmd | This is the first code file to run if you are starting with the raw data files. This file takes in original files from FAL eBird (effort, locations, polyFID) and merges them together into a species-level .rds file for later analysis. | aggregates data |
+| migration-paths.Rmd | This is the third code file to run, after generating the merged species-level .rds file and generating the centroids using the nvector method. This file is used analyze ebird data across multiple species. It creates average migration pathway, identifies start and end of migration seasons, and peak latitude (summer), and identifies linear trends in migration dates (onset, end) through time, where they exist. | outputs figures and results |
 | Migration-path-window.Rmd | This file uses GAMs to calculate the yearly migration paths for the 15 species of interest, as well as the start/end dates of those migrations for the 15 species of interest. calcuates using average of multiple parameter settings (k, g) | outputs figures and results |
 | plot_migration_paths.Rmd | This file uses the results from Migration-path-window.Rmd to plot the migration paths for all 15 species | run after migration-path-window, outputs figures |
 | cooccur.Rmd | This file uses eBird data (that has been filtered to fall within the range of the ERC) in order to calculate species co-occurrence for the 15 species of interest | outputs results |
