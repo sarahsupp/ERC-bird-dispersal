@@ -60,8 +60,6 @@ library(nvctr)
 library(radiant.data)
 library(raster)
 library(RColorBrewer)
-#library(rgdal) #FIXME: rgdal was removed from CRAN. Is it needed for this code? Check, and remove if not
-#library(rgeos) #FIXME: rgeos was removed from CRAN. Is it needed for this code? Check, and remove if not
 library(rnaturalearth)
 #devtools::install_github("ropensci/rnaturalearthhires")
 library(rnaturalearthhires)
@@ -73,6 +71,8 @@ library(sjlabelled)
 library(stargazer)
 library(sp)
 #install.packages('remotes')
+#library(rgdal) #FIXME: rgdal was removed from CRAN. Is it needed for this code? Check, and remove if not
+#library(rgeos) #FIXME: rgeos was removed from CRAN. Is it needed for this code? Check, and remove if not
 #remotes::install_version('SDMTools','1.1-221')
 # library(SDMTools)#FIXME: SDMTools removed from CRAN. Is it needed for this code? Check, and remove if not
 ```
@@ -111,7 +111,7 @@ for (i in files) {
 [La Sorte et al. 2014](https://onlinelibrary.wiley.com/doi/full/10.1111/jbi.12328) defined western, central, and eastern flyways for migrating songbirds. These are general, but since our species include populations across the continent, and we are focused on eastern and midwestern populations of eastern redcedar, we should exclude western occurrences (<-103 longitude).
 
 # FIXME: After checking the process-raw-eBird-data.Rmd file, can probably delete this note. 
-Note: After running "process-raw-eBrid-data" and re-run the *spdata*, the names of the variables (columns names) are changed. For example, in num_spobs function, count.x is not found in dat_effort. YEAR and DAYS have to be change into lower case letter. 
+Note: After running "process-raw-eBird-data" and re-run the *spdata*, the names of the variables (columns names) are changed. For example, in num_spobs function, count.x is not found in dat_effort. YEAR and DAYS have to be change into lower case letter. 
 
 ```{r}
 # x = longitude 
