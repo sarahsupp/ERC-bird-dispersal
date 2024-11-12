@@ -163,43 +163,49 @@ saveRDS(df, "data_2023/df_nvector_2024.rds")
 ## calculate daily weighted mean [centroid]
 Using the nvector dataset, estimate the location centroid for each species on a given day (as a weighted mean)
 *as a note, this code chunk also takes several minutes to run. (~6 minutes on linux desktop)
-#FIXME: optimize this code to run in a vectorized way for speed and efficiency
+
 ```{r}
-start1 <- Sys.time()
 #Putting species, year, and days into list in order
 species_list <- unique(df$species)
 year_list <- sort(unique(df$year))
-day_list <- sort(unique(df$day))
 
-#For each species of a given year and day, converting newx, newy, newz back into decimal meanx and meany
-weighted_mean_locs <- NULL
+#For each species on a given year and day, converting newx, newy, newz back into decimal meanx and meany
+weighted_mean_locs2 <- NULL
 for (i in 1:length(species_list)){
   species_df <- df[df$species==species_list[i],]
   
   for (j in 1:length(year_list)){
     year_df <- species_df[species_df$year==year_list[j],]
-  
-    for(k in 1:length(unique(year_df$day))){
-        day_list <- sort(unique(year_df$day))
+    day_list <- sort(unique(year_df$day)) #for each species and year, may have a unique set of days
+
+    for(k in 1:length(day_list)){
         day_df <- year_df[year_df$day==day_list[k],]
         mean_cal <- c(weighted.mean(day_df$newx, day_df$freq),
                       weighted.mean(day_df$newy, day_df$freq),
                       weighted.mean(day_df$newz, day_df$freq))
         mean_cal <- deg(n_E2lat_lon(mean_cal)) #degree func
-        weighted_mean_locs <- rbind(weighted_mean_locs, data.frame(day=day_list[k], 
-                                     weighted_lon=mean_cal[2], 
-                                     weighted_lat=mean_cal[1],
-                                     year=year_list[j],
-                                     species=species_list[i]))
+        # count total number of checklists and total number of cells
+        numcells = nrow(day_df) # each row represents a unique icosahedron cell
+        numobs = sum(day_df$count) #sum of the counts represents to the total number of checklists
+        weighted_mean_locs2 <- rbind(weighted_mean_locs2, 
+                                    data.frame(species=species_list[i], 
+                                    year=year_list[j], 
+                                    day=day_list[k],
+                                    numcells=numcells,
+                                    numobs=numobs,
+                                    weighted_lon=mean_cal[2], 
+                                    weighted_lat=mean_cal[1]))
     }
   }
 }  
-end1 <- Sys.time()
 
-sample <- df %>% 
+# counts the number of unique cells (numcells) and the total number of checklists (numobs)
+daily_counts <- df %>% 
   group_by(species, year, day) %>% 
-  summarise(numcells = n(), numobs = sum(count))
+  summarise(numcells = n(), numobs = sum(count)) %>%
+  ungroup()
 
+#append the counts to the weighted locs dataframe
 weighted_mean_locs <- cbind(weighted_mean_locs, sample[c("numcells", "numobs")])
 
 #Reordering the columns
@@ -207,65 +213,6 @@ weighted_mean_locs <- weighted_mean_locs[,c(5,4,1,2,3,6,7)]
 
 ```
 
-New way, check sys.time #its a win! 2x as fast
-```{r}
-start2 <- Sys.time()
-
-# Sort unique values of year and day (optional if already ordered in df)
-year_list <- sort(unique(df$year))
-day_list <- sort(unique(df$day))
-
-# Calculate weighted means for each combination of species, year, and day
-weighted_mean_locs2 <- df %>%
-  group_by(species, year, day) %>%
-  summarize(
-    weighted_lon = weighted.mean(newx, freq),
-    weighted_lat = weighted.mean(newy, freq),
-    weighted_z = weighted.mean(newz, freq))
-
-# Convert to decimal degrees
-
-
-%>%
-  # Convert to decimal degrees
-  mutate(
-    mean_cal = map2(weighted_lon, weighted_lat, ~ deg(n_E2lat_lon(c(.x, .y, weighted_z)))),
-    weighted_lon = map_dbl(mean_cal, 2),  # Extract longitude from mean_cal
-    weighted_lat = map_dbl(mean_cal, 1)   # Extract latitude from mean_cal
-  ) %>%
-  dplyr::select(-mean_cal, -weighted_z)  # Drop temporary columns
-
-,
-    .groups = "drop"  # Ungroup after summarizing
-  ) 
-
-wml <- weighted_mean_locs2
-
-coords <- data.frame(wml$weighted_lon, wml$weighted_lat, wml$weighted_z)
-wml$lon2 <- deg(n_E2lat_lon(as.vector(coords[1,])))[1] #degree func
-
-wml <- weighted_mean_locs2 %>%
-  # Convert to decimal degrees
-  mutate(
-     mean_cal = deg(n_E2lat_lon(c(as.numeric(weighted_lon), as.numeric(weighted_lat), as.numeric(weighted_z))))[1]
-  )
-    
-    #mean_cal = map2(as.numeric(weighted_lon), as.numeric(weighted_lat),
-                    ~ deg(n_E2lat_lon(c(.x, .y, as.numeric(weighted_z))))),
-    #weighted_lon = map_dbl(deg(n_E2lat_lon(c(weighted_lon, weighted_lat, weighted_z))))[1]
-    weighted_lon = map_dbl(mean_cal, 2),  # Extract longitude from mean_cal
-    weighted_lat = map_dbl(mean_cal, 1)   # Extract latitude from mean_cal
-  )# %>%
-  dplyr::select(-mean_cal, -weighted_z)  # Drop temporary columns
-
-end2 <- Sys.time()
-
-deg(n_E2lat_lon(mean_cal)
-
-# View result
-weighted_mean_locs
-
-```
 
 
 ## Add more detail to dates in the weighted mean location dataframe
