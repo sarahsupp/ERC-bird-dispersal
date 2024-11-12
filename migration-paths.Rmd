@@ -160,13 +160,15 @@ Initial plot of bird average locations for all species and latitude by day acros
 ```{r}
 wtlon_by_day <- ggplot(weighted_mean_locs, aes(day, weighted_lon, group=year)) +
   geom_point(alpha=0.25, aes(col=winter)) + geom_line(alpha=0.25) +
-  facet_wrap(~year)
+  facet_wrap(~year) + 
+  theme_bw()
 
 wtlat_by_day <- ggplot(weighted_mean_locs, aes(as.numeric(day), weighted_lat, group=year)) +
   stat_smooth(aes(col=as.numeric(year))) + ylab("Weighted mean latitude") +
   xlab("Day of the year") + 
   scale_x_continuous(breaks = seq(1, 366, by = 60)) +
-  facet_wrap(~species)
+  facet_wrap(~species) + 
+  theme_bw()
 
 ggsave(wtlat_by_day, filename = "figs/15species_weighted_mean_locs_smmooth_2023.png", height = 11, width=8)
 ```
