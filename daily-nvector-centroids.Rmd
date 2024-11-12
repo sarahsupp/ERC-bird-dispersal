@@ -170,7 +170,7 @@ species_list <- unique(df$species)
 year_list <- sort(unique(df$year))
 
 #For each species on a given year and day, converting newx, newy, newz back into decimal meanx and meany
-weighted_mean_locs2 <- NULL
+weighted_mean_locs <- NULL
 for (i in 1:length(species_list)){
   species_df <- df[df$species==species_list[i],]
   
@@ -187,7 +187,7 @@ for (i in 1:length(species_list)){
         # count total number of checklists and total number of cells
         numcells = nrow(day_df) # each row represents a unique icosahedron cell
         numobs = sum(day_df$count) #sum of the counts represents to the total number of checklists
-        weighted_mean_locs2 <- rbind(weighted_mean_locs2, 
+        weighted_mean_locs <- rbind(weighted_mean_locs, 
                                     data.frame(species=species_list[i], 
                                     year=year_list[j], 
                                     day=day_list[k],
@@ -202,8 +202,7 @@ for (i in 1:length(species_list)){
 ```
 
 
-
-## Add more detail to dates in the weighted mean location dataframe
+## Add Labels for winter (October-March)
 A DATE and MONTH formatted column to mean_daily_locs dataframe.
 An ID column is also added, which is an integer of each of the dates in order, 1-4383.
 **It is important to note when converting to Dates that for this data type only (why!?!) R uses a 0 based index. This means Day 1 is 0. So to convert our "day of year" integers to a Year-Month-Day format, we need to use DAY-1 and YEAR.**
@@ -221,7 +220,7 @@ weighted_mean_locs <- weighted_mean_locs %>%
   mutate(ID = row_number()) %>%
   dplyr::select(-DAYm1, -origin)
 
-saveRDS(weighted_mean_locs, "weighted_mean_locs_2023.rds")
+saveRDS(weighted_mean_locs, "data_2023/weighted_mean_locs_2024.rds")
 ```
 
 
@@ -242,6 +241,7 @@ ggplot(weighted_mean_locs, aes(weighted_lat)) +
 # LONGITUDE
 ggplot(weighted_mean_locs, aes(day, weighted_lon)) + 
   geom_point(alpha=0.10) + facet_wrap(~species, ncol=3) + 
+  ylab("weighted mean longitude") +
   theme_bw()
 
 ggsave(filename = "figs/15_species_mean_locs_lon.png", height = 10, width=8)
@@ -250,6 +250,7 @@ ggsave(filename = "figs/15_species_mean_locs_lon.png", height = 10, width=8)
 ggplot(weighted_mean_locs, aes(day, weighted_lat)) + 
   geom_point(alpha=0.10) + 
   facet_wrap(~species, ncol=3) + 
+  ylab("weighted mean latitude") +
   theme_bw()
 
 ggsave(filename = "figs/15_species_mean_locs_lat.png", height = 10, width=8)
