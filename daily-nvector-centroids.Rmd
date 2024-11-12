@@ -124,11 +124,15 @@ Weight species counts by eBirder effort counts for each cell
 
 ## WARNING: the below code chunk takes a lot of time to run.
 **If df_nvector_2023 already exists, do not run it again.**
-* Converting 6369952 rows into n-vectors roughly takes 21hours on a desktop machine. It does not run on a general laptop.
+* Converting 6369952 rows into n-vectors roughly takes 21hours on the desktop machine in the CS dept. It does not run on a basic laptop.
+* After 30 hours on Linux machine, was only 22% complete
+* Recommend running this part of the code on a remote server for best results.
+
 
 Note: After running "process-raw-eBird-data", then load the 'df_nvector.rds'. 
 If the data was updated then start the whole code chunk. (). 
 Made an copy of original file just to be safe. "dat_effort = df"
+#FIXME: df should be the same number of rows as dat_effort
 
 ```{r} 
 Sys.time()
@@ -142,11 +146,23 @@ df$newy <- NA
 df$newz <- NA
 
 #For each species of a given year and day, converting x and y to newx, newy, newz(radius)
-for (i in 1:nrow(df)){
-  df[i,"newx"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[1]
-  df[i,"newy"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[2]
-  df[i,"newz"] <- lat_lon2n_E(rad(df[i, "y"]),rad(df[i,"x"]))[3]
-}
+  df <- df %>%
+  mutate(
+    rad_y = rad(y),
+    rad_x = rad(x),
+    new_vals = pmap(list(rad_y, rad_x), lat_lon2n_E),
+    newx = map_dbl(new_vals, 1),
+    newy = map_dbl(new_vals, 2),
+    newz = map_dbl(new_vals, 3)
+  )
+
+#FIXME: Delete the below commented chunk, if the above works. I think it should reduce total compute time at least threefold!
+# for (i in 1:nrow(df)){
+#   new_vals <- lat_lon2n_E(rad(df[i, "y"]), rad(df[i,"x"]))
+#   df[i,"newx"] <- new_vals[1]
+#   df[i,"newy"] <- new_vals[2]
+#   df[i,"newz"] <- new_vals[3]
+# }
 
 # #Save to RDS file
 saveRDS(df, "df_nvector_2023_test.rds") #remove the "_test" once I can compare and show that it works. will also need to copy over the old .rds file with the name at that point.
