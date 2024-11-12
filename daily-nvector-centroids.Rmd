@@ -34,8 +34,8 @@ Birds evaluated include:
 knitr::opts_chunk$set(echo = TRUE)
 
 library(here)
-library(tidyverse)
 library(nvctr)
+library(tidyverse)
 #library(geosphere) #FIXME: Check if needed, or loaded in the background with nvctr
 
 ```
@@ -118,7 +118,6 @@ ggsave("figs/checklist_counts.png", height=10, width=8) #if want the background 
 saveRDS(dat_effort, "data_2023/dat_effort_2023.rds")
 ```
 
-
 # Weight mean locations 
 Weight species counts by eBirder effort counts for each cell
 
@@ -153,22 +152,24 @@ unique_cell_coords <- unique_cell_coords %>%
   ) %>%
   dplyr::select(-new_vals, -rad_y, -rad_x)  # Clean up temporary columns
 
-# Join the new coordinates to the dat_effort dataframe, based on the x and y values
+# Join the new coordinates back to the dat_effort dataframe, based on the x and y values
 df <- dat_effort %>%
   left_join(unique_cell_coords, by = c("x", "y"))
 
 # #Save to RDS file
-saveRDS(df, "df_nvector_2024.rds") 
+saveRDS(df, "data_2023/df_nvector_2024.rds") 
 ```
 
-
+## calculate daily weighted mean [centroid]
 Using the nvector dataset, estimate the location centroid for each species on a given day (as a weighted mean)
-*as a note, this code chunk also takes several minutes to run.
+*as a note, this code chunk also takes several minutes to run. (~6 minutes on linux desktop)
+#FIXME: optimize this code to run in a vectorized way for speed and efficiency
 ```{r}
+start1 <- Sys.time()
 #Putting species, year, and days into list in order
 species_list <- unique(df$species)
-year_list <- unique(df$year)
-day_list <- unique(df$day)
+year_list <- sort(unique(df$year))
+day_list <- sort(unique(df$day))
 
 #For each species of a given year and day, converting newx, newy, newz back into decimal meanx and meany
 weighted_mean_locs <- NULL
@@ -193,14 +194,77 @@ for (i in 1:length(species_list)){
     }
   }
 }  
+end1 <- Sys.time()
 
-
-sample <- df %>% group_by(species, year, day) %>% summarise(numcells = n(), numobs = sum(count))
+sample <- df %>% 
+  group_by(species, year, day) %>% 
+  summarise(numcells = n(), numobs = sum(count))
 
 weighted_mean_locs <- cbind(weighted_mean_locs, sample[c("numcells", "numobs")])
 
 #Reordering the columns
 weighted_mean_locs <- weighted_mean_locs[,c(5,4,1,2,3,6,7)]
+
+```
+
+New way, check sys.time #its a win! 2x as fast
+```{r}
+start2 <- Sys.time()
+
+# Sort unique values of year and day (optional if already ordered in df)
+year_list <- sort(unique(df$year))
+day_list <- sort(unique(df$day))
+
+# Calculate weighted means for each combination of species, year, and day
+weighted_mean_locs2 <- df %>%
+  group_by(species, year, day) %>%
+  summarize(
+    weighted_lon = weighted.mean(newx, freq),
+    weighted_lat = weighted.mean(newy, freq),
+    weighted_z = weighted.mean(newz, freq))
+
+# Convert to decimal degrees
+
+
+%>%
+  # Convert to decimal degrees
+  mutate(
+    mean_cal = map2(weighted_lon, weighted_lat, ~ deg(n_E2lat_lon(c(.x, .y, weighted_z)))),
+    weighted_lon = map_dbl(mean_cal, 2),  # Extract longitude from mean_cal
+    weighted_lat = map_dbl(mean_cal, 1)   # Extract latitude from mean_cal
+  ) %>%
+  dplyr::select(-mean_cal, -weighted_z)  # Drop temporary columns
+
+,
+    .groups = "drop"  # Ungroup after summarizing
+  ) 
+
+wml <- weighted_mean_locs2
+
+coords <- data.frame(wml$weighted_lon, wml$weighted_lat, wml$weighted_z)
+wml$lon2 <- deg(n_E2lat_lon(as.vector(coords[1,])))[1] #degree func
+
+wml <- weighted_mean_locs2 %>%
+  # Convert to decimal degrees
+  mutate(
+     mean_cal = deg(n_E2lat_lon(c(as.numeric(weighted_lon), as.numeric(weighted_lat), as.numeric(weighted_z))))[1]
+  )
+    
+    #mean_cal = map2(as.numeric(weighted_lon), as.numeric(weighted_lat),
+                    ~ deg(n_E2lat_lon(c(.x, .y, as.numeric(weighted_z))))),
+    #weighted_lon = map_dbl(deg(n_E2lat_lon(c(weighted_lon, weighted_lat, weighted_z))))[1]
+    weighted_lon = map_dbl(mean_cal, 2),  # Extract longitude from mean_cal
+    weighted_lat = map_dbl(mean_cal, 1)   # Extract latitude from mean_cal
+  )# %>%
+  dplyr::select(-mean_cal, -weighted_z)  # Drop temporary columns
+
+end2 <- Sys.time()
+
+deg(n_E2lat_lon(mean_cal)
+
+# View result
+weighted_mean_locs
+
 ```
 
 
