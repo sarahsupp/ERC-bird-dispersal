@@ -199,18 +199,6 @@ for (i in 1:length(species_list)){
   }
 }  
 
-# counts the number of unique cells (numcells) and the total number of checklists (numobs)
-daily_counts <- df %>% 
-  group_by(species, year, day) %>% 
-  summarise(numcells = n(), numobs = sum(count)) %>%
-  ungroup()
-
-#append the counts to the weighted locs dataframe
-weighted_mean_locs <- cbind(weighted_mean_locs, sample[c("numcells", "numobs")])
-
-#Reordering the columns
-weighted_mean_locs <- weighted_mean_locs[,c(5,4,1,2,3,6,7)]
-
 ```
 
 
