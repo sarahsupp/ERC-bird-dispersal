@@ -233,8 +233,8 @@ north_america <- world_map %>%
 ggplot() + 
   geom_sf(data = grid, aes(fill = sum_count), color = alpha("white", 0.4 )) +
   geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  #scale_fill_gradient(low="gray90", high="black") +
-  scale_fill_gradient(low="red", high="yellow") +
+  scale_fill_gradient(low="gray90", high="black") +
+  #scale_fill_gradient(low="red", high="yellow") +
   coord_sf(xlim = c(-103, -60), ylim = c(10, 65)) + #set limits without distorting boundaries
   labs(title = "Number of checklists submitted by grid cell, 2008-2023") +
   theme_minimal() + 
@@ -243,26 +243,6 @@ ggplot() +
           axis.title.x=element_blank(),
           axis.title.y=element_blank()) +
   facet_wrap(~species, ncol=5)
-
-#FIXME: CHECK IF WE NEED THESE FOR REFERENCE ANYMORE, THEN DELETE
-# Dr. Supp old codes
-#   #geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), alpha=0.4)    +
-#   geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
-# #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-#   scale_fill_gradient(low="gray90", high="black") + 
-#   #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
-#   theme_bw() + 
-#   facet_wrap(~species)
-
-# ggplot() + 
-#   #geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-#   geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), alpha=0.4)    +
-#   geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
-# #  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-#   scale_fill_gradient(low="gray90", high="black") + 
-#   #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
-#   theme_bw() + 
-#   facet_wrap(~species)
 ```
 
 # Estimate migration pathways using Generalized Additive Model, population-level migration speed, and migration dates
