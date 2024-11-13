@@ -52,7 +52,7 @@ library(ggmap)
 library(ggpubr)
 #library(kableExtra)
 library(lubridate)
-#library(maps) #FIXME: Test if these are needed or already loaded in background with ggplot2 and ggmap
+library(maps)
 #library(mapdata) #FIXME: remove if not needed
 library(mgcv)
 library(maptools)
@@ -60,7 +60,7 @@ library(purrr)
 #library(radiant.data)
 #library(raster) FIXME: Check if I need to load this; may not if relying mainly on sf and not manipulating raster datasets directly.
 library(RColorBrewer)
-library(rnaturalearth) 
+#library(rnaturalearth) removed map boundaries that relied on this package, in favor of maps instead. 
 #FIXME: do I need both naturalearth packages?
 #devtools::install_github("ropensci/rnaturalearthhires")
 #library(rnaturalearthhires) #is this just a higher resolution version of rnaturalearth?
@@ -261,8 +261,13 @@ Estimatedailylocs = function(dat) {
 
   x <- c(2008:2022)
   spp <- unique(dat$species)
-
-  df_dailylocs <- data.frame(species=character(), day=integer(), year=integer(), month=integer(), winter=character(), lon=numeric(), lat=numeric(), lon_se=numeric(), lat_se=numeric()) #initialize empty dataframe
+  
+  #initialize empty dataframe
+  df_dailylocs <- data.frame(species=character(), day=integer(), year=integer(), 
+                             month=integer(), winter=character(), lon=numeric(), 
+                             lat=numeric(), lon_se=numeric(), lat_se=numeric(), 
+                             lon_LCI=numeric(), lon_UCI=numeric(),
+                             lat_LCI=numeric(), lat_UCI=numeric()) 
 
   for (s in spp){
     for (i in x) {
@@ -275,10 +280,16 @@ Estimatedailylocs = function(dat) {
       xpred = data.frame(day=sort(unique(sub_weighted_mean_locs$day)))
       lonpred = predict(lon_gam, newdata = xpred, type="response", se.fit=T)
       latpred = predict(lat_gam, newdata = xpred, type="response", se.fit=T)
+      lon_lowerCI = lonpred$fit - 1.96 * lonpred$se.fit  # Lower bound of 95% CI Longitude centroid
+      lon_upperCI = lonpred$fit + 1.96 * lonpred$se.fit  # Upper bound of 95% CI Longitude centroid
+      lat_lowerCI = latpred$fit - 1.96 * latpred$se.fit  # Lower bound of 95% CI Latitude centroid
+      lat_upperCI = latpred$fit + 1.96 * latpred$se.fit  # Upper bound of 95% CI Latitude centroid
 
       preds =  data.frame(species = s, day = xpred$day, year = i,
                           month = sub_weighted_mean_locs$month, winter = sub_weighted_mean_locs$winter,
-                          lon = lonpred$fit, lat = latpred$fit, lon_se = lonpred$se.fit, lat_se = latpred$se.fit)
+                          lon = lonpred$fit, lat = latpred$fit, lon_se = lonpred$se.fit, 
+                          lat_se = latpred$se.fit, lon_LCI = lon_lowerCI, lon_UCI = lon_upperCI,
+                          lat_LCI = lat_lowerCI, lat_UCI = lat_upperCI)
       df_dailylocs <- data.frame(bind_rows(df_dailylocs, preds))
     }
   }
