@@ -439,26 +439,12 @@ max_mig_speed_plot <- ggplot(max_speed, aes(year, max_speed, group=species)) +
 max_mig_speed_plot
 
 ggsave(max_mig_speed_plot, filename = "figs/9species_MedMaxMigrationSpeed_2024.png", height = 5, width=8)
-
 ```
 
 
 # estimate 3 migration dates, beginning of spring, peak latitude (summer), end of fall migration
 This will need some editing to work on each year separately. Ideally a resulting data frame with columns for year, begin_spring, peak_latitude, end_autumn
 
-TODO/ #FIXME:need to figure out these two species(why stopping at 2017 and 2008? why other year are working?)
-```{r}
-#saving S.magna and S.vulgaris data into rds file seperately
-
-#magnadailylocs <- dailylocs %>% filter (species %in% c("Sturnella_magna") )
-#vulgarisdailylocs<-dailylocs %>% filter (species %in% c("Sturnus_vulgaris") )
-
-#saveRDS(magnadailylocs, "magnadailylocs.rds")
-#saveRDS(vulgarisdailylocs, "vulgarisdailylocs.rds")
-
-#magnadailylocs <- readRDS("magnadailylocs.rds")
-#vulgarisdailylocs <- readRDS("vulgarisdailylocs.rds")
-```
 
 FIXME/TODO: (Dr. Supp needs to check) double check index dates 
 Note: Since 2023 is only half way filled, year of 2023 is excluded in Est3MigrationDates. 
