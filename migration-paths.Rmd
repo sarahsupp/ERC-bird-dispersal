@@ -203,12 +203,12 @@ ggplot(spp_counts, aes(x=mean_weighted_count)) +
 ```
 
 
-## Create a map of eBird effort (all years, all dates)
-across eastern North America
+## Create a map of eBird effort (all years, all dates) across Eastern North America
+This uses the data that has already been filtered to only consider occurrences >=-103 longitude.
 
-TODO: Need to update the code (see: https://github.com/r-barnes/dggridR/blob/master/vignettes/dggridR.Rmd). 
+For help with dggridR functions, see: https://github.com/r-barnes/dggridR/blob/master/vignettes/dggridR.Rmd. 
+
 FIXME: After merging grid and spp_counts, long and lat are gone. 
-
 ```{r}
 #Get the grid cell boundaries for cells which had bird observations
 grid <- dggridR::dgcellstogrid(dgg, spp_counts$cell) 
@@ -233,7 +233,8 @@ north_america <- world_map %>%
 ggplot() + 
   geom_sf(data = grid, aes(fill = sum_count), color = alpha("white", 0.4 )) +
   geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  scale_fill_gradient(low="gray90", high="black") +
+  #scale_fill_gradient(low="gray90", high="black") +
+  scale_fill_gradient(low="red", high="yellow") +
   coord_sf(xlim = c(-103, -60), ylim = c(10, 65)) + #set limits without distorting boundaries
   labs(title = "Number of checklists submitted by grid cell, 2008-2023") +
   theme_minimal() + 
@@ -262,56 +263,6 @@ ggplot() +
 #   #scale_fill_gradient2(low="blue", high="red", midpoint = 250) 
 #   theme_bw() + 
 #   facet_wrap(~species)
-```
-
-
-## Create a map of species counts (all years, all dates)
-across eastern North America
-STARTHERE:FIXME
-TODO: Needs to update the code. (see: https://github.com/r-barnes/dggridR/blob/master/vignettes/dggridR.Rmd). 
-FIXME: After merging grid and uw_spp_counts, cell is gone. Only sequem and geometry are shown. 
-
-```{r}
-#TODO: Make how you prefer, but feel free to plot the data as the actual locations of the birds 
-#       (from the .csv files), or to use the .Rdata files to plot the polygon center, maybe with 
-#       point sized or colored by magnitude of the count.
-
-
-#all_states <- map_data("state")
-state_prov <- rnaturalearth::ne_states(c("united states of america", "canada"))
-#states <- subset(all_states, region %in% c('ohio', 'michigan', 'kentucky', 'tennessee', 'indiana', 
-#                                           'illinois', 'iowa', 'nebraska','south dakota', 'north dakota',
-#                                           'minnesota', 'wisconsin', 'missouri', 'kansas'))
-uw_spp_counts <- df %>%
-  group_by(species, cell) %>% 
-  summarise(count_new_uw=sum(count))
-
-
-
-uw_grid <- dgcellstogrid(dgg, uw_spp_counts$cell)
-uw_grid <- merge(grid, uw_spp_counts, by.x=c("cell", "species"), by.y=c("cell", "species")) 
-
-p <- ggplot() +
-  geom_polygon(data=state_prov, 
-                aes(x=long, y=lat, group = group), colour="black", fill="white") +
-  geom_polygon(data=uw_grid, 
-               aes(x=long, y=lat, group=cell, fill=count_new_uw), alpha=0.4) +
-  geom_path(data=uw_grid, 
-            aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
-  xlim(-102,-52) +
-#  geom_point  (aes(x=cellcenters$lon_deg, y=cellcenters$lat_deg), size=0.5) +
-  scale_fill_gradient(low="red", high="yellow") +
-#  scale_fill_gradient2(low="blue", high="red",midpoint = 10000 ) +
-  labs(title="Bird locations") + 
-  theme_bw() + 
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.title.y=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank()) + 
-  facet_wrap(~species)
-p
 ```
 
 # Estimate migration pathways using Generalized Additive Model, population-level migration speed, and migration dates
