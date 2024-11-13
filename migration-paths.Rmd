@@ -211,37 +211,39 @@ FIXME: After merging grid and spp_counts, long and lat are gone.
 
 ```{r}
 #Get the grid cell boundaries for cells which had bird observations
-#FIXME: after merging grid and spp_count, there are no longer a long and lat  
-
-#grid <-  dggridR::dgcellstogrid(dgg, spp_counts$cell, frame=TRUE, wrapcells=TRUE) #->not working 
 grid <- dggridR::dgcellstogrid(dgg, spp_counts$cell) 
 
 
 #Update the grid cells' properties to include the number of observations in each cell
 grid <- merge(grid, spp_counts, by.x="seqnum", by.y="cell")
-# grid <- merge(grid, spp_counts, by="cell")
-# grid <- merge(grid, spp_counts, by.x="cell", by.y="cell")
 
-#Make adjustments so the output is more visually interesting
-# grid$count    <- log(grid$sum_count)
-# cutoff        <- quantile(grid$count,0.9)
-# grid          <- grid %>% mutate(count=ifelse(count>cutoff,cutoff,count))
+# #Make adjustments so the output is more visually interesting
+#  grid$count    <- log(grid$sum_count)
+#  cutoff        <- quantile(grid$count,0.9)
+#  grid          <- grid %>% mutate(count=ifelse(count>cutoff,cutoff,count))
 
-#zoom to just eastern USA
-grid <- grid %>%
-  filter(long >= -103,
-         lat >= 25)
 #Get polygons for the spatial range and make a map of bird observations
-countries <- map_data("usa") 
+world_map <- map_data("world")
+north_america <- world_map %>%
+  filter(region %in% c("USA", "Canada", "Mexico", "Guatemala", "Belize", 
+                       "El Salvador", "Honduras", "Nicaragua", "Costa Rica", 
+                       "Panama"))
 
-
+# plot the number of checklists submitted (summed) per grid cell (2008-2023)
 ggplot() + 
-  geom_polygon(data=countries, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
   geom_sf(data = grid, aes(fill = sum_count), color = alpha("white", 0.4 )) +
+  geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
   scale_fill_gradient(low="gray90", high="black") +
-  theme_bw() + 
-  facet_wrap(~species)
- 
+  coord_sf(xlim = c(-103, -60), ylim = c(10, 65)) + #set limits without distorting boundaries
+  labs(title = "Number of checklists submitted by grid cell, 2008-2023") +
+  theme_minimal() + 
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank()) +
+  facet_wrap(~species, ncol=5)
+
+#FIXME: CHECK IF WE NEED THESE FOR REFERENCE ANYMORE, THEN DELETE
 # Dr. Supp old codes
 #   #geom_polygon(data=grid, aes(x=long, y=lat, group=cell, fill=mean_weighted_count), alpha=0.4)    +
 #   geom_path   (data=grid, aes(x=long, y=lat, group=cell), alpha=0.4, color="white") +
@@ -265,7 +267,7 @@ ggplot() +
 
 ## Create a map of species counts (all years, all dates)
 across eastern North America
-
+STARTHERE:FIXME
 TODO: Needs to update the code. (see: https://github.com/r-barnes/dggridR/blob/master/vignettes/dggridR.Rmd). 
 FIXME: After merging grid and uw_spp_counts, cell is gone. Only sequem and geometry are shown. 
 
