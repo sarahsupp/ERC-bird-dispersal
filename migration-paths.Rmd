@@ -174,12 +174,14 @@ ggsave(wtlat_by_day, filename = "figs/15species_weighted_mean_locs_smmooth_2023.
 ```
 
 
-## Calculates the count of observations within each cell, 
-weighted by total eBirder effort on that day in a given cell. 
-Appends into the dataframe as "count_weighted" for analysis. Weighted as the total number of observations of the target species in a cell divided by the total number of eBirder records in a cell.
+## Prepares the hexagonal grid cells for later plotting, and summarizes the frequencies by cell
+* freq = number of checklists / total effort, per cell
+* sum_weighted_count = the sum of all the frequencies within a cell. A proxy for comparing how often target species occur in a given cell.
+* mean_weighted_count = the average frequency for a cell. A proxy for how often target species occur in a given cell.
 
+**Note:** the lines using the `dggridr` functions take a few minutes to run.
 ```{r}
-#using original data(dat_effort=df)
+#using the data filtered for eastern flyway (df); and cell centers calculated
 dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
 df$cell <- dgGEO_to_SEQNUM(dgg, df$x, df$y)$seqnum
 df$cell_lat <- dgSEQNUM_to_GEO(dgg, df$cell)$lat_deg 
@@ -190,11 +192,13 @@ spp_counts <- df %>%
   group_by(species, cell) %>% 
   summarise(sum_weighted_count=sum(freq),
             mean_weighted_count=mean(freq),
-            sum_count=sum(count))
+            sum_count=sum(count)) %>%
+  ungroup()
 
 ggplot(spp_counts, aes(x=mean_weighted_count)) +
   geom_histogram(binwidth=0.01) + 
-  facet_wrap(~species)
+  facet_wrap(~species) + 
+  theme_bw()
 
 ```
 
