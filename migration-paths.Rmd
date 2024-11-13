@@ -258,7 +258,7 @@ In the GAM, we can use the weighted mean locations (latitude and longitude) that
 ```{r}
 Estimatedailylocs = function(dat) {
 
-  x <- c(2008:2022)
+  years <- c(2008:2022)
   spp <- unique(dat$species)
   
   #initialize empty dataframe
@@ -269,7 +269,7 @@ Estimatedailylocs = function(dat) {
                              lat_LCI=numeric(), lat_UCI=numeric()) 
 
   for (s in spp){
-    for (i in x) {
+    for (i in years) {
       sub_weighted_mean_locs <-
         dat %>%
         filter(year == i & species == s)
@@ -450,44 +450,44 @@ FIXME/TODO: (Dr. Supp needs to check) double check index dates
 Note: Since 2023 is only half way filled, year of 2023 is excluded in Est3MigrationDates. 
 index is finding exact date of the migration date
 
+#FIXME: Is this redundant from the earlier gam models already run? Can we pull the predicted centroids and estimate the dates all in the same function, rather than running it all over again?
 ```{r}
 # modified from old function Est3MigrationDates in migration-fxns.R
 Est3MigrationDates = function(dat){
   #takes in predicted centroids for migration path, and estimates the beginning of spring migration,
   # the end of fall migration, and the date where the species reaches maximum latitude.
-  dat <- dat %>%
-  filter(day != 1)
+  dat <- dat %>% filter(day != 1)
   year <- c(2008:2022)
   species <- unique(dat$species)
   df_dates <- data.frame(species=character(), year=integer(), spring=numeric(), maxlat=numeric(), fall=numeric()) #initialize empty dataframe
   
   for (s in species) {
     for (y in year){
-      dat_subset <- 
-        dat %>%
-        filter(year == y & species == s) %>%
-        filter(!is.na(lon))
+      dat_subset <- dat %>%
+        filter(year == y, species == s, !is.na(lon))
     print(paste0("species: ", s, "; year: ", y))
     
-    #GAM model on predicted latitude of centroids by julian date
-    gam1 = gam(lat ~ s(day, k = 40), data = dat, gamma = 1.5)
+    #GAM model on latitude by julian date (estimate centroids)
+    gam1 = gam(lat ~ s(day, k = 40), data = dat, gamma = 1.5) #FIX ME: Why k=40  and not k=20?
     xpred = data.frame(day = c(1:max(dat$day)))
     dpred = predict(gam1, newdata=xpred, type="response", se.fit=TRUE)
+    
+    #NOTE: These dates are seeking Jan 1-May 31 for Spring migration begin
+    #                 AND          Aug 1-Dec 30 for Fall migration end 
+    spring_threshold = min(filter(dat_subset, day %in% c(2:120))$lat_se*2.56 + 
+                             filter(dat_subset, day %in% c(2:120))$lat, na.rm=TRUE) # Jan 2 ~ April 30
+    fall_threshold = min(filter(dat_subset, day %in% c(244:364))$lat_se*2.56 + 
+                           filter(dat_subset, day %in% c(244:364))$lat, na.rm=TRUE) # Sep 1 ~ Dec 30
+    
+    # Note: After removing DAY=1, there are years with 364 days and with 365 days. 
+    #   In effect, the calculation is ignoring the last day of leap years, 
+    #   but this should not significantly influence the fall threshold.
     
     ## cutoff based on 2 SE for spring and fall combined, following La Sorte et al. 2013 methods
     # Spring migration should be between 11 Jan and 9 July
     # Fall migration should be between 8 August and 21 Dec
-    #NOTE: These dates are seeking Jan 1-May 31 for Spring migration begin
-    #                 AND          Aug 1-Dec 30 for Fall migration end 
-   # CHANGED FROM PREVIOUS CODE FOR HUMMINGBIRD PROJECT
-   # ALSO ADDED NA.RM=TRUE ARGUMENT, DOES THIS HAVE ANY DOWNSIDES?
-  
-    spring_threshold = min(filter(dat_subset, day %in% c(2:120))$lat_se*2.56 + filter(dat_subset, day %in% c(2:120))$lat, na.rm=TRUE) # Jan 2 ~ April 30
-    fall_threshold = min(filter(dat_subset, day %in% c(244:364))$lat_se*2.56 + filter(dat_subset, day %in% c(244:364))$lat, na.rm=TRUE) # Oct7 ~ Sep 1 
     
-    #FIXME: after removing DAY=1, there are years with 364 days and with 365 days.If we ignore the last day of the leap years, will this influence fall threshold?
-    
-    spring_index = intersect(c(11:190), dat_subset$day) # between 11 Jan and 9 July #FIXME: what should these dates be, they don't match 
+    spring_index = intersect(c(11:190), dat_subset$day) # between 11 Jan and 9 July 
     fall_index = intersect(c(220:355), dat_subset$day) # between 8 August and 21 Dec
     spring_max = (dat_subset %>% filter(day %in% spring_index) %>% slice_max(lat))$day
     fall_max =  (dat_subset %>% filter(day %in% fall_index) %>% slice_max(lat))$day
@@ -528,9 +528,80 @@ Est3MigrationDates = function(dat){
 return(df_dates)
 }
 
-spp7MigrationDates <- Est3MigrationDates(spp7dailylocs)
+MigrationDates <- Est3MigrationDates(mig_spp_dailylocs)
 #saveRDS(spp7MigrationDates, "spp7MigrationDates_2023.rds")
 ```
+
+#FIXME: Check if the below code gets the same results as the function above, and if it has faster processing time. If  yes, keep the below chunk, remove the _test flag, and remove the chunk above.
+#FIXME: Jump back to the varying k and g version of the migration gams, which calculates 5 dates. If that works, then we don't need this function at all! 5 dates is better than 3 (migration-path-window.Rmd).
+```{r}
+# Optimized function to estimate migration dates
+Est3MigrationDates_test <- function(dat) {
+  # Remove entries for day 1 to clean data at the start
+  dat <- dat %>% filter(day != 1)
+  years <- 2008:2022
+  species_list <- unique(dat$species)
+  
+  # Initialize an empty dataframe
+  df_dates <- data.frame(species = character(), year = integer(), spring = numeric(), maxlat = numeric(), fall = numeric())
+  
+  for (s in species_list) {
+    for (y in years) {
+      # Filter data for the current species and year
+      dat_subset <- dat %>% filter(year == y, species == s, !is.na(lon))
+      
+      # Skip if there's no data for the species and year
+      if (nrow(dat_subset) == 0) next
+
+      print(paste0("species: ", s, "; year: ", y))
+      
+      # GAM model on latitude by julian date
+      gam_model <- gam(lat ~ s(day, k = 40), data = dat_subset, gamma = 1.5)
+      xpred <- data.frame(day = 1:max(dat_subset$day))
+      dpred <- predict(gam_model, newdata = xpred, type = "response", se.fit = TRUE)
+      
+      # Define thresholds for spring and fall migrations
+      spring_threshold <- min(dpred$fit[2:120] + 2.56 * dpred$se.fit[2:120], na.rm = TRUE)
+      fall_threshold <- min(dpred$fit[244:364] + 2.56 * dpred$se.fit[244:364], na.rm = TRUE)
+      
+      # Calculate indices for spring and fall ranges
+      spring_index <- intersect(11:190, dat_subset$day)
+      fall_index <- intersect(220:355, dat_subset$day)
+      
+      # Maximum latitude days within spring and fall indices
+      spring_max <- dat_subset %>% filter(day %in% spring_index) %>% slice_max(lat) %>% pull(day)
+      fall_max <- dat_subset %>% filter(day %in% fall_index) %>% slice_max(lat) %>% pull(day)
+      
+      # Determine the start of spring migration
+      spring_begin <- spring_max
+      while (spring_begin > 1 && dat_subset$lat[dat_subset$day == spring_begin] > spring_threshold) {
+        spring_begin <- spring_begin - 1
+      }
+      spring_begin <- spring_begin + 1
+      
+      # Determine the end of fall migration
+      fall_end <- fall_max
+      while (fall_end < max(dat_subset$day) && dat_subset$lat[dat_subset$day == fall_end] > fall_threshold) {
+        fall_end <- fall_end + 1
+      }
+      fall_end <- fall_end - 1
+      
+      # Maximum latitude day for the center of the season
+      max_lat <- dat_subset %>% slice_max(lat) %>% pull(day)
+      
+      # Append calculated dates to df_dates
+      df_dates <- bind_rows(df_dates, data.frame(species = s, year = y, spring = spring_begin, 
+                                                 maxlat = max_lat, fall = fall_end))
+    }
+  }
+  return(df_dates)
+}
+
+Sys.time()
+MigrationDates_test <- Est3MigrationDates_test(mig_spp_dailylocs)
+Sys.time()
+```
+
 
 
 ```{r}
@@ -683,6 +754,7 @@ winter_dat_effort <- spp7 %>%
 ```
 
 
+#FIXME: I think that the "community analysis" belongs in a new .Rmd file, since it is analyzing data at a different scale (community vs. population).
 #--------------------------------------------------
 #Start spatial analysis... 
 
