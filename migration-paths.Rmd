@@ -433,7 +433,20 @@ list(dataresult = final_mig_dates, latitude = final_gam_latitude)
 Sys.time()
 ```
 
-
+Plot the results of the averaged daily locations (centroids) for the migratory species by day of year
+#FIXME: these results indicate something weird going on with the date estimation from the varying k and g code above.
+```{r}
+ggplot(final_gam_latitude, aes(day, lat, group=year)) + 
+  geom_line(linewidth=0.1) +
+  #scale_colour_manual(values = c("grey50", "blue")) +
+  # Day 91 = April 1; Day 273 = Sep 30
+  geom_vline(xintercept=c(91, 273), col="gray30") +
+  geom_vline(data=final_mig_dates, xintercept=c(spring_beginning, spring_middle, spring_end), col="blue") +
+  geom_vline(data=final_mig_dates, xintercept=c(autumn_beginning, autumn_middle, autumn_end), col="orange") +
+  xlab("Day of Year") + ylab("centroid latitude") +
+  facet_wrap( ~species, ncol=3) + 
+  theme_bw()
+```
 
 
 Plot the results of the smoothed daily locations (centroids) for the migratory species by day of year
