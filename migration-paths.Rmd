@@ -252,6 +252,7 @@ In the GAM, we can use the weighted mean locations (latitude and longitude) that
 
 #FIXME: use/modify code from migration-path-window to test GAM results using varying k (8-20) and gamma (0-8)
 # FIXME: should output a big table of results that we can use to justify our choices and be transparent
+#FIXME: If keep this function, should include date estimation at the same time.
 ```{r}
 Estimatedailylocs = function(dat) {
 

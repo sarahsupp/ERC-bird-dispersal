@@ -28,7 +28,7 @@ Calling the data can be done by "readRDS("name of the data frame.rds")
 #Step 1:loading the original data (the data is from the migration-path rmd file)
 
 #weighted_mean_locs is the centroid latitude and longitude of each migratory speices. 
-weighted_mean_locs <- readRDS("data_2023/weighted_mean_locs_2023.rds")
+weighted_mean_locs <- readRDS("data_2023/weighted_mean_locs_2024.rds")
 weighted_mean_locs
 
 #Step 2: taking single species,Bombycilla cedrorum and saving it as Bombycilla_centroids. (In the future no need to take out the species when running the whole migratory species)
@@ -48,6 +48,8 @@ years <- sort(unique(Bombycilla_centroids$year))
 
 #Supplementray code on calculating daily basis 
 
+#FIXME: Not sure why we need max and min latitude by each day? DELETE?
+If so, can also delete the saved .rds file, as it isn't really needed or useful
 ```{r}
 #calculating daily basis 
 #calculating the maximum longitude and latitude for each year for Bombycilla_c
@@ -92,7 +94,8 @@ maxmin_val_day
 
 saveRDS(maxmin_val_day, file = "data_2023/maxmin_val_day_2023.RDS") 
 ```
-
+#FIXME: Not sure why we need max and min latitude day by each year? DELETE?
+If so, can also delete the saved .rds files, as they aren't really needed or useful
 ```{r}
 #Step 5: calculating yearly
   #calculating the maximum longitude and latitude for each year for Bombycilla_c
