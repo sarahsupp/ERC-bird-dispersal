@@ -43,6 +43,7 @@ library(broom)
 #library(devtools)
 #devtools::install_github('r-barnes/dggridR', vignette=TRUE, force = TRUE)
 library(dggridR)
+library(features)
 library(fields) #FIXME: Test if this is needed or already loaded in background with sf or sp
 library(gamm4) 
 #library(gapminder)
@@ -110,8 +111,7 @@ weighted_mean_locs <- readRDS("data_2023/weighted_mean_locs_2024.rds")
 ```
 
 # Data summaries for manuscript and annual reporting
-##START HERE
-Count number of records by year *for 2020 NSF report*
+Count number of records by year *for NSF report*
 ```{r}
 #count total number of records across the years. (increasing strongly)
 counts <- df %>%
@@ -151,7 +151,7 @@ ggsave(filename = "figs/species_obs_2023.png", height = 11, width=8)
 ```
 
 
-Initial plot of bird average locations for all species and latitude by day across years *for 2020 NSF report*
+Initial plot of bird average locations for all species and latitude by day across years *for NSF report*
 ```{r}
 wtlon_by_day <- ggplot(weighted_mean_locs, aes(day, weighted_lon, group=year)) +
   geom_point(alpha=0.25, aes(col=winter)) + geom_line(alpha=0.25) +
@@ -306,6 +306,135 @@ mig_spp_dailylocs <- dailylocs %>%
                          "Sialia sialis", "Sturnella magna", 
                          "Sturnus vulgaris"))
 ```
+
+#FIXME: Trying the gam in a way that allows us to vary k and g, and record the results. 
+If this works, may choose to delete the above function and to delet the Estimate migration dates function, as it could be a better method, that calculates both at the same time.
+```{r}
+#FIXME: Double check results versus the original version of this code
+#   conduct sanity checks, and walk through code and results with collabs to check method.
+
+# The output should contain the columns of year, 1st derivative of spring begin, 2nd derivative of spring end, 2nd derivative fall begin, ad 1st derivative of fall end from year 2008 to 2021. 
+
+Sys.time()
+# create values for unique years and species names
+# Only incldue the migratory species 
+spp <- c("Bombycilla cedrorum", "Haemorhous purpureus", 
+          "Hylocichla mustelina", "Junco hyemalis", 
+          "Setophaga coronata", "Turdus migratorius", 
+          "Sialia sialis", "Sturnella magna", 
+          "Sturnus vulgaris")
+#need to take year from 2009 to 2021 so that it will include 2008 and 2022 as calculating the buffer year
+years <- 2009:2022 
+
+# initialize empty lists to store results
+dataresult <- NULL 
+latitude <- NULL 
+
+
+for(s in species){
+  #filtering dataset to species, remove day 366 so all years have 365 days (lose one day from leap years)
+  dat <-weighted_mean_locs %>%
+    filter(species == s, day != 366) 
+  
+  for (y in years) {
+    #subset dataset to 3-year period
+    buffer_years <- c(y-1, y, y+1)
+    filter_yr <- dat %>% filter(year %in% buffer_years) 
+    
+    # Skip if buffer_years is empty or if there are fewer than 300 rows
+    if (nrow(filter_yr) < 300) next
+
+    # separate winter start and end from focal year
+    # the day2 mutations create a sequence of values ranging -45 to 438 to keep the days in order  
+    winter_start <- filter_yr %>% filter(year == buffer_years[1] & day > 319) %>% mutate(day2 = day - 365)
+    focal_year <- filter_yr %>% filter(year == buffer_years[2]) %>% mutate(day2 = day)
+    winter_end <- filter_yr %>% filter(year == buffer_years[3] & day < 74) %>% mutate(day2 = day + 365)
+    
+    # merge back together, sorted by day2 to retain the correct sequence to estimating migration
+    merged_dat <- bind_rows(winter_start, focal_year, winter_end) %>% arrange(day2)
+
+    # Define ranges to test a range of parameters for k and gamma
+    k_vals <- seq(8, 20, 1)
+    gamma_vals <- seq(0, 8, 1)
+    
+    # initialize empty lists to store results in
+    dates <- vector("list", length(gamma_vals) * length(k_vals))
+    predictions <- vector("list", length(gamma_vals) * length(k_vals))
+    index <- 1
+    
+    for (k in k_vals){
+      for (g in gamma_vals){
+         mdl <- gam(weighted_lat ~ s(day2, k = k), data = merged_dat, gamma = g)
+         x_data <- data.frame(day2 = 1:365)
+         prediction_lat <- predict(mdl, newdata = x_data, type = "response")
+         predictions[[index]] <- prediction_lat
+          
+         # features package extracts the 1st and 2nd derivatives
+         feature <- features(x_data$day2, prediction_lat, smoother = "glkerns", control = list(npts = 365))
+         first_derivative <- attributes(feature)$fits$d1
+         second_derivative <- attributes(feature)$fits$d2
+         
+         # Compute dates for spring and autumn from the derivatives
+         # FIXME: Double check with FAL; changed a bit from previous code, tested for the same values
+          spring_begin <- which.max(second_derivative[10:140]) + 9
+          spring_middle = which.max(first_derivative[10:140]) + 9
+          spring_end <- which.min(second_derivative[10:140]) + 9
+          
+          autumn_begin <- which.min(second_derivative[220:355]) + 219
+          autumn_middle = which.min(first_derivative[220:355]) + 219
+          autumn_end <- which.max(second_derivative[220:355]) + 219
+          
+          dates[[index]] <- data.frame(
+            species = s,
+            year = y,
+            k = k,
+            g = g,
+            spring_begin = spring_begin,
+            spring_middle = spring_middle,
+            spring_end = spring_end,
+            autumn_begin = autumn_begin,
+            autumn_middle = autumn_middle,
+            autumn_end = autumn_end
+          )
+          index <- index + 1
+        
+      }
+    }
+    # Combine and summarize results
+    dates_df <- do.call(rbind, dates)
+    avg_dates <- dates_df %>%
+     summarise(
+      ## quantile second derivative 
+      ### method looks across all results to find the best line to match what you'd expect to see
+      ### recommend using 0.1 and 0.9, found to work well on lots of species
+      ### removes some of the extreme outliers
+      spring_beginning = quantile(spring_begin, 0.9, na.rm = TRUE),
+      spring_middle = mean(spring_middle, na.rm = TRUE),
+      spring_end = quantile(spring_end, 0.1, na.rm = TRUE),
+      autumn_beginning = quantile(autumn_begin, 0.1, na.rm = TRUE),
+      autumn_middle = mean(autumn_middle, na.rm = TRUE),
+      autumn_end = quantile(autumn_end, 0.9, na.rm = TRUE)
+      ) %>%
+      mutate(species = s, year = y)
+      
+    # collects results averaged across the different k and g parameter setting
+    dataresult[[length(dataresult) + 1]] <- avg_dates
+    avg_pred <- rowMeans(do.call(cbind, predictions), na.rm = TRUE)
+    latitude[[length(latitude) + 1]] <- data.frame(species = rep(s, 365), year = rep(y, 365), 
+                                                   day = 1:365, lat = avg_pred)
+  }
+}  
+
+# Bind results into final data frames
+final_mig_dates <- bind_rows(dataresult)
+final_gam_latitude <- bind_rows(latitude)
+  
+list(dataresult = final_mig_dates, latitude = final_gam_latitude)
+Sys.time()
+```
+
+
+
 
 Plot the results of the smoothed daily locations (centroids) for the migratory species by day of year
 ```{r}
