@@ -463,6 +463,25 @@ ggplot(final_gam, aes(day, lat, group=year)) +
   theme_bw()
 ```
 
+#FIXME: Just showing for one species for now.
+Plot the results showing the lat-lon path by year
+```{r}
+
+# plot the number of checklists submitted (summed) per grid cell (2008-2023)
+ggplot() + 
+  geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  coord_sf(xlim = c(-103, -60), ylim = c(25, 55)) + #set limits without distorting boundaries
+  geom_point(data=final_gam, aes(lon, lat), size=0.1, col="indianred", alpha=0.1) +
+  labs(title = "Bombycilla cedrorum, migration pathway 2008-2023") +
+  theme_minimal() + 
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank()) +
+  facet_wrap(~year, ncol=4)
+```
+
+
 
 Plot the results of the smoothed daily locations (centroids) for the migratory species by day of year
 ```{r}
