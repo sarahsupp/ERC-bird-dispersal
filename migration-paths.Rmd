@@ -328,7 +328,7 @@ years <- 2009:2022
 
 # initialize empty lists to store results
 dataresult <- NULL 
-latitude <- NULL 
+lat_lon <- NULL 
 
 
 for(s in species){
@@ -359,18 +359,28 @@ for(s in species){
     
     # initialize empty lists to store results in
     dates <- vector("list", length(gamma_vals) * length(k_vals))
-    predictions <- vector("list", length(gamma_vals) * length(k_vals))
+    predictions_lon <- vector("list", length(gamma_vals) * length(k_vals))
+    predictions_lat <- vector("list", length(gamma_vals) * length(k_vals))
     index <- 1
     
     for (k in k_vals){
       for (g in gamma_vals){
-         mdl <- gam(weighted_lat ~ s(day2, k = k), data = merged_dat, gamma = g)
-         x_data <- data.frame(day2 = 1:365)
-         prediction_lat <- predict(mdl, newdata = x_data, type = "response")
-         predictions[[index]] <- prediction_lat
+        
+         # LONGITUDE MODEL
+         mdl_lon <- gam(weighted_lon ~ s(day2, k = k), data = merged_dat, gamma = g)
+         x_data_lon <- data.frame(day2 = 1:365)
+         prediction_lon <- predict(mdl_lon, newdata = x_data_lon, type = "response")
+         predictions_lon[[index]] <- prediction_lon
+        
+         # LATITUDE MODEL
+         mdl_lat <- gam(weighted_lat ~ s(day2, k = k), data = merged_dat, gamma = g)
+         x_data_lat <- data.frame(day2 = 1:365)
+         prediction_lat <- predict(mdl, newdata = x_data_lat, type = "response")
+         predictions_lat[[index]] <- prediction_lat
           
          # features package extracts the 1st and 2nd derivatives
-         feature <- features(x_data$day2, prediction_lat, smoother = "glkerns", control = list(npts = 365))
+         feature <- features(x_data_lat$day2, prediction_lat, 
+                             smoother = "glkerns", control = list(npts = 365))
          first_derivative <- attributes(feature)$fits$d1
          second_derivative <- attributes(feature)$fits$d2
          
@@ -417,20 +427,22 @@ for(s in species){
       autumn_end = quantile(autumn_end, 0.9, na.rm = TRUE)
       ) %>%
       mutate(species = s, year = y)
-      
-    # collects results averaged across the different k and g parameter setting
+    
+    # collects the average dates into new dataframe  
+    # collects results averaged across the different k and g parameter setting for lon and lat
     dataresult[[length(dataresult) + 1]] <- avg_dates
-    avg_pred <- rowMeans(do.call(cbind, predictions), na.rm = TRUE)
-    latitude[[length(latitude) + 1]] <- data.frame(species = rep(s, 365), year = rep(y, 365), 
-                                                   day = 1:365, lat = avg_pred)
+    avg_pred_lon <- rowMeans(do.call(cbind, predictions_lon), na.rm = TRUE)
+    avg_pred_lat <- rowMeans(do.call(cbind, predictions_lat), na.rm = TRUE)
+    lat_lon[[length(lat_lon) + 1]] <- data.frame(species = rep(s, 365), year = rep(y, 365), 
+                                                   day = 1:365, lat = avg_pred_lat, lon = avg_pred_lon)
   }
 }  
 
 # Bind results into final data frames
 final_mig_dates <- bind_rows(dataresult)
-final_gam_latitude <- bind_rows(latitude)
+final_gam <- bind_rows(lat_lon)
   
-list(dataresult = final_mig_dates, latitude = final_gam_latitude)
+list(dataresult = final_mig_dates, lat_lon = final_gam)
 Sys.time()
 ```
 
