@@ -39,14 +39,12 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(here)
 library(broom)
-#library(data.table) #FIXME: check, but I don't think this is used, remove if not
 #library(devtools)
 #devtools::install_github('r-barnes/dggridR', vignette=TRUE, force = TRUE)
 library(dggridR)
 library(features)
 library(fields) #FIXME: Test if this is needed or already loaded in background with sf or sp
 library(gamm4) 
-#library(geojsonio) #FIXME: Test if this is needed. Delete if not.
 #devtools::install_github("dkahle/ggmap")
 library(ggmap)
 library(ggpubr)
@@ -56,8 +54,6 @@ library(maps)
 library(mgcv)
 library(maptools)
 library(purrr)
-#library(radiant.data)
-#library(raster) FIXME: Check if I need to load this; may not if relying mainly on sf and not manipulating raster datasets directly.
 library(RColorBrewer)
 #devtools::install_github("r-spatial/sf") #C compiler error on mac
 library(sf)
@@ -305,8 +301,9 @@ mig_spp_dailylocs <- dailylocs %>%
                          "Sturnus vulgaris"))
 ```
 
-#FIXME: Trying the gam in a way that allows us to vary k and g, and record the results. 
-If this works, may choose to delete the above function and to delet the Estimate migration dates function, as it could be a better method, that calculates both at the same time.
+### Trying the gam in a way that allows us to vary k and g, and record the results. 
+#FIXME: Edit method for calculating dates
+If this works, may choose to delete the above function and to delete the Estimate migration dates function, as it could be a better method, that calculates both at the same time.
 ```{r}
 #FIXME: Double check results versus the original version of this code
 #   conduct sanity checks, and walk through code and results with collabs to check method.
@@ -459,7 +456,7 @@ ggplot(final_gam, aes(day, lat, group=year)) +
   geom_vline(data=final_mig_dates, aes(xintercept=autumn_end, group=year), col="orange", linewidth=0.5) +
   geom_vline(data=final_mig_dates, aes(xintercept=autumn_beginning, group=year), col="orange", linewidth=0.5) +
   xlab("Day of Year") + ylab("centroid latitude") +
-  facet_wrap(~year, ncol=3) + 
+  facet_wrap(~species, scales = "free_y", ncol=3) + 
   theme_bw()
 ```
 
