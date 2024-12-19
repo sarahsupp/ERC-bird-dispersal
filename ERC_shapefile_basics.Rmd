@@ -192,7 +192,7 @@ ggplot() +
   geom_sf(data = ERC_range_sf, fill = "lightgreen", color = alpha("darkgreen")) +
   geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black") +
   geom_point(data=eBird_in_range, aes(x, y), alpha=0.25, size=0.1) +
-  geom_point(data=eBird_out_range, aes(x, y), alpha=0.25, size=0.1, col="indianred")
+  geom_point(data=eBird_out_range, aes(x, y), alpha=0.25, size=0.1, col="indianred") + 
   coord_sf(xlim = c(-103, -65), ylim = c(25, 50)) + #set limits without distorting boundaries
   labs(title = "eBird occurrences within J. virginiana range extent") +
   theme_minimal() + 
@@ -200,6 +200,8 @@ ggplot() +
           axis.text.y=element_blank(),axis.ticks=element_blank(),
           axis.title.x=element_blank(),
           axis.title.y=element_blank())
+
+ggsave(filename = "figs/eBird_and_range_map.png", height = 4, width=5.5)
 ```
 
 ### BBL data maps
