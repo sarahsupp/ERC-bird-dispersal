@@ -7,21 +7,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-#library(rgdal)
 library(tidyverse)
 library(sf)
 library(mapdata)
-
-library(sfheaders)
-library(raster)
-library(terra)
-library(broom)
-#library(leaflet)
-library(sp)
-library(s2)
-library(lwgeom)
-# library(rnaturalearth)
-# library(rnaturalearthhires)
 ```
 
 # Introduction
@@ -71,13 +59,12 @@ ggsave(filename = "figs/ERC_range_map.png", height = 4, width=5.5)
 
 Read in the eBird data that was summarized in previous code
 ```{r}
-#going to repeat lat/lon filtering process with eBird data
 eBird_2023 <- readRDS("data_2023/dat_effort_2023.rds")
 ```
 
 Convert the eBird dataframe into an sf object
 ```{r}
-#converting eBird data into an sf object 
+#convert eBird data into an sf object 
 eBird_sf <- st_as_sf(eBird_2023, 
                      coords = c("x", "y"), 
                      crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
@@ -88,6 +75,8 @@ Geometry for eBird_sf represents the center point of the icosahedron cell within
 Geometry for ERC_range_sf represents the range boundaries for eastern red cedar tree
 
 Note: The filter step requires several minutes to run on a desktop computer.
+
+WITHIN RANGE DATA
 ```{r}
 # apply st_intersects to eBird data
 inside_eBird = lengths(st_intersects(eBird_sf, ERC_range_sf)) > 0
@@ -97,13 +86,26 @@ eBird_in_range = eBird_sf %>%
   filter(eBird_sf$geometry %in% eBird_sf$geometry[inside_eBird])
 ```
 
-clean up the filtered data to write back to tabular format for storing
+clean up the columns
 ```{r}
-#splitting the geometry column back into lat col and lon col by converting sf object back to df
+#split the geometry column back into lat col and lon col by converting sf object back to df
 eBird_in_range <- sf_to_df(eBird_in_range, fill = TRUE )
 
-#removing unnecessary columns created by above conversion
+#remove unnecessary columns created by above conversion
 eBird_in_range = subset(eBird_in_range, select = -c(sfg_id, point_id))
+```
+
+OUTSIDE OF RANGE DATA
+```{r}
+# Identify which points are outside the ERC range extent
+eBird_out_range = eBird_sf %>%
+  filter(! eBird_sf$geometry %in% eBird_sf$geometry[inside_eBird])
+
+#split the geometry column back into lat col and lon col by converting sf object back to df
+eBird_out_range <- sf_to_df(eBird_out_range, fill = TRUE )
+
+#remove unnecessary columns created by above conversion
+eBird_out_range = subset(eBird_out_range, select = -c(sfg_id, point_id))
 ```
 
 Save filtered data as a file to the main project folder
@@ -112,12 +114,85 @@ Save filtered data as a file to the main project folder
 saveRDS(eBird_in_range, "data_2023/dat_effort_in_range_2023.rds")
 ```
 
+
+
+## Filter within range BBL data, 2008-2023
+Read in the BBL data and conduct some basic data preparation steps
+```{r}
+BBL <- readRDS("data_2023/BBL_data/BBL2022.rds")
+
+#change names of lat/lon columns for convenience
+colnames(BBL)[which(names(BBL) == "lat_dd")] <- "lat"
+colnames(BBL)[which(names(BBL) == "lon_dd")] <- "lon"
+
+#remove rows with NA for lat/lon columns
+BBL <- BBL[!is.na(BBL$lat),]
+BBL <- BBL[!is.na(BBL$lat),]
+
+# convert the BBL dataframe into an sf object
+BBL_sf <- st_as_sf(BBL, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+```
+
+Find out which BBL records occur within the ERC range
+```{r}
+#apply st_intersects to BBL data
+inside <- lengths(st_intersects(BBL_sf, ERC_range_sf)) > 0
+
+BBL_in_range <- BBL_sf %>%
+  filter(BBL_sf$geometry %in% BBL_sf$geometry[inside])
+```
+
+Identify which BBL records ARE NOT within the ERC range
+```{r}
+BBL_out_range <- BBL_sf %>%
+  filter(! BBL_sf$geometry %in% BBL_sf$geometry[inside])
+```
+
+clean up the filtered data to write back to tabular format for storing
+```{r}
+#  WITHIN RANGE DATA
+#split the geometry column back into lat col and lon col by converting sf object back to df
+BBL_in_range <- sf_to_df(BBL_in_range, fill = TRUE )
+
+#remove unnecessary columns created by above conversion
+BBL_in_range = subset(BBL_in_range, select = -c(sfg_id, point_id))
+
+#rename columns
+BBL_in_range <- rename(BBL_in_range, lon = x)
+BBL_in_range <- rename(BBL_in_range, lat = y)
+```
+
+```{r}
+#  OUTSIDE RANGE DATA
+#split the geometry column back into lat col and lon col by converting sf object back to df
+BBL_out_range <- sf_to_df(BBL_out_range, fill = TRUE )
+
+#remove unnecessary columns created by above conversion
+BBL_out_range = subset(BBL_out_range, select = -c(sfg_id, point_id))
+
+#rename columns
+BBL_out_range <- rename(BBL_out_range, lon = x)
+BBL_out_range <- rename(BBL_out_range, lat = y)
+```
+
+Save filtered data as a file to the main project folder
+```{r}
+#export as .rds
+saveRDS(BBL_in_range, "data_2023/BBL_data/BBL_in_range_2024.rds")
+```
+
+## Final plots of the eBird data and the BBL data within the ERC range
+
+### eBird data maps 
+Note: there is a lot of overplotting because the points represent cell centers, not individual observation coordinates
+black = within the range, red = outside of the range
 ```{r}
 # plot the checklists submitted within the range
 ggplot() + 
   geom_sf(data = ERC_range_sf, fill = "lightgreen", color = alpha("darkgreen")) +
   geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black") +
-  geom_point(data=eBird_in_range, aes(x, y, alpha=0.25)) +
+  geom_point(data=eBird_in_range, aes(x, y), alpha=0.25, size=0.1) +
+  geom_point(data=eBird_out_range, aes(x, y), alpha=0.25, size=0.1, col="indianred")
   coord_sf(xlim = c(-103, -65), ylim = c(25, 50)) + #set limits without distorting boundaries
   labs(title = "eBird occurrences within J. virginiana range extent") +
   theme_minimal() + 
@@ -127,64 +202,15 @@ ggplot() +
           axis.title.y=element_blank())
 ```
 
-
-
-
-## Filter within range BBL data, 2008-2023
-
-Read in the BBL data and conduct some basic data preparation steps
-```{r}
-#note that github repo data folder only has .rds since .csv was too big
-BBL <- readRDS("data_2023/BBL_data/BBL2022.rds")
-
-#changing names of lat/lon columns for convenience
-colnames(BBL)[which(names(BBL) == "lat_dd")] <- "lat"
-colnames(BBL)[which(names(BBL) == "lon_dd")] <- "lon"
-
-#removing rows with NA for lat/lon columns
-BBL <- BBL[!is.na(BBL$lat),]
-BBL <- BBL[!is.na(BBL$lat),]
-```
-
-convert the BBL dataframe into an sf object
-```{r}
-BBL_sf <- st_as_sf(BBL, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
-```
-
-Find out which BBL records occur within the ERC range
-```{r}
-#applying st_intersects to BBL data
-inside = lengths(st_intersects(BBL_sf, ERC_range_sf)) > 0
-
-BBL_in_range = BBL_sf %>%
-  filter(BBL_sf$geometry %in% BBL_sf$geometry[inside])
-```
-
-clean up the filtered data to write back to tabular format for storing
-```{r}
-#splitting the geometry column back into lat col and lon col by converting sf object back to df
-BBL_in_range <- sf_to_df(BBL_in_range, fill = TRUE )
-
-#removing unnecessary columns created by above conversion
-BBL_in_range = subset(BBL_in_range, select = -c(sfg_id, point_id))
-
-#rename columns
-BBL_in_range <- rename(BBL_in_range, lon = x)
-BBL_in_range <- rename(BBL_in_range, lat = y)
-```
-
-Save filtered data as a file to the main project folder
-```{r}
-#export as .rds
-saveRDS(BBL_in_range, "data_2023/BBL_data/BBL_in_range_2024.rds")
-```
-
+### BBL data maps
+black = within the range, red = outside of the range
 ```{r}
 # plot the number of records submitted within the range
 ggplot() + 
   geom_sf(data = ERC_range_sf, fill = "lightgreen", color = alpha("darkgreen")) +
   geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black") +
-  geom_point(data=BBL_in_range, aes(lon, lat, alpha=0.25)) +
+  geom_point(data=BBL_in_range, aes(lon, lat), alpha=0.25, size=0.1) +
+  geom_point(data=BBL_out_range, aes(lon, lat), alpha=0.25, size=0.1, col="indianred") +
   coord_sf(xlim = c(-103, -65), ylim = c(25, 50)) + #set limits without distorting boundaries
   labs(title = "BBL records within J. virginiana range extent") +
   theme_minimal() + 
@@ -192,282 +218,7 @@ ggplot() +
           axis.text.y=element_blank(),axis.ticks=element_blank(),
           axis.title.x=element_blank(),
           axis.title.y=element_blank())
-```
 
+ggsave(filename = "figs/BBL_and_range_map.png", height = 4, width=5.5)
 
-
-
-```{r}
-
-```
-
-```{r}
-#making lat/lon back into separate cols (still keeping geometry column in case it ends up being useful)
-#h <- head(BBL_in_range)
-#latlon_eBird <- do.call(rbind, st_geometry(eBird_in_range)) %>% 
-#    as_tibble() %>% setNames(c("x","y"))
-#eBird_in_range <- cbind(eBird_in_range, latlon_eBird)
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Working with Shapefile
-This file is mostly just for me (Max Wisnefski) to figure out how to work with shapefiles
-
-
-```{r}
-#unzipping wasn't really necessary, but I'll leave these as comments anyways
-#system("unzip data/ERC-range.zip")
-#system("unzip data/USA_Canada_ShapefileMerge.zip")
-```
-
-the shapefile of US and Canada comes from USGS
-link: https://www.sciencebase.gov/catalog/item/51bf5940e4b0eb321c798ec9 
-
-```{r}
-#spdf is short for spatial polygon dataframe
-US_CAN_spdf <- readOGR(dsn = "old-code-data/data/USA_Canada_ShapefileMerge", layer = "USA_Canada_ShapefileMerge", verbose = TRUE)
-my_spdf <- readOGR(dsn = "data_2023/ERC_shapefile_2023", layer = "junivirg")
-```
-^I'm not sure why I am getting these warnings. I'm using both the sf and terra packages. 
-
-
-### Plotting ERC range in base R
-```{r}
-par(mar=c(0,0,0,0))   #changes size of image
-plot(my_spdf, col="#69b3a2", bg="white", lwd=0.25, border=0 )
-```
-
-```{r}
-#also plotting US and some of Canada
-par(mar=c(0,0,0,0))
-plot(US_CAN_spdf, col="lightblue", bg="white", lwd=0.25, border=0, xlim = c(-130, -65), ylim = c(20,50))
-```
-
-
-
-
-```{r}
-#just looking at names for the object 
-names(my_spdf)
-```
-
-
-### plotting in ggplot2
-```{r}
-#must first change into df that ggplot can read
-#setting region equal to different columns in @data slot of shapefile does not seem to change output at all
-#I just went with CODE
-spdf_tidy <- tidy(my_spdf, regions = "CODE")
-```
-
-```{r}
-#produces same thing as base R
-ggplot() +
-  geom_polygon(data = spdf_tidy, aes( x = long, y = lat, group = group), fill="#69b3a2", color="white") +
-  theme_void() 
-```
-
-
-
-
-```{r}
-#checking to see if the two shapefiles have the same projection
-#my_spdf@proj4string@projargs #does same thing as next line
-crs(my_spdf)
-extent(my_spdf)
-
-crs(US_CAN_spdf)
-extent(US_CAN_spdf)
-#They do not have same projection
-```
-
-
-```{r}
-#ERC projection is mercator, must change to longlat to match US/CAN projection
-#changing the projection of ERC shapefile
-spdf_latlon <- spTransform(my_spdf,
-                                "+proj=longlat +datum=NAD83 +no_defs")
-```
-
-
-```{r}
-#checking if change was successful
-crs(spdf_latlon)
-extent(spdf_latlon)
-```
-
-### Putting ERC range on top of US/CAN map
-
-```{r}
-#creating a transparent color for ERC range, so you can still see state boundaries
-mycol <- rgb(105, 179, 162, max = 255, alpha = 170, names = "color")
-
-par(mar = c(0,0,2.5,0))
-plot(US_CAN_spdf,
-     main = "Map of US and Canada\nWith ERC range",
-     col = "white", lwd = 0.25, border = 1, xlim = c(-130, -65), ylim = c(25,50))
-
-
-# add ERC range
-plot(spdf_latlon,
-     col = mycol,
-     add = TRUE)
-```
-
-
-### Mapping ERC range on US map with ggplot
-
-```{r}
-#making the returnclass sf, so I can zoom in on it 
-state_prov <- rnaturalearth::ne_states(c("united states of america", "canada", "mexico", "honduras", "el salvador", "guatemala", "costa rica"), returnclass = "sf")
-state_prov <- st_crop(state_prov, xmin = -110, xmax = -50, ymin = 20, ymax = 50)
-```
-
-
-```{r}
-range_sf = st_as_sf(spdf_latlon, crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
-
-ggplot(data=state_prov, colour="grey") + 
-  geom_sf(fill = "white") + 
-  geom_sf(data = range_sf, fill = mycol) +
-  theme_void() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-#ggsave("../ERC_range.png", bg = "transparent", height = 10, width = 15)
-```
-
-
-
-### Mapping ERC range in leaflet
-
-I also figured out how to do this in leaflet, but I don't think it looks as good
-
-```{r}
-#making long/lat projection of ERC into df that I can use with leaflet
-new_proj_tidy <- tidy(spdf_latlon, region = "CODE")
-```
-
-
-```{r}
-outline <- new_proj_tidy[chull(new_proj_tidy$long, new_proj_tidy$lat),]
-
-m <- leaflet(new_proj_tidy) %>% 
-  addTiles() %>% 
-  setView(lng = -100.45, lat = 35.25, zoom = 4 ) %>%
-  #adding a dot for each point in shapefile
-  addCircles(~long, ~lat, ~100, stroke = F, color = "black", group = "ERC Range") %>%
-  #adding the outline
-  addPolygons(data = outline, lng = ~long, lat = ~lat,
-    fill = F, weight = 2, color = "darkgreen", group = "Outline of Range") %>%
-  #Layers control
-  addLayersControl(
-    overlayGroups = c("ERC Range", "Outline of Range"),
-    options = layersControlOptions(collapsed = FALSE)
-  )
-m
-```
-
-
-## Filter bird banding data based on ERC range lat/longs
-
-Here I use the sf::st_intersects function to filter the Bird Banding Lab (BBL) data based on the ERC range shapefile
-
-```{r}
-#note that github repo data folder only has .rds since .csv was too big
-BBL <- readRDS("data_2023/BBL_data/BBL2022.rds")
-#changing names of lat/lon columns for convenience
-colnames(BBL)[which(names(BBL) == "lat_dd")] <- "lat"
-colnames(BBL)[which(names(BBL) == "lon_dd")] <- "lon"
-```
-
-```{r}
-#removing rows with NA for lat/lon columns
-BBL <- BBL[!is.na(BBL$lat),]
-BBL <- BBL[!is.na(BBL$lat),]
-```
-
-
-```{r}
-#making both shapefile and BBL data into sf objects so I can comepare the lats/lons
-ERC_range_sf <- st_read("data_2023/ERC_shapefile_2023/junivirg.shp", quiet = TRUE) %>%
-  st_transform(crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
-BBL_sf <- st_as_sf(BBL, coords = c("lon", "lat"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
-```
-
-
-```{r}
-# scatter 100 points around
-#just testing st_intersects function before I actually use it on entire data set
-pts = st_jitter(st_sample(ERC_range_sf, 100), factor=0.2)
-#inside will be a list of boolean vals, TRUE if point falls in range, FALSE otherwise
-inside = lengths(st_intersects(pts, ERC_range_sf)) > 0
-out = !inside
-```
-
-
-```{r}
-#making sure it categorized the points correctly
-plot(ERC_range_sf$geom)
-plot(pts[inside], pch=1, col="blue", add=TRUE);
-plot(pts[out], pch=1, col="red", add=TRUE);
-```
-
-```{r}
-#applying st_intersects to BBL data
-inside = lengths(st_intersects(BBL_sf, ERC_range_sf)) > 0
-#out = !inside
-```
-
-^This will give you a list of TRUE/FALSE vals, use this list to filter data frame, TRUE means point falls within ERC range, FALSE means it does not
-
-```{r}
-#visual from this chunk of code is not particularly useful 
-#plot(ERC_range_sf$geom)
-#plot(BBL_sf$geometry[inside], pch=1, col="blue", add=TRUE);
-#plot(BBL_sf$geometry[out], pch=1, col="red", add=TRUE);
-```
-
-
-```{r}
-#using the inside list to filter the BBL data to just observations within ERC range
-BBL_in_range = BBL_sf %>%
-  filter(BBL_sf$geometry %in% BBL_sf$geometry[inside])
-```
-
-
-```{r}
-#making lat/lon back into separate cols (still keeping geometry column in case it ends up being useful)
-#h <- head(BBL_in_range)
-latlon <- do.call(rbind, st_geometry(BBL_in_range)) %>% 
-    as_tibble() %>% setNames(c("lon","lat"))
-BBL_in_range <- cbind(BBL_in_range, latlon)
-```
-
-
-
-```{r}
-#export as .rds
-#(it's too big to push to repo as a .csv)
-#saveRDS(BBL_in_range, "data_2023/BBL_data/BBL_in_range_2022.rds")
-```
-
-
-```{r}
-#also exporting unfiltered data as .rds, so I can push it to github repo 
-#saveRDS(BBL, "data_2023/BBL_data/BBL2022.rds")
 ```
