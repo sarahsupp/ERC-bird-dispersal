@@ -7,22 +7,136 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(rgdal)
+#library(rgdal)
+library(tidyverse)
 library(sf)
+library(mapdata)
+
 library(sfheaders)
 library(raster)
 library(terra)
 library(broom)
-library(ggplot2)
-library(leaflet)
+#library(leaflet)
 library(sp)
 library(s2)
-library(tidyr)
-library(dplyr)
 library(lwgeom)
-library(rnaturalearth)
-library(rnaturalearthhires)
+# library(rnaturalearth)
+# library(rnaturalearthhires)
 ```
+
+# Introduction
+This code file imports a shapefile representing an updated range boundary for the eastern redcedar tree, Juniperus virginia. The shapefile was created by W. Haas, 2023 (Kent State University).
+The file also imports occurrence data from eBird and the Breeding Bird Laboratory. 
+It uses the shapefile as a filter to identify occurrences that fall within the eastern redcedar (ERC) species range.
+
+The file was originally authored by M. Wisnefski (Anderson Summer Scholar, 2023) and updated by S. Supp (2024-2025).
+
+
+# Import the ERC range file, updated by W. Haas, 2022
+```{r}
+ERC_range_sf <- st_read("data_2023/ERC_shapefile_2023/junivirg.shp", quiet = TRUE) %>%
+  st_transform(crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+```
+
+# Plot the shapefile on a map of North America
+
+Get the map boundaries
+```{r}
+#Get polygons for north america map
+world_map <- map_data("world")
+north_america <- world_map %>%
+  filter(region %in% c("USA", "Canada"))
+```
+
+plot the range shapefile on a map to check that it's working
+```{r}
+# plot the number of checklists submitted (summed) per grid cell (2008-2023)
+ggplot() + 
+  geom_sf(data = ERC_range_sf, fill = "lightgreen", color = alpha("darkgreen")) +
+  geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black") +
+  coord_sf(xlim = c(-103, -65), ylim = c(25, 50)) + #set limits without distorting boundaries
+  labs(title = "W. Haas shapefile of J. virginiana range extent") +
+  theme_minimal() + 
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank())
+
+ggsave(filename = "figs/ERC_range_map.png", height = 4, width=5.5)
+```
+
+
+## eBird data, 2008-2023
+
+Read in the eBird data that was summarized in previous code
+```{r}
+#going to repeat lat/lon filtering process with eBird data
+eBird_2023 <- readRDS("data_2023/dat_effort_2023.rds")
+```
+
+Convert the eBird dataframe into an sf object
+```{r}
+#converting eBird data into an sf object 
+eBird_sf <- st_as_sf(eBird_2023, 
+                     coords = c("x", "y"), 
+                     crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
+```
+
+Find out which avian occurrences fall within the eastern redcedar range (ERC_range_sf)
+Geometry for eBird_sf represents the center point of the icosahedron cell within which the observation took place.
+Geometry for ERC_range_sf represents the range boundaries for eastern red cedar tree
+```{r}
+# apply st_intersects to eBird data
+inside_eBird = lengths(st_intersects(eBird_sf, ERC_range_sf)) > 0
+
+# use inside_eBird to filter the eBird data to only include observations within ERC range extent
+eBird_in_range = eBird_sf %>%
+  filter(eBird_sf$geometry %in% eBird_sf$geometry[inside_eBird])
+```
+
+
+
+
+
+```{r}
+BBL_in_range = BBL_sf %>%
+  filter(BBL_sf$geometry %in% BBL_sf$geometry[inside])
+```
+
+```{r}
+#making lat/lon back into separate cols (still keeping geometry column in case it ends up being useful)
+#h <- head(BBL_in_range)
+#latlon_eBird <- do.call(rbind, st_geometry(eBird_in_range)) %>% 
+#    as_tibble() %>% setNames(c("x","y"))
+#eBird_in_range <- cbind(eBird_in_range, latlon_eBird)
+```
+
+
+```{r}
+#splitting the geometry column back into lat col and lon col by converting sf object back to df
+eBird_in_range <- sf_to_df(eBird_in_range, fill = TRUE )
+
+#removing useless columns created by above conversion
+eBird_in_range = subset(eBird_in_range, select = -c(sfg_id, point_id))
+```
+
+
+
+```{r}
+#export as .rds
+saveRDS(eBird_in_range, "data_2023/dat_effort_in_range_2023.rds")
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -273,61 +387,3 @@ BBL_in_range <- cbind(BBL_in_range, latlon)
 #also exporting unfiltered data as .rds, so I can push it to github repo 
 #saveRDS(BBL, "data_2023/BBL_data/BBL2022.rds")
 ```
-
-## eBird data
-
-```{r}
-#going to repeat lat/lon filtering process with eBird data
-eBird_2023 <- readRDS("data_2023/dat_effort_2023.rds")
-```
-
-
-```{r}
-#converting eBird data into an sf object 
-eBird_sf <- st_as_sf(eBird_2023, coords = c("x", "y"), crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
-
-```
-
-
-```{r}
-#applying st_intersects to eBird data
-inside_eBird = lengths(st_intersects(eBird_sf, ERC_range_sf)) > 0
-```
-
-
-```{r}
-#using the inside list to filter the eBird data to just observations within ERC range
-eBird_in_range = eBird_sf %>%
-  filter(eBird_sf$geometry %in% eBird_sf$geometry[inside_eBird])
-```
-
-
-```{r}
-BBL_in_range = BBL_sf %>%
-  filter(BBL_sf$geometry %in% BBL_sf$geometry[inside])
-```
-
-```{r}
-#making lat/lon back into separate cols (still keeping geometry column in case it ends up being useful)
-#h <- head(BBL_in_range)
-#latlon_eBird <- do.call(rbind, st_geometry(eBird_in_range)) %>% 
-#    as_tibble() %>% setNames(c("x","y"))
-#eBird_in_range <- cbind(eBird_in_range, latlon_eBird)
-```
-
-
-```{r}
-#splitting the geometry column back into lat col and lon col by converting sf object back to df
-eBird_in_range <- sf_to_df(eBird_in_range, fill = TRUE )
-
-#removing useless columns created by above conversion
-eBird_in_range = subset(eBird_in_range, select = -c(sfg_id, point_id))
-```
-
-
-
-```{r}
-#export as .rds
-saveRDS(eBird_in_range, "data_2023/dat_effort_in_range_2023.rds")
-```
-
