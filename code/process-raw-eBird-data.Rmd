@@ -1,0 +1,78 @@
+---
+title: "process-eBird-data"
+author: "Sarah Supp"
+date: "2/19/2021"
+output: html_document
+---
+
+##Code for cedar waxwing project, modified from eBird migration project (Supp et al. 2015)
+(c) 2020-2025, Niu and Supp
+supps@denison.edu
+Denison University
+Code is under development, part of NSF Multi-Institution Collaborative Award (2019-25)
+
+Birds evaluated include: 
+* Cedar Waxwing (CEWA) _Bombycilla cedrorum_
+* Robin (ROBI) _Turdus migratorius_
+* Wood Thrush (WOTH) _Hylocichla mustelina_
+* Yellow-rumped Warbler (YEWA) _setophaga coronata_
+* Blue Jay (BLJA) _Cyanocitta cristata_
+* European Starling (EUST) _Sturnus vulgaris_
+* Eastern Bluebird (EABL) _Sialia sialis_
+* Northern Mockingbird (NOMO) _Mimus polyglottos_
+* Downy Woodpecker (DOWO) _Dryobates pubescens_
+* Eastern Meadowlark (EAME) _Sturnella magna_
+* White-breasted Nuthatch (WHNU) _Sitta carolinensis_
+* Purple Finch (PUFI) _Haemorhous purpureus_
+* Northern Cardinal (NOCA) _Cardinalis cardinalis_
+* Dark-eyed Junco (DAJU) _Junco hyemalis_
+* American Crow (AMCR) _Corvus brachyrhynchos_
+
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+```
+
+If starting from scratch, input the three raw data files and merge together.
+You need to bring in: 
+1. a file with the bird observations (ebrd2.c)
+2. a file with the total eBirder "effort" (eft.c)
+3. a file with all the center locations for the POLYFID grid cells (locs)
+
+Load the eBird effort and location files, from FAL (January 2025)
+```{r}
+# raw eBird data, queried by FAL
+  # will load as dat, FAL named previously
+load(here("data/1-raw_eBird_data_2024/effort-count.RData"))
+
+# coordinates for the icosahedron cells
+ # will load as locs, FAL named previously
+load(here("data/1-raw_eBird_data_2024/locs_2023.RData")) 
+```
+
+*For all 15 species .RData files*
+This code chunk will identify all 15 species files, bring them in one by one, and loop through the merge on polygon ID (POLYFID) with the total eBirder effort, the center lat-long for each hexagonal icosahedron cell, and write to .RDS file for use in the next steps.
+```{r}
+spfiles = list.files(path=here("data/1-raw_eBird_data_2024/species/"), pattern=glob2rx("*.RData"))
+
+for (i in spfiles) {
+  # These RData files have one object and it is named "dat2" 
+  load(paste0(here("data/1-raw_eBird_data_2024/species/"),(i)))
+  
+  #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
+  dat_merged = merge(dat2, locs, by.x = "POLYFID", by.y = "POLYFID")
+  
+  #now merge with the third data file for effort 
+  #where count.x is number of target species and count.y is total number of eBird records (including those without the target species)
+  dat_effort = merge(dat_merged, dat, by.x = c("POLYFID", "year", "day"), by.y = c("POLYFID","year",  "day")) 
+  
+  # make sure day is numeric
+  dat_effort$day <- as.numeric(dat_effort$day) 
+  # grab species name from the filename and add it as a column
+  spname <- sub("\\.[[:alnum:]]+$", "", i)
+  dat_effort$species <- spname
+  # save file, also adding the species name, into a new folder with the species + effort merged datasets
+  saveRDS(dat_effort, file = paste0("data/2-intermediate_eBird_data_2024/effort-merged_data/dat_effort_", spname, ".rds"))
+}
+```
