@@ -41,6 +41,7 @@ You need to bring in:
 2. a file with the total eBirder "effort" (dat; effort-count.RData)
 3. a file with all the center locations for the POLYFID grid cells (locs)
 
+*Load global datasets* 
 Load the eBird effort and location files, from FAL (January 2025)
 ```{r}
 # raw eBird data, queried by FAL
@@ -57,14 +58,13 @@ subset files to only include longitude values that represent the Americas within
 Merge dat and locs, keeping only the rows that match the POLYFID included in the locs dataframe
 ```{r}
 # filter locs from global to longitudes for Western hemisphere Americas
-locs2 <- locs %>%
-  filter(x > 20 & x < 160)
+locs <- locs %>%
+  filter(x > -160 & x < -20)
 
 # merge the effort and locs files
-effort_locs <- dplyr::inner_join(dat, locs2, by="POLYFID")
+effort_locs <- dplyr::inner_join(dat, locs, by="POLYFID")
 
 rm(dat)
-rm(locs)
 ```
 
 
@@ -77,19 +77,17 @@ for (i in spfiles) {
   # These RData files have one object and it is named "dat2" 
   load(paste0(here("data/1-raw_eBird_data_2024/species/"),(i)))
   
-  #merge locations data on POLYFID so it includes the center of each hex cell (LONGITUDE.y, LATITUDE.y)
-  dat_merged = merge(dat2, locs, by.x = "POLYFID", by.y = "POLYFID")
+  #Join locations and effort data on POLYFID so it includes the center of each hex cell (LONGITUDE.x, LATITUDE.y)
+  #   Note that I am conducting a right join here, so that many target species "counts" will be NA. 
+  #   These NA count rows can be filtered out later, if needed
+  #   count is the number of target species and 
+  #   effort is the total number of eBird records (including those without the target species)
+  dat_merged = right_join(dat2, effort_locs, by = c("year", "day", "POLYFID"))
   
-  #now merge with the third data file for effort 
-  #where count.x is number of target species and count.y is total number of eBird records (including those without the target species)
-  dat_effort = merge(dat_merged, dat, by.x = c("POLYFID", "year", "day"), by.y = c("POLYFID","year",  "day")) 
-  
-  # make sure day is numeric
-  dat_effort$day <- as.numeric(dat_effort$day) 
   # grab species name from the filename and add it as a column
   spname <- sub("\\.[[:alnum:]]+$", "", i)
-  dat_effort$species <- spname
+  dat_merged$species <- spname
   # save file, also adding the species name, into a new folder with the species + effort merged datasets
-  saveRDS(dat_effort, file = paste0("data/2-intermediate_eBird_data_2024/effort-merged_data/dat_effort_", spname, ".rds"))
+  saveRDS(dat_merged, file = paste0("data/2-intermediate_eBird_data_2024/effort-merged_data/dat_effort_", spname, ".rds"))
 }
 ```
