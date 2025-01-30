@@ -32,12 +32,13 @@ Birds evaluated include:
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(echo = TRUE)
 library(here)
+library(tidyverse)
 ```
 
 If starting from scratch, input the three raw data files and merge together.
 You need to bring in: 
 1. a file with the bird observations (ebrd2.c)
-2. a file with the total eBirder "effort" (eft.c)
+2. a file with the total eBirder "effort" (dat; effort-count.RData)
 3. a file with all the center locations for the POLYFID grid cells (locs)
 
 Load the eBird effort and location files, from FAL (January 2025)
@@ -50,6 +51,22 @@ load(here("data/1-raw_eBird_data_2024/effort-count.RData"))
  # will load as locs, FAL named previously
 load(here("data/1-raw_eBird_data_2024/locs_2023.RData")) 
 ```
+
+*get western hemisphere and merged values*
+subset files to only include longitude values that represent the Americas within the Western Hemisphere 
+Merge dat and locs, keeping only the rows that match the POLYFID included in the locs dataframe
+```{r}
+# filter locs from global to longitudes for Western hemisphere Americas
+locs2 <- locs %>%
+  filter(x > 20 & x < 160)
+
+# merge the effort and locs files
+effort_locs <- dplyr::inner_join(dat, locs2, by="POLYFID")
+
+rm(dat)
+rm(locs)
+```
+
 
 *For all 15 species .RData files*
 This code chunk will identify all 15 species files, bring them in one by one, and loop through the merge on polygon ID (POLYFID) with the total eBirder effort, the center lat-long for each hexagonal icosahedron cell, and write to .RDS file for use in the next steps.
