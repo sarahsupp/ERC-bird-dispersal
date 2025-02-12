@@ -228,7 +228,8 @@ saveRDS(weighted_mean_locs, here("data/2-intermediate_eBird_data/weighted_mean_l
 ```
 
 
-Plot the new weights to visualize them
+## Make figures to summarize results so far
+Plot the new weighted mean locations to visualize them, separately by species
 ```{r}
 #plot the weighted lons and lats by species, just to check
 ggplot(weighted_mean_locs, aes(weighted_lon)) + 
