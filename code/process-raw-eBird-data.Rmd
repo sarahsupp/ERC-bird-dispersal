@@ -41,8 +41,9 @@ You need to bring in:
 2. a file with the total eBirder "effort" (dat; effort-count.RData)
 3. a file with all the center locations for the POLYFID grid cells (locs)
 
-*Load global datasets* 
+*Load datasets* 
 Load the eBird effort and location files, from FAL (January 2025)
+Data files should contain values from the western hemisphere
 ```{r}
 # raw eBird data, queried by FAL
   # will load as dat, FAL named previously
@@ -50,26 +51,12 @@ load(here("data/1-raw_eBird_data_2024/effort-count.RData"))
 
 # coordinates for the icosahedron cells
  # will load as locs, FAL named previously
-load(here("data/1-raw_eBird_data_2024/locs_2023.RData")) 
-```
-
-*get western hemisphere and merged values*
-subset files to only include longitude values that represent the Americas within the Western Hemisphere 
-Merge dat and locs, keeping only the rows that match the POLYFID included in the locs dataframe
-```{r}
-# filter locs from global to longitudes for Western hemisphere Americas
-locs <- locs %>%
-  filter(x > -160 & x < -20)
-
-# merge the effort and locs files
-effort_locs <- dplyr::inner_join(dat, locs, by="POLYFID")
-
-rm(dat)
+load(here("data/1-raw_eBird_data_2024/locs.RData")) 
 ```
 
 
 *For all 15 species .RData files*
-This code chunk will identify all 15 species files, bring them in one by one, and loop through the merge on polygon ID (POLYFID) with the total eBirder effort, the center lat-long for each hexagonal icosahedron cell, and write to .RDS file for use in the next steps.
+This code chunk will identify all 15 species files, bring them in one by one, and loop through the merge on polygon ID (POLYFID) with the total eBirder effort, add the center lat-long coordinates for each hexagonal icosahedron cell, and write to .RDS file for use in the next steps.
 ```{r}
 spfiles = list.files(path=here("data/1-raw_eBird_data_2024/species/"), pattern=glob2rx("*.RData"))
 
@@ -77,17 +64,19 @@ for (i in spfiles) {
   # These RData files have one object and it is named "dat2" 
   load(paste0(here("data/1-raw_eBird_data_2024/species/"),(i)))
   
-  #Join locations and effort data on POLYFID so it includes the center of each hex cell (LONGITUDE.x, LATITUDE.y)
-  #   Note that I am conducting a right join here, so that many target species "counts" will be NA. 
-  #   These NA count rows can be filtered out later, if needed
-  #   count is the number of target species and 
-  #   effort is the total number of eBird records (including those without the target species)
-  dat_merged = right_join(dat2, effort_locs, by = c("year", "day", "POLYFID"))
+  # use merge to annotate the species files with the effort values
+  datmerged <- merge(dat2, dat)
   
+  # use merge to annotate the species counts and effort with the polygon coordinates (lat, long)
+  datmerged <- merge(datmerged, locs)
+
   # grab species name from the filename and add it as a column
   spname <- sub("\\.[[:alnum:]]+$", "", i)
-  dat_merged$species <- spname
+  datmerged$species <- spname
+  
   # save file, also adding the species name, into a new folder with the species + effort merged datasets
-  saveRDS(dat_merged, file = paste0("data/2-intermediate_eBird_data_2024/effort-merged_data/dat_effort_", spname, ".rds"))
+  saveRDS(datmerged, file = here(paste0("data/2-intermediate_eBird_data_2024/species_effort/dat_effort_", spname, ".rds")))
+  
+  print(paste0(spname, " has ", nrow(datmerged), " rows and is complete."))
 }
 ```
