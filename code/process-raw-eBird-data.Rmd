@@ -47,22 +47,22 @@ Data files should contain values from the western hemisphere
 ```{r}
 # raw eBird data, queried by FAL
   # will load as dat, FAL named previously
-load(here("data/1-raw_eBird_data_2024/effort-count.RData"))
+load(here("data/1-raw_eBird_data/effort-count.RData"))
 
 # coordinates for the icosahedron cells
  # will load as locs, FAL named previously
-load(here("data/1-raw_eBird_data_2024/locs.RData")) 
+load(here("data/1-raw_eBird_data/locs.RData")) 
 ```
 
 
 *For all 15 species .RData files*
 This code chunk will identify all 15 species files, bring them in one by one, and loop through the merge on polygon ID (POLYFID) with the total eBirder effort, add the center lat-long coordinates for each hexagonal icosahedron cell, and write to .RDS file for use in the next steps.
 ```{r}
-spfiles = list.files(path=here("data/1-raw_eBird_data_2024/species/"), pattern=glob2rx("*.RData"))
+spfiles = list.files(path=here("data/1-raw_eBird_data/species/"), pattern=glob2rx("*.RData"))
 
 for (i in spfiles) {
   # These RData files have one object and it is named "dat2" 
-  load(paste0(here("data/1-raw_eBird_data_2024/species/"),(i)))
+  load(paste0(here("data/1-raw_eBird_data/species/"),(i)))
   
   # use merge to annotate the species files with the effort values
   datmerged <- merge(dat2, dat)
@@ -75,7 +75,7 @@ for (i in spfiles) {
   datmerged$species <- spname
   
   # save file, also adding the species name, into a new folder with the species + effort merged datasets
-  saveRDS(datmerged, file = here(paste0("data/2-intermediate_eBird_data_2024/species_effort/dat_effort_", spname, ".rds")))
+  saveRDS(datmerged, file = here(paste0("data/2-intermediate_eBird_data/species_effort/dat_effort_", spname, ".rds")))
   
   print(paste0(spname, " has ", nrow(datmerged), " rows and is complete."))
 }
