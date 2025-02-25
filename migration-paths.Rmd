@@ -57,6 +57,7 @@ library(purrr)
 library(RColorBrewer)
 #devtools::install_github("r-spatial/sf") #C compiler error on mac
 library(sf)
+library(viridis)
 #library(sjPlot)
 #library(sjmisc)
 #library(sjlabelled)
@@ -198,10 +199,10 @@ north_america <- world_map %>%
 ggplot() + 
   geom_sf(data = grid, aes(fill = sum_count), color = alpha("white", 0.4 )) +
   geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
-  scale_fill_gradient(low="gray90", high="black") +
+  scale_fill_gradient(low="grey90", high="black", na.value="white") +
   #scale_fill_gradient(low="red", high="yellow") +
   coord_sf(xlim = c(-103, -60), ylim = c(10, 65)) + #set limits without distorting boundaries
-  labs(title = "Number of checklists submitted by grid cell, 2008-2023") +
+  labs(title = "Number of checklists submitted by grid cell, 2008-2024") +
   theme_minimal() + 
   theme(axis.line=element_blank(),axis.text.x=element_blank(),
           axis.text.y=element_blank(),axis.ticks=element_blank(),
@@ -209,7 +210,7 @@ ggplot() +
           axis.title.y=element_blank()) +
   facet_wrap(~species, ncol=5)
 
-ggsave(filename = "figs/15species_checklist_by_grid_cell.png", height = 11, width=8)
+ggsave(filename = "figs/15spp_sum_checklist_grids.png", height = 11, width=8)
 
 ```
 
@@ -227,10 +228,12 @@ In the GAM, we can use the weighted mean locations (latitude and longitude) that
 #FIXME: use/modify code from migration-path-window to test GAM results using varying k (8-20) and gamma (0-8)
 # FIXME: should output a big table of results that we can use to justify our choices and be transparent
 #FIXME: If keep this function, should include date estimation at the same time.
+
+This code chunk stores a function to use a GAM model to estimate smoothed centroids that represent the migration path. It uses the weighted mean latitude and longitude as inputs and returns new daily centroids based on the predicted model fits, along with lower and upper confidence intervals (LCI, UCI).
 ```{r}
 Estimatedailylocs = function(dat) {
 
-  years <- c(2008:2022)
+  years <- unique(dat$year)
   spp <- unique(dat$species)
   
   #initialize empty dataframe
@@ -242,8 +245,7 @@ Estimatedailylocs = function(dat) {
 
   for (s in spp){
     for (i in years) {
-      sub_weighted_mean_locs <-
-        dat %>%
+      sub_weighted_mean_locs <- dat %>%
         filter(year == i & species == s)
 
       lon_gam = gam(weighted_lon ~ s(day, k=20), data = sub_weighted_mean_locs, gamma = 1.5)
@@ -266,19 +268,66 @@ Estimatedailylocs = function(dat) {
   }
   return(df_dailylocs)
 }
+```
 
+Run the GAM function on the weighted mean dataframe for all species.
+```{r}
 #get daily centroid locations for all species in all years
 dailylocs <- Estimatedailylocs(weighted_mean_locs)
 
-#filtering only the migratory species (9 species)
+#filter to keep only the migratory species (9 species)
 mig_spp_dailylocs <- dailylocs %>% 
-  filter (species %in% c("Bombycilla cedrorum", "Haemorhous purpureus", 
-                         "Hylocichla mustelina", "Junco hyemalis", 
-                         "Setophaga coronata", "Turdus migratorius", 
-                         "Sialia sialis", "Sturnella magna", 
-                         "Sturnus vulgaris"))
+  filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", 
+                         "Hylocichla_mustelina", "Junco_hyemalis", 
+                         "Setophaga_coronata", "Turdus_migratorius", 
+                         "Sialia_sialis", "Sturnella_magna", 
+                         "Sturnus_vulgaris"))
 ```
 
+Plot results from the GAM model
+```{r}
+ggplot(mig_spp_dailylocs, aes(x=day, y=lat, group=year)) + 
+  geom_point(aes(col=as.factor(year)), size=0.10) + 
+  scale_color_viridis(discrete=TRUE, option="magma") + 
+  facet_wrap(~species, scales="free") +
+  xlab("day of year") + ylab("centroid latitude") + 
+  labs(col = "Year") +
+  theme_bw()
+
+ggsave(filename = here("figs/9spp_GAMlatitude.png"), height = 6, width=8)
+```
+
+Plot GAM model results showing the lat-lon path on a geographic map by species
+```{r}
+
+# plot the number of checklists submitted (summed) per grid cell (2008-2024)
+ggplot() + 
+  geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  coord_sf(xlim = c(-103, -60), ylim = c(15, 55)) + #set limits without distorting boundaries
+  geom_point(data=mig_spp_dailylocs, aes(lon, lat, col=winter), size=0.1, alpha=0.1) +
+  scale_color_viridis(discrete=TRUE) +
+  labs(title = "GAM smoothed migration path, 2008-2024") +
+  theme_minimal() + 
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank()) +
+  theme(legend.position="bottom") +
+  guides(color = guide_legend(override.aes = list(size = 3, alpha=1) ) ) +
+  facet_wrap(~species, ncol=3)
+
+ggsave(filename = here("figs/9spp_GAMmap.png"), height = 6, width=8)
+```
+
+
+#FIXME: BEGIN HERE NEXT WEEK!!
+
+
+
+
+
+
+#FIXME: probably can't use this method for this subset of species; don't have strong enough N-S migration
 ### Trying the gam in a way that allows us to vary k and g, and record the results. 
 #FIXME: Edit method for calculating dates
 If this works, may choose to delete the above function and to delete the Estimate migration dates function, as it could be a better method, that calculates both at the same time.
@@ -291,13 +340,13 @@ If this works, may choose to delete the above function and to delete the Estimat
 Sys.time()
 # create values for unique years and species names
 # Only incldue the migratory species 
-spp <- c("Bombycilla cedrorum", "Haemorhous purpureus", 
-          "Hylocichla mustelina", "Junco hyemalis", 
-          "Setophaga coronata", "Turdus migratorius", 
-          "Sialia sialis", "Sturnella magna", 
-          "Sturnus vulgaris")
+species <- c("Bombycilla_cedrorum", "Haemorhous_purpureus", 
+          "Hylocichla_mustelina", "Junco_hyemalis", 
+          "Setophaga_coronata", "Turdus_migratorius", 
+          "Sialia_sialis", "Sturnella_magna", 
+          "Sturnus_vulgaris")
 #need to take year from 2009 to 2021 so that it will include 2008 and 2022 as calculating the buffer year
-years <- 2009:2022 
+years <- 2009:2023 
 
 # initialize empty lists to store results
 dataresult <- NULL 
@@ -442,7 +491,7 @@ ggplot(final_gam, aes(day, lat, group=year)) +
 Plot the results showing the lat-lon path by year
 ```{r}
 
-# plot the number of checklists submitted (summed) per grid cell (2008-2023)
+# plot the number of checklists submitted (summed) per grid cell (2008-2024)
 ggplot() + 
   geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
   coord_sf(xlim = c(-103, -60), ylim = c(25, 55)) + #set limits without distorting boundaries
