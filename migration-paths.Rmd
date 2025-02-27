@@ -659,10 +659,29 @@ write.table(date_results, here(file = 'data/3-results_data/lm_migration_dates.tx
 ```
 
 
+Plot results from the GAM model with the estimated dates 
+Save to file
+```{r}
+ggplot(mig_spp_dailylocs, aes(x=day, y=lat, group=year)) + 
+  geom_point(aes(col=as.factor(year)), size=0.10) + 
+  scale_color_viridis(discrete=TRUE, option="magma") + 
+  geom_vline(data=migration_dates, aes(xintercept=spring), col="skyblue") + 
+  geom_vline(data=migration_dates, aes(xintercept=fall), col="darkorange3") +
+#  geom_vline(data=migration_dates, aes(xintercept=maxlat, col="grey50")) +
+  facet_wrap(~species, scales="free") +
+  xlab("day of year") + ylab("centroid latitude") + 
+  labs(col = "Year") +
+  theme_bw()
 
+ggsave(filename = here("figs/9spp_lat_with_dates.png"), height = 6, width=8)
+```
 
-
+#-------------------------------------------------------------------
 #FIXME: BEGIN HERE NEXT !!!
+Check the code below this point. 
+- keep
+- remove
+- start new file that focuses on community analysis using FAL iNEXT dataset
 
 
 
