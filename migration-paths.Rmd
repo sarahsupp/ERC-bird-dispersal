@@ -668,62 +668,6 @@ write.table(date_results, here(file = 'data/3-results_data/lm_migration_dates.tx
 
 
 
-
-Now we just want to look at bird occurrences during the winter months, and in the latitudes that ERC occur in: 
-Can use the winter column to grab all data October-March and the latitudes ~ 26-47 --Note that these choices are somewhat arbitrary, just to get a quick look now. Will need to get finer grained info from D. Ward and lab later...
-```{r}
-ERCbirds <- spp7dailylocs %>%
-  filter(lat - lat_se > 27 & lat + lat_se < 47 & winter=="winter")
-
-ggplot() + 
-  geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
-  geom_point(data=ERCbirds, aes(lon, lat, col=species), size=.1) + 
-  xlim(-102,-52) + 
-  ylim(25,50) +
-  theme_bw() + 
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.title.y=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank()) + 
-  facet_wrap(~month)
-
-```
-
-# look at the dat_effort file locations, not just the daily locs (which are summarized centroids only)
-```{r}
- spp7 <- df %>% filter (species %in% c("Bombycilla_cedrorum", "Haemorhous_purpureus", "Hylocichla_mustelina", "Junco_hyemalis", "Setophaga_coronata", "Turdus_migratorius", "Sialia_sialis") )
-
-winter_dat_effort <- spp7 %>%
-  mutate(DAYm1 = day-1,
-         origin = paste0(year, "-01-01"),
-         date = as.Date(DAYm1, origin=origin),
-         month = month(date)) %>%
-  mutate(winter = ifelse(month %in% c(10, 11, 12, 1, 2, 3), "winter", "non-winter")) %>%
-  arrange(species,date) %>%
-  ungroup() %>%
-  mutate(ID = row_number()) %>%
-  dplyr::select(-DAYm1, -origin) %>%
-  filter(winter=="winter") %>%
-  filter(y > 27 & x < 47)
-
-
-  ggplot() + 
-  geom_polygon(data=state_prov, aes(x=long, y=lat, group = group), colour="grey50", fill="white") + 
-  geom_point(data=winter_dat_effort, aes(x, y, col=species), alpha=.2, size=.1) + 
-  xlim(-102,-52) + 
-  theme_bw() + 
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank(),
-        axis.title.y=element_blank(),
-        axis.text.y=element_blank(),
-        axis.ticks.y=element_blank()) + 
-  facet_grid(species~month)
-```
-
-
 #FIXME: I think that the "community analysis" belongs in a new .Rmd file, since it is analyzing data at a different scale (community vs. population).
 #--------------------------------------------------
 #Start spatial analysis... 
