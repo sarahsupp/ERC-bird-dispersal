@@ -1,0 +1,7 @@
+"species"	"begin_winter"	"end_winter"
+"Bombycilla_cedrorum"	348	119
+"Haemorhous_purpureus"	325	58
+"Hylocichla_mustelina"	312	76
+"Junco_hyemalis"	320	78
+"Setophaga_coronata"	329	74
+"Turdus_migratorius"	347	53

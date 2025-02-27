@@ -434,9 +434,11 @@ Report the annual estimates, and an overall summary of the values pooled across 
 saveRDS(max_speed, here("data/3-results_data/max_speed.rds"))
 write.table(max_speed, here(file = 'data/3-results_data/max_speed_table.txt'), col.names = TRUE,
               row.names = FALSE, sep = "\t")
+```
 
-# Let's further summarize the max speed for each species across years, to check how much it varies
-#   reports mean, median, and sd across 2008-2022 for each species
+Let's further summarize the max speed for each species across years, to check how much it varies
+```{r}
+# reports mean, median, and sd across 2008-2022 for each species
 max_speed_summary <- max_speed %>%
   group_by(species) %>%
   summarise(
@@ -452,10 +454,11 @@ write.table(max_speed_summary, here(file = 'data/3-results_data/max_speed_summar
               row.names = FALSE, sep = "\t")
 ```
 
+Plot the annual maximum migration speeds for each species, with a horizontal line showing the median of all the years for a species pooled together.
 ```{r}
 # plot yearly maximum migration speeds for each species
 max_mig_speed_plot <- ggplot(max_speed, aes(year, max_speed, group=species)) + 
-  geom_hline(data = max_speed_spp, aes(yintercept = median), color = "indianred") +
+  geom_hline(data = max_speed_summary, aes(yintercept = median), color = "indianred") +
   geom_point(data=max_speed) +
   xlab("Year") + ylab("Max Speed (km/day)") + 
   scale_x_continuous(breaks=seq(2008, 2024, 4)) +
@@ -470,17 +473,9 @@ ggsave(max_mig_speed_plot, filename = here("figs/9spp_MedMaxMigrationSpeed.png")
 ```
 
 
-#FIXME: BEGIN HERE NEXT !!!
-
-
 # estimate 3 migration dates, beginning of spring, peak latitude (summer), end of fall migration
 This will need some editing to work on each year separately. Ideally a resulting data frame with columns for year, begin_spring, peak_latitude, end_autumn
 
-
-FIXME/TODO: (Dr. Supp needs to check) double check index dates 
-index is finding exact date of the migration date
-
-#FIXME: Is this redundant from the earlier gam models already run? Can we pull the predicted centroids and estimate the dates all in the same function, rather than running it all over again?
 ```{r}
 # modified from old function Est3MigrationDates in migration-fxns.R
 Est3MigrationDates = function(dat){
@@ -493,8 +488,8 @@ Est3MigrationDates = function(dat){
   
   for (s in species) {
     for (y in year){
-      dat_subset <- dat %>%
-        filter(year == y, species == s, !is.na(lon))
+      #subset data tos pecies and year, remove rows with missing longitude
+      dat_subset <- dat %>% filter(species == s, year == y, !is.na(lon))
     print(paste0("species: ", s, "; year: ", y))
     
     #GAM model on latitude by julian date (estimate centroids)
@@ -557,131 +552,79 @@ Est3MigrationDates = function(dat){
   }
 return(df_dates)
 }
-
-MigrationDates <- Est3MigrationDates(mig_spp_dailylocs)
-#saveRDS(spp7MigrationDates, "spp7MigrationDates_2023.rds")
 ```
 
-#FIXME: Check if the below code gets the same results as the function above, and if it has faster processing time. If  yes, keep the below chunk, remove the _test flag, and remove the chunk above.
-#FIXME: Jump back to the varying k and g version of the migration gams, which calculates 5 dates. If that works, then we don't need this function at all! 5 dates is better than 3 (migration-path-window.Rmd).
-#FIXME: Some dates are missing. We filled these back in during the missdates function, but then they were removed again after the distance calculation. Perhaps doing these at the same time or in a different order can reduce the problem. And what to do if the while date is NA? As long as there is a row, then if the latitude is NA it won't matter, right? Move this function way up in the code, and then check that it works OK?
+
+Run the estimate dates function with the migratory species, removing the partial migrants (method won't work and results won't make sense if there's not a clear breeding season max latitude and clear northward and southward migration movements).
+Save the results to an rds file and a text file for later use.
 ```{r}
-# Optimized function to estimate migration dates
-Est3MigrationDates_test <- function(dat) {
-  # Remove entries for day 1 to clean data at the start
-  dat <- dat %>% filter(day != 1)
-  years <- 2008:2024
-  species_list <- unique(dat$species)
-  
-  # Initialize an empty dataframe
-  df_dates <- data.frame(species = character(), year = integer(), spring = numeric(), maxlat = numeric(), fall = numeric())
-  
-  for (s in species_list) {
-    for (y in years) {
-      # Filter data for the current species and year
-      dat_subset <- dat %>% filter(year == y, species == s, !is.na(lon))
-      
-      # Skip if there's no data for the species and year
-      if (nrow(dat_subset) == 0) next
-
-      print(paste0("species: ", s, "; year: ", y))
-      
-      # GAM model on latitude by julian date
-      gam_model <- gam(lat ~ s(day, k = 40), data = dat_subset, gamma = 1.5)
-      xpred <- data.frame(day = 1:max(dat_subset$day))
-      dpred <- predict(gam_model, newdata = xpred, type = "response", se.fit = TRUE)
-      
-      # Define thresholds for spring and fall migrations
-      spring_threshold <- min(dpred$fit[2:120] + 2.56 * dpred$se.fit[2:120], na.rm = TRUE)
-      fall_threshold <- min(dpred$fit[244:364] + 2.56 * dpred$se.fit[244:364], na.rm = TRUE)
-      
-      # Calculate indices for spring and fall ranges
-      spring_index <- intersect(11:190, dat_subset$day)
-      fall_index <- intersect(220:355, dat_subset$day)
-      
-      # Maximum latitude days within spring and fall indices
-      spring_max <- dat_subset %>% filter(day %in% spring_index) %>% slice_max(lat) %>% pull(day)
-      fall_max <- dat_subset %>% filter(day %in% fall_index) %>% slice_max(lat) %>% pull(day)
-      
-      # Determine the start of spring migration
-      spring_begin <- spring_max
-      #FIXME: What to do when this particular day's latitude is NA?
-      while (spring_begin > 1 && dat_subset$lat[dat_subset$day == spring_begin] > spring_threshold) {
-        spring_begin <- spring_begin - 1
-      }
-      spring_begin <- spring_begin + 1
-      
-      # Determine the end of fall migration
-      fall_end <- fall_max
-      while (fall_end < max(dat_subset$day) && dat_subset$lat[dat_subset$day == fall_end] > fall_threshold) {
-        fall_end <- fall_end + 1
-      }
-      fall_end <- fall_end - 1
-      
-      # Maximum latitude day for the center of the season
-      max_lat <- dat_subset %>% slice_max(lat) %>% pull(day)
-      
-      # Append calculated dates to df_dates
-      df_dates <- bind_rows(df_dates, data.frame(species = s, year = y, spring = spring_begin, 
-                                                 maxlat = max_lat, fall = fall_end))
-    }
-  }
-  return(df_dates)
-}
-
+#test function
 Sys.time()
-MigrationDates_test <- Est3MigrationDates_test(mig_spp_dailylocs)
+#remove partial migrants
+dailylocs <- mig_spp_dailylocs %>% filter(!species %in% c("Sialia_sialis", "Sturnella_magna", "Sturnus_vulgaris"))
+migration_dates <- Est3MigrationDates(dailylocs)
 Sys.time()
+
+# save result as an rds and text file
+saveRDS(migration_dates, file=here("data/3-results_data/migration_dates.rds"))
+write.table(migration_dates, here(file = 'data/3-results_data/migration_dates.txt'), col.names = TRUE,
+              row.names = FALSE, sep = "\t")
 ```
 
 
 
+Calculate the median migration date for each species, across all the years
 ```{r}
-#spp7MigrationDates <- readRDS("spp7MigrationDates.rds")
-
-median_migdates <- spp7MigrationDates %>%
+#Calculate median migration date for each species
+median_migdates <- migration_dates %>%
   group_by(species) %>%
-  summarise(begin_winter = median(fall),
-            end_winter = median(spring))
+  summarise(begin_spring = median(spring),
+            end_autumn = median(fall),
+            )
 
-#paste0("The beginning of winter is on average day ", begin_winter, " and the end of winter is on average day ", end_winter, ".")
+write.table(median_migdates, here(file = 'data/3-results_data/median_migration_dates.txt'), col.names = TRUE,
+              row.names = FALSE, sep = "\t")
+```
 
-begin <- ggplot(spp7MigrationDates, aes(year, fall)) + 
-  geom_point() + 
-  geom_smooth(method="lm") +
-  #geom_hline(yintercept = begin_winter, linetype="dashed", col="hotpink") +
-  theme_bw() + xlab("Year") + ylab("Winter begin date") + 
+Visualize the estimated dates for the 6 migratory species
+```{r}
+#set winter dates based on the ERC fruiting season of October-March
+end_winter = 90 #March 31
+begin_winter = 274 #October 1
+
+spring <- ggscatter(data=migration_dates, x="year", y="spring", facet.by="species", add="reg.line") +
+  stat_cor(label.y = 10, aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~"))) +
+  stat_regline_equation(label.y = -10) + 
+  geom_hline(yintercept = end_winter, linetype="dashed", col="cadetblue3") +
   theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-  scale_x_continuous(breaks=seq(2008, 2021, 2)) +
- # annotate(geom="text", x= 2012, y= 340, label=paste0("median doy = ", round(begin_winter,2)))
-  facet_wrap(~species)
+  scale_x_continuous(breaks=seq(2008, 2024, 6)) +
+  xlab("Year") + ylab("spring migration begin date") +
+  theme_bw()
 
-end <- ggplot(spp7MigrationDates, aes(year, spring)) + 
-  geom_point() + 
-  geom_smooth(method="lm") +
- # geom_hline(yintercept = end_winter, linetype="dashed", col="hotpink") +
-  theme_bw() + xlab("Year") + ylab("Winter end date") + 
-  theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +  
-  scale_x_continuous(breaks=seq(2008, 2021, 2)) +
-  #annotate(geom="text", x= 2012, y= 55, label=paste0("median doy = ", round(end_winter,2)))
-  facet_wrap(~species)
+autumn <- ggscatter(data=migration_dates, x="year", y="fall", facet.by="species", add="reg.line") +
+  stat_cor(label.y = 300, aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~"))) +
+  stat_regline_equation(label.y = 285) + 
+  geom_hline(yintercept = begin_winter, linetype="dashed", col="cadetblue3") +
+  theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  scale_x_continuous(breaks=seq(2008, 2024, 6)) +
+  xlab("Year") + ylab("autumn migration end date") + 
+  theme_bw()# 
 
-ggarrange(begin, end,
-          labels=c("Begining of the winter", "End of the winter"),
-          ncol=2, nrow=1)
+ggarrange(spring, autumn,
+          ncol=1, nrow=2)
 
-ggsave(filename = "figs/7spp_MigrationDates_2023.png", height = 10, width=10)
+ggsave(filename = here("figs/6spp_migration_dates.png"), height = 10, width=7.5)
 ```
 
 # Statistically compare migration paths, speeds, and dates across the time-series for each species
 
-Look at linear trends for dates of the 7 migratory species to see if there is a significant directional trend, or not.
+Look at linear trends for dates of the migratory species to see if there is a significant directional trend, or not.
 ```{r}
-# Function to extract relevant statistics from linear regression object
+# Function to extract relevant statistics from linear regression object, using tidy models
 extract_lm_stats <- function(model) {
   summary_model <- summary(model)
   
-  tidy_model <- broom::tidy(model) %>% 
+  tidy_model <- broom::tidy(model, conf.int=TRUE) %>% 
     filter(term == "year")
   
   tibble(r2 = summary_model$r.squared,
@@ -691,21 +634,39 @@ extract_lm_stats <- function(model) {
     pvalue = tidy_model$p.value)
 }
 
-
-# Apply the function to each species for spring and fall, separately
-date_results <- spp7MigrationDates %>%
+# Process each species for spring and autumn, separately
+date_results <- migration_dates %>%
   group_by(species) %>%
-  summarize( spring_lm = list(lm(spring ~ year, data = cur_data())),
-    fall_lm = list(lm(fall ~ year, data = cur_data())) ) %>%
-  mutate( spring_stats = map(spring_lm, extract_lm_stats),
-    fall_stats = map(fall_lm, extract_lm_stats) ) %>%
-  select(-spring_lm, -fall_lm) %>% # Remove the models if not needed
-  unnest(cols = c(spring_stats, fall_stats))
+  nest() %>%
+  mutate(
+    spring_lm = purrr::map(data, ~lm(spring ~ year, data = .x)),
+    fall_lm = purrr::map(data, ~lm(fall ~ year, data = .x)),
+    spring_stats = purrr::map(spring_lm, extract_lm_stats),
+    fall_stats = purrr::map(fall_lm, extract_lm_stats)
+  ) %>%
+  select(-spring_lm, -fall_lm, -data) %>%
+ unnest(cols = c(spring_stats, fall_stats), names_sep = "_")
 
 # View results
 date_results
 
+# view only significant results
+date_results %>% filter(spring_stats_pvalue < 0.05 | fall_stats_pvalue < 0.05)
+
+# write to results file
+write.table(date_results, here(file = 'data/3-results_data/lm_migration_dates.txt'), col.names = TRUE,
+              row.names = FALSE, sep = "\t")
 ```
+
+
+
+
+
+#FIXME: BEGIN HERE NEXT !!!
+
+
+
+
 
 
 Now we just want to look at bird occurrences during the winter months, and in the latitudes that ERC occur in: 
@@ -1265,4 +1226,78 @@ ggplot() +
           axis.title.x=element_blank(),
           axis.title.y=element_blank()) +
   facet_wrap(~year, ncol=4)
+```
+
+
+#FIXME: Delete after confirming we don't need. 
+I made this version in an attempt to optimize the function, but it's not getting the same/accurate results, and it fails if a day is missing or is NA
+FIXME: SOMETHING IS WEIRD WITH THE FUNCTION BELOW. DELETE AND REMOVE? IT IS FASTER, BUT DOESN'T WORK ACCURATELY, GETS DIFFERENT DPRED AND ESTIMATED DATES RESULTS FROM ABOVE (WHICH I HAVE VETTED BEFORE)
+FIXME: Some dates are missing. We filled these back in during the missdates function, but then they were removed again after the distance calculation. Perhaps doing these at the same time or in a different order can reduce the problem. And what to do if the while date is NA? As long as there is a row, then if the latitude is NA it won't matter, right? Move this function way up in the code, and then check that it works OK?
+```{r}
+# Optimized function to estimate migration dates
+Est3MigrationDates_test <- function(dat) {
+  # Remove entries for day 1 to clean data at the start
+  dat <- dat %>% filter(day != 1)
+  years <- 2008:2024
+  species_list <- unique(dat$species)
+  
+  # Initialize an empty dataframe
+  df_dates <- data.frame(species = character(), year = integer(), spring = numeric(), maxlat = numeric(), fall = numeric())
+  
+  for (s in species_list) {
+    for (y in years) {
+      # Filter data for the current species and year
+      dat_subset2 <- dat %>% filter(year == y, species == s, !is.na(lon)) #FIXME: removing rows causes a problem.
+      
+      # Skip if there's no data for the species and year
+      if (nrow(dat_subset2) == 0) next
+
+      print(paste0("species: ", s, "; year: ", y))
+      
+      # GAM model on latitude by julian date
+      gam_model2 <- gam(lat ~ s(day, k = 40), data = dat_subset2, gamma = 1.5)
+      xpred2 <- data.frame(day = 1:max(dat_subset2$day))
+      dpred2 <- predict(gam_model2, newdata = xpred2, type = "response", se.fit = TRUE)
+      
+      # Define thresholds for spring and fall migrations
+      spring_threshold2 <- min(dpred2$fit[2:120] + 2.56 * dpred2$se.fit[2:120], na.rm = TRUE)
+      fall_threshold2 <- min(dpred2$fit[244:364] + 2.56 * dpred2$se.fit[244:364], na.rm = TRUE)
+      
+      # Calculate indices for spring and fall ranges
+      spring_index <- intersect(11:190, dat_subset$day)
+      fall_index <- intersect(220:355, dat_subset$day)
+      
+      # Maximum latitude days within spring and fall indices
+      spring_max <- dat_subset %>% filter(day %in% spring_index) %>% slice_max(lat) %>% pull(day)
+      fall_max <- dat_subset %>% filter(day %in% fall_index) %>% slice_max(lat) %>% pull(day)
+      
+      # Determine the start of spring migration
+      spring_begin <- spring_max
+      #FIXME: What to do when this particular day's latitude is NA?
+      while (spring_begin > 1 && dat_subset$lat[dat_subset$day == spring_begin] > spring_threshold) {
+        spring_begin <- spring_begin - 1
+      }
+      spring_begin <- spring_begin + 1
+      
+      # Determine the end of fall migration
+      fall_end <- fall_max
+      while (fall_end < max(dat_subset$day) && dat_subset$lat[dat_subset$day == fall_end] > fall_threshold) {
+        fall_end <- fall_end + 1
+      }
+      fall_end <- fall_end - 1
+      
+      # Maximum latitude day for the center of the season
+      max_lat <- dat_subset %>% slice_max(lat) %>% pull(day)
+      
+      # Append calculated dates to df_dates
+      df_dates <- bind_rows(df_dates, data.frame(species = s, year = y, spring = spring_begin, 
+                                                 maxlat = max_lat, fall = fall_end))
+    }
+  }
+  return(df_dates)
+}
+
+Sys.time()
+MigrationDates_test <- Est3MigrationDates_test(mig_spp_dailylocs)
+Sys.time()
 ```
