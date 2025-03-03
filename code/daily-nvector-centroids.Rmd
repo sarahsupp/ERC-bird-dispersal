@@ -28,7 +28,6 @@ Birds evaluated include:
 * Dark-eyed Junco (DAJU) _Junco hyemalis_
 * American Crow (AMCR) _Corvus brachyrhynchos_
 
-**Disclaimer**: The nvector method used in this code file takes a long time to run (>15 hours on a desktop computer). Proceed accordingly.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
