@@ -24,7 +24,7 @@ The file was originally authored by M. Wisnefski (Anderson Summer Scholar, 2023)
 
 Import the ERC range file, updated by W. Haas, 2022
 ```{r}
-ERC_range_sf <- st_read("data_2023/ERC_shapefile_2023/junivirg.shp", quiet = TRUE) %>%
+ERC_range_sf <- st_read(here("data/shapefiles/ERC_shapefile_2023/junivirg.shp"), quiet = TRUE) %>%
   st_transform(crs = "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")
 ```
 
