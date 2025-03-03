@@ -35,7 +35,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(here)
 library(nvctr)
 library(tidyverse)
-#library(geosphere) #FIXME: Check if needed, or loaded in the background with nvctr
 
 ```
 
