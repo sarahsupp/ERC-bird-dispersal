@@ -50,14 +50,14 @@ load(here("data/1-raw_eBird_data/locs.RData"))
 
 merge the diversity files with the location file so that polygon locations can be mapped
 ```{r}
+# use merge to annotate SURVEY COMPLETENESS with the polygon coordinates (lat, long)
+sc <- merge(sc, locs)
+
 # use merge to annotate SPECIES RICHNESS with the polygon coordinates (lat, long)
 S <- merge(S, locs)
 
 # use merge to annotate DIVERSITY ESTIMATES with the polygon coordinates (lat, long)
 est <- merge(est, locs)
-
-# use merge to annotate SURVEY COMPLETENESS with the polygon coordinates (lat, long)
-sc <- merge(sc, locs)
 ```
 
 Import polygons for plotting maps
@@ -69,6 +69,84 @@ north_america <- world_map %>%
                        "El Salvador", "Honduras", "Nicaragua", "Costa Rica", 
                        "Panama"))
 ```
+
+# Survey completeness
+Survey completeness of the bird occurrence information was estimated using the Hill numbers approach (Chao et al., 2014). We implement this analysis for each winter season using the iNEXT R package (Hsieh et al., 2024). We only included checklists in the survey completeness analysis where all the species detected by sight or sound were recorded by the observer (i.e. the ‘all observations reported’ field in eBird was designated as ‘yes’) (La Sorte et al., 2024). For our community analysis, we only examined spatial bins that were well surveyed in each season, with a survey completeness threshold >=90% (La Sorte et al., 2024).
+
+Look at the survey completeness data, by year
+```{r}
+ggplot(data=sc, aes(x=SC, y=as.factor(year), group=as.factor(year), fill=year)) +
+  geom_density_ridges() +
+  scale_fill_viridis(name = "survey completeness", option = "C") +
+  labs(y = "Winter Season Year",
+       x = "Survey Completeness") +
+  geom_vline(aes(xintercept=0.90)) +
+  theme_ridges() +
+    theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8))
+```
+There is no major pattern in survey completeness across time, but maybe a slight increase in completeness in more recent years.
+
+
+Check the relationship of observed species richness with survey completeness
+```{r}
+ggplot(sc, aes(S.obs, SC)) +
+  geom_point(alpha=0.10) + 
+  theme_bw()
+```
+As species richness increases, it is more likely that high sample completeness will be estimated. There are still a good nubmer of low species richness sites that also reach high survey completeness. 
+
+Let's plot survey completeness on a map to show the estimates transparently
+```{r}
+#Prepare the grid cell data for mapping
+# use the sepcies richness dataframe; and cell centers calculated
+dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
+sc$cell <- dgGEO_to_SEQNUM(dgg, sc$x, sc$y)$seqnum
+sc$cell_lat <- dgSEQNUM_to_GEO(dgg, sc$cell)$lat_deg 
+sc$cell_lon <- dgSEQNUM_to_GEO(dgg, sc$cell)$lon_deg 
+
+# Get the grid cell boundaries 
+grid <- dggridR::dgcellstogrid(dgg, sc$POLYFID) 
+
+#Update the grid cells' properties to include sc values
+grid <- merge(grid, sc, by.x="seqnum", by.y="cell")
+
+# #Make adjustments so the output is more visually interesting
+grid <- grid %>% mutate(threshold=ifelse(SC<0.90, "exclude", "include"))
+grid <- grid %>% mutate(thres_vals=ifelse(SC<0.90, NA, round(SC,2)))
+
+
+# Winter survey completeness per grid cell (Nov-Feb)
+ggplot() + 
+  geom_sf(data = grid, aes(fill = thres_vals), color = alpha("white", 0.4 )) +
+  geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  #scale_fill_discrete()+
+  #scale_fill_gradient(low="grey90", high="black", na.value="white") +
+  scale_fill_gradient(low="yellow", high="red") +
+  coord_sf(xlim = c(-130, -60), ylim = c(10, 65)) + #set limits without distorting boundaries
+  labs(title = "Winter survey completeness per grid cell (Nov-Feb)") +
+  theme_minimal() + 
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank(),
+          legend.position="bottom") +
+  facet_wrap(~year, ncol=4)
+
+ggsave(filename = here("figs/sample-coverage_map_08-23.png"), height = 11, width=8, bg="white")
+```
+
+#FIXME: Next step: For composition/diversity analysis, use the survey completeness threshold >=0.90 (90%) to filter the S and est dataframes. Cells <0.90 we cannot assume to be well sampled. 
+- For each diversity estimate; calculate a linear regression, record slope, se, pvalue.
+- should we also set a minimum number of years to be included to run the lm? 
+- plot the results to view significant increases, significant decreases, and non-signficant cell trends (map, diverging histogram). Is there an overall direction of trend? Is there a spatial signal in the results? What different might we learn from S, Shan, Simp diversity? Is one of these better to pay attention to?
+#FIXME: Also filter the cells to only include those within the eastern united states or within the ERC range: Need to add this step -- there are some south american cells, that aren't really relevant here. 
+
+
+
+
 
 
 # Species richness
@@ -127,9 +205,111 @@ ggplot() +
           legend.position="bottom") +
   facet_wrap(~year, ncol=4)
 
-ggsave(filename = here("figs/S_map_08-25.png"), height = 11, width=8)
+ggsave(filename = here("figs/S_map_08-23.png"), height = 11, width=8)
 
 ```
 
+### Is there a significant trend for changing species richness across cells, through time?
+Calculate the slopes of change across years, within cells. Plot the results to see if there is a trend of higher species disperser load through time. Need to think and check with FAL for ideas to see if we need to account for overall effort better (currently using as pres-only data, without weighted checks)
+```{r}
+# calculate separate lm for all grid cells
+cells <- unique(S$POLYFID)
+
+lm_S_results <- data.frame(cell=numeric(), n=integer(), slope=numeric(), 
+                           pVal=numeric(), cell_lat=numeric(), cell_lon=numeric())
+
+for (c in cells) {
+  dat <- S %>% filter(POLYFID == c)
+  #must have at least 3 data points to run a linear model; FIXME: set stronger requirement?
+  if (nrow(dat) >= 3) {
+      mod <- lm(S~as.numeric(year), data=dat)
+      n = nrow(dat)
+      slope = coef(mod)[[2]]
+      pVal = glance(mod)$p.value[[1]]
+      cell_lat = dat$cell_lat[1]
+      cell_lon = dat$cell_lon[1]
+      
+      newrow <- data.frame(cell=c, n, slope, pVal, cell_lat, cell_lon)
+      lm_S_results <- rbind(lm_S_results, newrow)
+  }
+}
+
+#remove the NA values
+lm_S_results <- na.omit(lm_S_results)
+  
+# add column for significance
+lm_S_results$sig <- ifelse(lm_S_results$pVal <= 0.05, "sig", "NS")
+```
+
+Plot the results from the S linear regression
+```{r}
+#ggplot histogram, layered by identity for sig and NS
+ggplot(lm_S_results, aes(slope)) + 
+  geom_histogram(aes(fill=sig), binwidth=0.05, position="identity", alpha=0.5) +
+  scale_fill_manual(values = c("gray40", "darkturquoise")) + 
+  geom_vline(xintercept=0, linetype="dashed", col="gray10") +
+  xlab("slope estimate") + 
+  theme_bw()
+```
+Most of the significant slopes were positive (increasing richness). Very few significant negative slopes (decreasing richness).
+
+```{r}
+#average effect size, mean of the slopes
+avg_effect_size <- lm_S_results %>% 
+  filter(sig=="sig") %>%
+  summarize(meanslope = mean(slope),
+            medianslope = median(slope))
+
+# is there any signal of the significant richness slopes by latitude (would indicate a N-S influence)
+ggscatter(data=lm_S_results %>% filter(sig=="sig" & cell_lat>25), 
+          x="cell_lat", y="slope", add="reg.line", alpha=0.25) +
+  stat_cor(label.y = 0.8, aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~"))) +
+  stat_regline_equation(label.y = 0.7) + 
+  geom_hline(yintercept = 0, linetype="dashed") +
+  theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  #scale_x_continuous(breaks=seq(2008, 2024, 6)) +
+  xlab("Cell Latitude") + ylab("S regression slope") + 
+  theme_bw()
+```
+
+Let's plot the map using the significant slopes, and all others shaded in grey
+```{r}
+#Prepare the grid cell data for mapping
+# use the sepcies richness dataframe; and cell centers calculated
+dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
+lm_S_results$cell <- dgGEO_to_SEQNUM(dgg, lm_S_results$cell_lon, lm_S_results$cell_lat)$seqnum
+lm_S_results$cell_lat <- dgSEQNUM_to_GEO(dgg, lm_S_results$cell)$lat_deg 
+lm_S_results$cell_lon <- dgSEQNUM_to_GEO(dgg, lm_S_results$cell)$lon_deg 
+
+# Get the grid cell boundaries 
+grid <- dggridR::dgcellstogrid(dgg, lm_S_results$cell) 
+
+#Update the grid cells' properties to include S values
+grid <- merge(grid, lm_S_results, by.x="seqnum", by.y="cell")
+
+# make subsets based on significant vs non-significant slope pvalues
+gridsig <- grid %>% filter(sig == "sig")
+gridNS <- grid %>% filter(sig == "NS")
+
+
+# Winter species richness change (slope), per grid cell (Nov-Feb)
+ggplot() + 
+  geom_sf(data = gridsig, aes(fill = slope), color = alpha("white", 0.4 )) +
+  geom_sf(data = gridNS, fill="grey", color = alpha("white", 0.04)) + 
+  geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  #scale_fill_gradient(low="grey90", high="black", na.value="white") +
+  scale_fill_gradient2(low="firebrick3", high="navyblue", midpoint = 0) +
+  coord_sf(xlim = c(-130, -60), ylim = c(10, 65)) + #set limits without distorting boundaries
+  labs(title = "Winter species richness slope per grid cell (2008-2023)") +
+  theme_void() + 
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank(),
+          legend.position="bottom")
+
+ggsave(filename = here("figs/S_slope_map.png"), height = 4, width=6, bg="white")
+
+```
 
 
