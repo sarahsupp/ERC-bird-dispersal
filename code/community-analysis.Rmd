@@ -35,10 +35,101 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(here)
+library(ggplot2)
+library(ggridges)
 ```
 
 Import the iNext data for the community analysis. It is based on the eBird occurrence information for all 15 seed dispersing species. Winter season was defined as November through February. We used years 2008-2023.
 ```{r}
+# diversity estimates for winter seasons, by POLYFID hexagonal cell; loads 3 dataframes
 load(here("data/1-raw_eBird_data/community/iNEXT-results.RData"))
+
+# coordinates for the icosahedron cells
+load(here("data/1-raw_eBird_data/locs.RData")) 
 ```
+
+merge the diversity files with the location file so that polygon locations can be mapped
+```{r}
+# use merge to annotate SPECIES RICHNESS with the polygon coordinates (lat, long)
+S <- merge(S, locs)
+
+# use merge to annotate DIVERSITY ESTIMATES with the polygon coordinates (lat, long)
+est <- merge(est, locs)
+
+# use merge to annotate SURVEY COMPLETENESS with the polygon coordinates (lat, long)
+sc <- merge(sc, locs)
+```
+
+Import polygons for plotting maps
+```{r}
+#Get polygons for the spatial range and make a map
+world_map <- map_data("world")
+north_america <- world_map %>%
+  filter(region %in% c("USA", "Canada", "Mexico", "Guatemala", "Belize", 
+                       "El Salvador", "Honduras", "Nicaragua", "Costa Rica", 
+                       "Panama"))
+```
+
+
+# Species richness
+This file contains columns for POLYFID, year, and species richness. 
+The 15 species listed at the top of this file were included; so species richness should range 0-15 for each POLYFID. 
+What we want to know is: 
+- Spatial: Are there areas with increased richness of ERC seed dispersers?
+-- A hypothesis is that there should be higher richness of ERC seed dispersers in the southeastern united states, and in east coast urban areas (heat island, feeder effects, etc.)
+
+- Temporal: Is seed disperser richness stable through time, or is there evidence of overall increase? 
+--A hypothesis could be that changing climate is increasing seed disperser richness during the winter because of advanced migration and/or increased number of individuals or subpopulations that are not migrating southward, out of the ERC range.
+--A spatial component could include a shift in areas that are experiencing this trend, and other areas that are not.
+
+```{r}
+ggplot(data=S, aes(x=S, y=as.factor(year), group=as.factor(year), fill=year)) +
+  geom_density_ridges() +
+  scale_fill_viridis(name = "species richness", option = "C") +
+  labs(y = "Winter Season Year",
+       x = "Species Richness") +
+  theme_bw() +
+    theme(
+      legend.position="none",
+      panel.spacing = unit(0.1, "lines"),
+      strip.text.x = element_text(size = 8))
+```
+
+Show species richness on a map, separated by year
+```{r}
+#Prepare the grid cell data for mapping
+# use the sepcies richness dataframe; and cell centers calculated
+dgg <- dgconstruct(project = "FULLER", aperture = 4, topology = "HEXAGON", res = 6)
+S$cell <- dgGEO_to_SEQNUM(dgg, S$x, S$y)$seqnum
+S$cell_lat <- dgSEQNUM_to_GEO(dgg, S$cell)$lat_deg 
+S$cell_lon <- dgSEQNUM_to_GEO(dgg, S$cell)$lon_deg 
+
+# Get the grid cell boundaries 
+grid <- dggridR::dgcellstogrid(dgg, S$POLYFID) 
+
+#Update the grid cells' properties to include S values
+grid <- merge(grid, S, by.x="seqnum", by.y="cell")
+
+
+# Winter species richness per grid cell (Nov-Feb)
+ggplot() + 
+  geom_sf(data = grid, aes(fill = S), color = alpha("white", 0.4 )) +
+  geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
+  #scale_fill_gradient(low="grey90", high="black", na.value="white") +
+  scale_fill_gradient(low="yellow", high="red") +
+  coord_sf(xlim = c(-130, -60), ylim = c(10, 65)) + #set limits without distorting boundaries
+  labs(title = "Winter species richness per grid cell (Nov-Feb)") +
+  theme_minimal() + 
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank(),
+          legend.position="bottom") +
+  facet_wrap(~year, ncol=4)
+
+ggsave(filename = here("figs/S_map_08-25.png"), height = 11, width=8)
+
+```
+
+
 

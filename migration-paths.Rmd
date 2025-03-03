@@ -676,6 +676,9 @@ ggplot(mig_spp_dailylocs, aes(x=day, y=lat, group=year)) +
 ggsave(filename = here("figs/9spp_lat_with_dates.png"), height = 6, width=8)
 ```
 
+
+
+
 #-------------------------------------------------------------------
 #FIXME: BEGIN HERE NEXT !!!
 Check the code below this point. 
