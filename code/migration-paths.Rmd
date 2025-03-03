@@ -340,7 +340,7 @@ ggplot(mig_spp_dailylocs, aes(lon, lat, group=year)) +
   geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black")   +
   coord_sf(xlim = c(-103, -60), ylim = c(10, 65)) + #set limits without distorting boundaries
   scale_colour_manual(values = c("grey50", "blue")) +
-  labs(title = "Daily centroids, 2008-2022") +
+  labs(title = "Daily centroids, 2008-2024") +
   theme_minimal() + 
   theme(axis.line=element_blank(),axis.text.x=element_blank(),
           axis.text.y=element_blank(),axis.ticks=element_blank(),
