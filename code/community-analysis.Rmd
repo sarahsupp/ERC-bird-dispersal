@@ -1,0 +1,44 @@
+---
+title: "seed-disperser-diversity"
+author: "Sarah Supp"
+date: "2025-03-03"
+output: html_document
+---
+
+##Code for Eastern redcedar avian seed disperser project, modified from eBird project (Supp et al. 2015)
+(c) 2025, Supp (PI) and La Sorte
+supps@denison.edu
+Denison University
+Code is under development, part of NSF Multi-Institution Collaborative Award (2019-2025)
+
+Birds evaluated include: 
+* Cedar Waxwing (CEWA) _Bombycilla cedrorum_
+* Robin (ROBI) _Turdus migratorius_
+* Wood Thrush (WOTH) _Hylocichla mustelina_
+* Yellow-rumped Warbler (YEWA) _setophaga coronata_
+* Blue Jay (BLJA) _Cyanocitta cristata_
+* European Starling (EUST) _Sturnus vulgaris_
+* Eastern Bluebird (EABL) _Sialia sialis_
+* Northern Mockingbird (NOMO) _Mimus polyglottos_
+* Downy Woodpecker (DOWO) _Dryobates pubescens_
+* Eastern Meadowlark (EAME) _Sturnella magna_
+* White-breasted Nuthatch (WHNU) _Sitta carolinensis_
+* Purple Finch (PUFI) _Haemorhous purpureus_
+* Northern Cardinal (NOCA) _Cardinalis cardinalis_
+* Dark-eyed Junco (DAJU) _Junco hyemalis_
+* American Crow (AMCR) _Corvus brachyrhynchos_
+
+The inputs to this code file are the results from a community-level analysis, shared by collaborator La Sorte. This includes for each hexagon cell (POLYFID) and year (16 winter seasons from 2008 to 2023) the number of target species (S; range=0-15), three diversity metrics (est; richness, shannon, simpson), and survey completeness estimates (sc). Values were calculated using the iNEXT package for the analysis and the same eBird data used in the population-level analysis. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+```
+
+Import the iNext data for the community analysis. It is based on the eBird occurrence information for all 15 seed dispersing species. Winter season was defined as November through February. We used years 2008-2023.
+```{r}
+load(here("data/1-raw_eBird_data/community/iNEXT-results.RData"))
+```
+
