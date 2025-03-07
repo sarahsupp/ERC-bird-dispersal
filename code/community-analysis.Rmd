@@ -273,13 +273,6 @@ est_ERC_90sc <- est_ERC %>%
 
 ```
 
-#FIXME: - For each diversity estimate; calculate a linear regression,
-record slope, se, pvalue. - should we also set a minimum number of years
-to be included to run the lm? - plot the results to view significant
-increases, significant decreases, and non-signficant cell trends (map,
-diverging histogram). Is there an overall direction of trend? Is there a
-spatial signal in the results? What different might we learn from S,
-Shan, Simp diversity? Is one of these better to pay attention to?
 
 # Species richness
 
@@ -375,10 +368,9 @@ lm_S_results <- na.omit(lm_S_results)
 # add column for significance
 lm_S_results$sig <- ifelse(lm_S_results$pVal <= 0.05, "sig", "NS")
 
-#Cell lat disappeared, so we will need to merge this back together or re-grid to plot again....
 # add the cell locations back into the dataset
 unique_cell_dat <- S_ERC_90sc %>%
-  select(POLYFID, seqnum, cell_lon, geometry) %>%
+  select(POLYFID, seqnum, cell_lon, cell_lat, geometry) %>%
   distinct()
 
 #merge results with cell data
@@ -395,7 +387,7 @@ Plot the results from the S linear regression
 ggplot(lm_S_results, aes(slope)) + 
   geom_density(aes(fill=sig), alpha=0.50) +
  # geom_histogram(aes(fill=sig), binwidth=0.05, position="identity", alpha=0.5) +
-  scale_fill_manual(values = c("gray40", "darkturquoise")) + 
+  scale_fill_manual(values = c("gray40", "navyblue")) + 
   geom_vline(xintercept=0, linetype="dashed", col="gray10") +
   xlab("slope estimate") + 
   theme_bw()
@@ -412,16 +404,17 @@ avg_effect_size <- lm_S_results %>%
   filter(sig=="sig") %>%
   summarize(meanslope = mean(slope),
             medianslope = median(slope))
+
+avg_effect_size
 ```
 
 See if there is a signal by longitude (would indicate a E-W influence or trend)
-#FIXME: add a plot for latitude, but need to first extract cell latitude from the geometry column, which is an sfc_POLYGON
 ```{r}
 ggscatter(data=lm_S_results, x="cell_lon", y="slope", add="reg.line", alpha=0.25, col="sig") +
   stat_cor(label.y = 0.8, aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~"))) +
   stat_regline_equation(label.y = 0.7) + 
   geom_hline(yintercept = 0, linetype="dashed") +
-  scale_colour_manual(values = c("gray40", "darkturquoise")) + 
+  scale_colour_manual(values = c("gray40", "navyblue")) + 
   theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
   #scale_x_continuous(breaks=seq(2008, 2024, 6)) +
   xlab("Cell Longitude") + ylab("S regression slope") + 
@@ -430,6 +423,41 @@ ggscatter(data=lm_S_results, x="cell_lon", y="slope", add="reg.line", alpha=0.25
 ggsave(filename = here("figs/S_slope_scatter-longitude.png"), height = 3, width=4, bg="white")
 
 ```
+
+See if there is a signal by latitude (would indicate a N-S influence or trend)
+
+```{r}
+ggscatter(data=lm_S_results, x="cell_lat", y="slope", add="reg.line", alpha=0.25, col="sig") +
+  stat_cor(label.y = 0.8, aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~"))) +
+  stat_regline_equation(label.y = 0.7) + 
+  geom_hline(yintercept = 0, linetype="dashed") +
+  scale_colour_manual(values = c("gray40", "navyblue")) + 
+  theme(text = element_text(size=9), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  #scale_x_continuous(breaks=seq(2008, 2024, 6)) +
+  xlab("Cell Latitude") + ylab("S regression slope") + 
+  theme_bw()
+
+ggsave(filename = here("figs/S_slope_scatter-latitude.png"), height = 3, width=4, bg="white")
+
+```
+
+Plot the slope estimates against S in year 1 (2008). 
+```{r}
+initial_S <- S_ERC_90sc %>%
+  filter(year == 2008) %>%
+  select(POLYFID, S)
+
+Sxslope <- st_join(lm_S_results, initial_S)
+
+ggplot(Sxslope, aes(S, slope)) + 
+  geom_jitter(aes(col=sig), alpha=0.20) +
+  scale_colour_manual(values = c("gray40", "navyblue")) + 
+  theme_bw() +
+  xlab("initial richness (S) in 2008")
+
+ggsave(filename = here("figs/slope_initial_S.png"), height = 3, width=4, bg="white")
+```
+
 
 Let's plot the map using the significant slopes, and all others shaded
 in grey
