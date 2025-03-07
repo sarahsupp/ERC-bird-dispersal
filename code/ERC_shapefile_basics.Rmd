@@ -31,27 +31,26 @@ ERC_range_sf <- st_read(here("data/shapefiles/ERC_shapefile_2023/junivirg.shp"),
 Plot the shapefile on a map of North America.
 Get the map boundaries.
 ```{r}
-#Get polygons for north america map
-world_map <- map_data("world")
-north_america <- world_map %>%
-  filter(region %in% c("USA", "Canada"))
+#Get polygons for the spatial range and make a map
+north_america <- map_data("world") %>%
+  filter(region %in% c("USA", "Canada", "Mexico"))
 ```
 
 plot the range shapefile on a map to check that it's working
 ```{r}
-# plot the number of checklists submitted (summed) per grid cell (2008-2023)
 ggplot() + 
-  geom_sf(data = ERC_range_sf, fill = "lightgreen", color = alpha("darkgreen")) +
+  geom_sf(data = ERC_range_sf, fill = "darkolivegreen3", color = alpha("darkolivegreen")) +
   geom_polygon(data=north_america, aes(x=long, y=lat, group=group), fill=NA, color="black") +
-  coord_sf(xlim = c(-103, -65), ylim = c(25, 50)) + #set limits without distorting boundaries
-  labs(title = "W. Haas shapefile of J. virginiana range extent") +
-  theme_minimal() + 
+  coord_sf(xlim = c(-125, -70), ylim = c(25, 50)) + #show within all north america
+ # coord_sf(xlim = c(-105, -70), ylim = c(25, 50)) + #focus on eastern us
+ # labs(title = "W. Haas shapefile of J. virginiana range extent") +
+  theme_void() + 
   theme(axis.line=element_blank(),axis.text.x=element_blank(),
           axis.text.y=element_blank(),axis.ticks=element_blank(),
           axis.title.x=element_blank(),
           axis.title.y=element_blank())
 
-ggsave(filename = "figs/ERC_range_map.png", height = 4, width=5.5)
+ggsave(filename = here("figs/ERC_range_map.png"), height = 4, width=5.5)
 ```
 
 
