@@ -446,7 +446,7 @@ write.table(max_speed_summary, here(file = 'data/3-results_data/max_speed_summar
               row.names = FALSE, sep = "\t")
 ```
 
-Plot the annual maximum migration speeds for each species, with a horizontal line showing the median of all the years for a species pooled together.
+Plot the annual maximum migration speeds for the 6 migratory species, with a horizontal line showing the median of all the years for a species pooled together.
 ```{r}
 # plot yearly maximum migration speeds for each species
 max_mig_speed_plot <- ggplot(max_speed, aes(year, max_speed, group=species)) + 
@@ -463,6 +463,32 @@ max_mig_speed_plot
 
 ggsave(max_mig_speed_plot, filename = here("figs/9spp_MedMaxMigrationSpeed.png"), height = 5, width=8)
 ```
+
+#make the same plot as above but focus on the 6 migratory species only
+```{r}
+mig6 <- c("Bombycilla_cedrorum", "Haemorhous_purpureus",
+          "Hylocichla_mustelina", "Junco_hyemalis", 
+          "Setophaga_coronata","Turdus_migratorius")
+
+ms6 <- max_speed %>% filter(species %in% mig6)
+mss6 <- max_speed_summary %>% filter(species %in% mig6)
+
+# plot yearly maximum migration speeds for each species
+max_mig_speed_plot <- ggplot(ms6, aes(year, max_speed, group=species)) + 
+  geom_hline(data = mss6, aes(yintercept = median), color = "indianred") +
+  geom_point(data=ms6) +
+  xlab("Year") + ylab("Max Speed (km/day)") + 
+  scale_x_continuous(breaks=seq(2008, 2024, 4)) +
+  theme_bw() + 
+  theme(text = element_text(size=10), 
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        legend.position="bottom") + 
+  facet_wrap(~species)
+max_mig_speed_plot
+
+ggsave(max_mig_speed_plot, filename = here("figs/6spp_MedMaxMigrationSpeed.png"), height = 5, width=8)
+```
+
 
 
 # estimate 3 migration dates, beginning of spring, peak latitude (summer), end of fall migration
